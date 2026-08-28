@@ -93,7 +93,7 @@ export function TeamCard({ members, currentUserId }: { members: TeamMember[]; cu
               required
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="collega@feestaanhetwater.nl"
+              placeholder="collega@jouworganisatie.nl"
               className="h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
             />
           </div>
