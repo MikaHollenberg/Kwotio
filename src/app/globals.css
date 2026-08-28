@@ -1,26 +1,107 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/*
+ * Caribbean Bar Uitgeest / Feest aan het Water — merk-theme.
+ * Kleurschalen zijn afgeleid van de exacte logo-hexwaarden (zie opdracht sectie 2.1).
+ * Tailwind v4 CSS-first config: alles hieronder wordt automatisch een utility
+ * (bg-blue-500, text-orange-700, font-display, etc.).
+ */
+@theme {
+  --font-display: var(--font-bricolage), "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-manrope), "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  /* Oceaanblauw */
+  --color-blue-50: #eaf3f7;
+  --color-blue-100: #cfe4ec;
+  --color-blue-200: #b0d1e0;
+  --color-blue-300: #8fb9ce;
+  --color-blue-400: #73a4bf;
+  --color-blue-500: #5890b1;
+  --color-blue-600: #4c7d9b;
+  --color-blue-700: #3c6e8c;
+  --color-blue-800: #2f5771;
+  --color-blue-900: #25495f;
+
+  /* Terracotta / zonsondergang */
+  --color-orange-50: #fbf0e6;
+  --color-orange-100: #f3dac0;
+  --color-orange-200: #ebc59c;
+  --color-orange-300: #e0a26a;
+  --color-orange-400: #d68d51;
+  --color-orange-500: #cc7a3e;
+  --color-orange-600: #b56a34;
+  --color-orange-700: #a15d2a;
+  --color-orange-800: #874d23;
+  --color-orange-900: #71401b;
+
+  /* Mosterdgeel / zonlicht */
+  --color-yellow-50: #fdf7e7;
+  --color-yellow-100: #f8e9be;
+  --color-yellow-200: #f4de9f;
+  --color-yellow-300: #f0d486;
+  --color-yellow-400: #ecc966;
+  --color-yellow-500: #e9c04e;
+  --color-yellow-600: #d3ab3a;
+  --color-yellow-700: #c79e2e;
+  --color-yellow-800: #a68227;
+  --color-yellow-900: #8f701c;
+
+  /* Caribisch teal */
+  --color-teal-50: #e8f4f8;
+  --color-teal-100: #c7e4ee;
+  --color-teal-200: #a0d1e2;
+  --color-teal-300: #71bcd6;
+  --color-teal-400: #4aa5c6;
+  --color-teal-500: #2991b4;
+  --color-teal-600: #257da0;
+  --color-teal-700: #1f6883;
+  --color-teal-800: #1a5468;
+  --color-teal-900: #154255;
+
+  /* Zand (achtergrond) */
+  --color-sand-50: #ffffff;
+  --color-sand-100: #fbf6ec;
+  --color-sand-200: #f3ebda;
+  --color-sand-300: #e9dcc2;
+  --color-sand-400: #dcc9a3;
+
+  /* Diepte / inkt */
+  --color-ink-50: #eef1f2;
+  --color-ink-100: #d7dde0;
+  --color-ink-200: #aab6bc;
+  --color-ink-300: #7c8f97;
+  --color-ink-400: #46626e;
+  --color-ink-500: #1e2e38;
+  --color-ink-600: #1a2830;
+  --color-ink-700: #14232b;
+  --color-ink-800: #101c22;
+  --color-ink-900: #0c161b;
+
+  --radius-brand-sm: 16px;
+  --radius-brand: 20px;
+  --radius-brand-lg: 24px;
+
+  --ease-brand: cubic-bezier(0.22, 1, 0.36, 1);
+}
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: var(--color-sand-100);
+  --foreground: var(--color-ink-500);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+/* Zachte, gedempte scrollbar in de merkstijl (bureau-dashboard) */
+::selection {
+  background: var(--color-yellow-300);
+  color: var(--color-ink-700);
 }
