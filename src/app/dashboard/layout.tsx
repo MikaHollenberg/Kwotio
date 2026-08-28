@@ -24,7 +24,7 @@ export default async function DashboardLayout({
   const { data: organization } = profile
     ? await supabase
         .from("organizations")
-        .select("logo_horizontal_url")
+        .select("logo_horizontal_url, brand_name, terms_url")
         .eq("id", profile.organization_id)
         .single()
     : { data: null };
@@ -37,6 +37,8 @@ export default async function DashboardLayout({
           fullName={profile?.full_name ?? null}
           email={profile?.email ?? user.email ?? ""}
           showAdmin={profile?.is_super_admin ?? false}
+          organizationName={organization?.brand_name ?? null}
+          termsUrl={organization?.terms_url ?? null}
         >
           {children}
         </DashboardShell>

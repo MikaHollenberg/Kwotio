@@ -52,8 +52,16 @@ const dict = {
   agree_prefix: { nl: "Ik ga akkoord met deze offerte en met de", en: "I agree to this quote and to the" },
   terms_link: { nl: "algemene voorwaarden", en: "terms and conditions" },
   agree_suffix: {
-    nl: "van Caribbean Bar Uitgeest, en bevestig dat ik bevoegd ben deze te ondertekenen.",
-    en: "of Caribbean Bar Uitgeest, and confirm that I am authorised to sign this.",
+    nl: "van {org}, en bevestig dat ik bevoegd ben deze te ondertekenen.",
+    en: "of {org}, and confirm that I am authorised to sign this.",
+  },
+  /** Gebruikt i.p.v. agree_prefix + terms_link + agree_suffix zolang de
+   * organisatie nog geen eigen algemene voorwaarden heeft geüpload — dan
+   * wordt de voorwaarden-verwijzing volledig weggelaten (zie
+   * app/src/lib/legal.ts). */
+  agree_no_terms: {
+    nl: "Ik ga akkoord met deze offerte en bevestig dat ik bevoegd ben deze te ondertekenen.",
+    en: "I agree to this quote and confirm that I am authorised to sign this.",
   },
   confirm_and_sign: { nl: "Bevestig & onderteken", en: "Confirm & sign" },
   signing_in_progress: { nl: "Bezig met ondertekenen…", en: "Signing…" },
@@ -62,6 +70,8 @@ const dict = {
     en: "We record a timestamp, IP address and document fingerprint as legal evidence (eIDAS SES).",
   },
   sign_error_generic: { nl: "Teken je handtekening voordat je bevestigt.", en: "Please sign before confirming." },
+  headcount_label: { nl: "Aantal personen", en: "Number of people" },
+  headcount_placeholder: { nl: "bijv. 45", en: "e.g. 45" },
 
   thank_you: { nl: "Bedankt", en: "Thank you" },
   celebration_body: {
@@ -72,8 +82,8 @@ const dict = {
 
   footer_terms_prefix: { nl: "Op deze offerte zijn de", en: "This quote is subject to the" },
   footer_terms_suffix: {
-    nl: "van Caribbean Bar Uitgeest van toepassing.",
-    en: "of Caribbean Bar Uitgeest.",
+    nl: "van {org} van toepassing.",
+    en: "of {org}.",
   },
   privacy_link: { nl: "Privacybeleid", en: "Privacy policy" },
 
@@ -90,6 +100,12 @@ const dict = {
 
 export type TranslationKey = keyof typeof dict;
 
-export function t(key: TranslationKey, lang: Lang): string {
-  return dict[key][lang];
+export function t(key: TranslationKey, lang: Lang, vars?: Record<string, string>): string {
+  let str = dict[key][lang] as string;
+  if (vars) {
+    for (const [name, value] of Object.entries(vars)) {
+      str = str.replaceAll(`{${name}}`, value);
+    }
+  }
+  return str;
 }

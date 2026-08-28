@@ -19,7 +19,7 @@ import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { Button } from "@/components/ui/button";
 import { SignModal } from "@/components/signature/sign-modal";
 import { SuccessCelebration } from "@/components/signature/success-celebration";
-import { ALGEMENE_VOORWAARDEN_URL, PRIVACYBELEID_URL } from "@/lib/legal";
+import { PRIVACYBELEID_URL } from "@/lib/legal";
 import { LanguageProvider, useTranslation } from "@/lib/i18n/language-context";
 import type { Lang } from "@/lib/i18n/translations";
 import { trackView, trackSectionView, updateSelection, submitComment } from "./actions";
@@ -34,6 +34,10 @@ export function PublicQuoteView(props: {
   isExpired: boolean;
   initialLang: Lang;
   logoUrl?: string | null;
+  organizationName: string;
+  termsUrl: string | null;
+  headcountRequired: boolean;
+  headcountNote: string | null;
 }) {
   return (
     <LanguageProvider initialLang={props.initialLang}>
@@ -71,6 +75,10 @@ function PublicQuoteViewInner({
   commentsByBlock,
   isExpired,
   logoUrl,
+  organizationName,
+  termsUrl,
+  headcountRequired,
+  headcountNote,
 }: {
   token: string;
   blocks: BlockDraft[];
@@ -80,6 +88,10 @@ function PublicQuoteViewInner({
   commentsByBlock: Record<string, CommentItem[]>;
   isExpired: boolean;
   logoUrl?: string | null;
+  organizationName: string;
+  termsUrl: string | null;
+  headcountRequired: boolean;
+  headcountNote: string | null;
 }) {
   const { t } = useTranslation();
   const { packagesContent, selections, setSelections, subtotal } = useQuoteSelections(
@@ -164,17 +176,21 @@ function PublicQuoteViewInner({
         </div>
 
         <p className="px-4 py-6 text-center text-xs text-ink-400 sm:px-0">
-          {t("footer_terms_prefix")}{" "}
-          <a
-            href={ALGEMENE_VOORWAARDEN_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-teal-600 underline hover:text-teal-700"
-          >
-            {t("terms_link")}
-          </a>{" "}
-          {t("footer_terms_suffix")}
-          {" · "}
+          {termsUrl && (
+            <>
+              {t("footer_terms_prefix")}{" "}
+              <a
+                href={termsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-teal-600 underline hover:text-teal-700"
+              >
+                {t("terms_link")}
+              </a>{" "}
+              {t("footer_terms_suffix", { org: organizationName })}
+              {" · "}
+            </>
+          )}
           <a
             href={PRIVACYBELEID_URL}
             target="_blank"
@@ -239,6 +255,10 @@ function PublicQuoteViewInner({
         currency={meta.currency}
         priceDisplay={meta.priceDisplay}
         selections={selections}
+        organizationName={organizationName}
+        termsUrl={termsUrl}
+        headcountRequired={headcountRequired}
+        headcountNote={headcountNote}
       />
 
       {celebration && (

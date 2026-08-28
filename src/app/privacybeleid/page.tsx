@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
-import { ALGEMENE_VOORWAARDEN_URL } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Privacybeleid" };
 
@@ -95,11 +94,8 @@ export default function PrivacybeleidPage() {
           </p>
 
           <p>
-            Op onze offertes zijn daarnaast onze{" "}
-            <a href={ALGEMENE_VOORWAARDEN_URL} target="_blank" rel="noopener noreferrer">
-              algemene voorwaarden
-            </a>{" "}
-            van toepassing.
+            Op offertes zijn daarnaast de algemene voorwaarden van de organisatie die de offerte
+            heeft opgesteld van toepassing, zoals vermeld op de offerte zelf.
           </p>
         </div>
       </div>

@@ -30,6 +30,12 @@ export default async function QuoteEditorPage({
       : Promise.resolve({ data: null }),
   ]);
 
+  const { data: organization } = await supabase
+    .from("organizations")
+    .select("aantal_personen_actief")
+    .eq("id", profile?.organization_id ?? quote.organization_id)
+    .single();
+
   const [blocks, { data: comments }, { data: signature }, engagement] = await Promise.all([
     loadQuoteBlocks(supabase, quoteId),
     supabase.from("comments").select("*").eq("quote_id", quoteId).order("created_at", { ascending: true }),
@@ -52,6 +58,7 @@ export default async function QuoteEditorPage({
       signature={signature}
       engagement={engagement}
       organizationId={profile?.organization_id ?? quote.organization_id}
+      orgHeadcountSettingActive={organization?.aantal_personen_actief ?? false}
     />
   );
 }

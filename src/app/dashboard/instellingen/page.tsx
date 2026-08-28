@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { EmailAutomationCard, type EmailRule } from "./email-automation-card";
 import { TeamCard, type TeamMember } from "./team-card";
 import { OrganizationSettingsCard } from "./organization-settings-card";
+import { HeadcountSettingsCard } from "./headcount-settings-card";
 
 export default async function InstellingenPage() {
   const supabase = await createClient();
@@ -69,6 +70,7 @@ export default async function InstellingenPage() {
         initialLogoHorizontalUrl={organization?.logo_horizontal_url ?? null}
         initialLogoSquareUrl={organization?.logo_square_url ?? null}
         initialLogoPreference={organization?.logo_preference ?? "horizontaal"}
+        initialTermsUrl={organization?.terms_url ?? null}
         initial={{
           name: organization?.name ?? "",
           brandName: organization?.brand_name ?? "",
@@ -89,6 +91,12 @@ export default async function InstellingenPage() {
             secondaryColor: brandTheme.secondaryColor ?? "",
           },
         }}
+      />
+
+      <HeadcountSettingsCard
+        initialActief={organization?.aantal_personen_actief ?? false}
+        initialKanttekening={organization?.aantal_personen_kanttekening ?? ""}
+        canEdit={canManageOrg}
       />
 
       <EmailAutomationCard rules={emailRules} canEdit={canManageOrg} />

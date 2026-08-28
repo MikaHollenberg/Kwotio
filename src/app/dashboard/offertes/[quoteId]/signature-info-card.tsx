@@ -5,7 +5,15 @@ import { formatDate } from "@/lib/utils";
 
 type Signature = Database["public"]["Tables"]["signatures"]["Row"];
 
-export function SignatureInfoCard({ signature, shareToken }: { signature: Signature; shareToken: string }) {
+export function SignatureInfoCard({
+  signature,
+  shareToken,
+  aantalPersonen,
+}: {
+  signature: Signature;
+  shareToken: string;
+  aantalPersonen?: number | null;
+}) {
   return (
     <Card className="border-teal-200 bg-teal-50/50">
       <CardHeader>
@@ -34,6 +42,12 @@ export function SignatureInfoCard({ signature, shareToken }: { signature: Signat
               {signature.method === "canvas" ? "Getekend" : "Naam getypt"}
             </dd>
           </div>
+          {aantalPersonen != null && (
+            <div>
+              <dt className="text-ink-400">Aantal personen</dt>
+              <dd className="font-medium text-ink-500">{aantalPersonen}</dd>
+            </div>
+          )}
         </dl>
         <p className="mt-3 truncate rounded-brand-sm bg-white px-3 py-2 font-mono text-[11px] text-ink-400">
           {signature.document_hash}

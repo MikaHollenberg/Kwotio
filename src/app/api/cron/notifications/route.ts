@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
 import { reminderClientEmail, eventReminderClientEmail, expiringSoonAgencyEmail } from "@/lib/email/templates/notifications";
-import { ALGEMENE_VOORWAARDEN_URL, PRIVACYBELEID_URL } from "@/lib/legal";
+import { PRIVACYBELEID_URL } from "@/lib/legal";
 import { renderEmailTemplate } from "@/lib/email/template-vars";
 import { formatDate } from "@/lib/utils";
 
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
   const now = new Date();
   const results = { remindersSent: 0, eventRemindersSent: 0, expiringSoonNotified: 0, markedExpired: 0 };
 
-  const { data: organizations } = await supabase.from("organizations").select("id, brand_name");
+  const { data: organizations } = await supabase.from("organizations").select("id, brand_name, terms_url");
   const orgById = new Map((organizations ?? []).map((o) => [o.id, o]));
   const origin = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
 
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
                 quoteTitle: quote.title,
                 bodyText: renderEmailTemplate(rule.body, vars),
                 shareUrl: vars.link,
-                termsUrl: `${origin}${ALGEMENE_VOORWAARDEN_URL}`,
+                termsUrl: org.terms_url,
                 privacyUrl: `${origin}${PRIVACYBELEID_URL}`,
               }),
             });
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
                 quoteTitle: quote.title,
                 bodyText: renderEmailTemplate(rule.body, vars),
                 shareUrl: vars.link,
-                termsUrl: `${origin}${ALGEMENE_VOORWAARDEN_URL}`,
+                termsUrl: org.terms_url,
                 privacyUrl: `${origin}${PRIVACYBELEID_URL}`,
               }),
             });

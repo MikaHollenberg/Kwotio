@@ -42,6 +42,7 @@ export function QuoteEditor({
   signature,
   engagement,
   organizationId,
+  orgHeadcountSettingActive,
 }: {
   quote: Quote;
   client: Client;
@@ -50,6 +51,7 @@ export function QuoteEditor({
   signature: Signature | null;
   engagement: QuoteEngagement;
   organizationId: string;
+  orgHeadcountSettingActive: boolean;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(quote.title);
@@ -57,6 +59,7 @@ export function QuoteEditor({
   const [validUntil, setValidUntil] = useState(quote.valid_until ?? "");
   const [priceDisplay, setPriceDisplay] = useState<PriceDisplayMode>(quote.price_display);
   const [discountAmount, setDiscountAmount] = useState(Number(quote.discount_amount));
+  const [aantalPersonenActief, setAantalPersonenActief] = useState(quote.aantal_personen_actief);
   const [blocks, setBlocks] = useState<BlockDraft[]>(initialBlocks);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [hasTemplate, setHasTemplate] = useState(!!quote.template_id);
@@ -71,7 +74,7 @@ export function QuoteEditor({
   const [deletePending, startDeleteTransition] = useTransition();
 
   const autosaveStatus = useAutosave(
-    { title, eventDate, validUntil, priceDisplay, discountAmount, language, blocks },
+    { title, eventDate, validUntil, priceDisplay, discountAmount, language, blocks, aantalPersonenActief },
     async (value) => {
       await Promise.all([
         saveQuoteMeta(quote.id, {
@@ -81,6 +84,7 @@ export function QuoteEditor({
           priceDisplay: value.priceDisplay,
           discountAmount: value.discountAmount,
           language: value.language,
+          aantalPersonenActief: value.aantalPersonenActief,
         }),
         saveQuoteBlocksAction(quote.id, value.blocks),
       ]);
@@ -211,7 +215,9 @@ export function QuoteEditor({
         </div>
       )}
 
-      {signature && <SignatureInfoCard signature={signature} shareToken={quote.share_token} />}
+      {signature && (
+        <SignatureInfoCard signature={signature} shareToken={quote.share_token} aantalPersonen={quote.aantal_personen} />
+      )}
 
       <EngagementCard engagement={engagement} blocks={blocks} />
 
@@ -276,6 +282,19 @@ export function QuoteEditor({
             ))}
           </div>
         </FieldBox>
+        {orgHeadcountSettingActive && (
+          <FieldBox label="Aantal personen">
+            <label className="flex items-center gap-2 -ml-1 -mt-0.5">
+              <input
+                type="checkbox"
+                checked={aantalPersonenActief}
+                onChange={(e) => setAantalPersonenActief(e.target.checked)}
+                className="size-4 accent-teal-600"
+              />
+              <span className="text-sm text-ink-500">Vragen bij ondertekenen</span>
+            </label>
+          </FieldBox>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">

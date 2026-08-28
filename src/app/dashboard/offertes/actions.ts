@@ -11,7 +11,7 @@ import type { PriceDisplayMode } from "@/lib/types/database";
 import { sendEmail } from "@/lib/email/client";
 import { quoteReceivedClientEmail } from "@/lib/email/templates/notifications";
 import { quoteEditedAfterSigningClientEmail } from "@/lib/email/templates/signing";
-import { ALGEMENE_VOORWAARDEN_URL, PRIVACYBELEID_URL } from "@/lib/legal";
+import { PRIVACYBELEID_URL } from "@/lib/legal";
 import { buildTranslatedOverlays } from "@/lib/translation/build-translated-overlays";
 
 async function requireOrganization() {
@@ -73,6 +73,7 @@ export async function saveQuoteMeta(
     priceDisplay: PriceDisplayMode;
     discountAmount: number;
     language: string;
+    aantalPersonenActief: boolean;
   },
 ) {
   const { supabase } = await requireOrganization();
@@ -86,6 +87,7 @@ export async function saveQuoteMeta(
       price_display: input.priceDisplay,
       discount_amount: input.discountAmount,
       language: input.language,
+      aantal_personen_actief: input.aantalPersonenActief,
     })
     .eq("id", quoteId);
   if (error) throw error;
@@ -217,7 +219,7 @@ export async function sendQuote(quoteId: string) {
   if (quote.client_id) {
     const [{ data: client }, { data: organization }, h] = await Promise.all([
       supabase.from("clients").select("name, email").eq("id", quote.client_id).maybeSingle(),
-      supabase.from("organizations").select("brand_name").eq("id", quote.organization_id).single(),
+      supabase.from("organizations").select("brand_name, terms_url").eq("id", quote.organization_id).single(),
       headers(),
     ]);
     if (client?.email) {
@@ -231,7 +233,7 @@ export async function sendQuote(quoteId: string) {
           clientName: client.name,
           quoteTitle: quote.title,
           shareUrl,
-          termsUrl: `${origin}${ALGEMENE_VOORWAARDEN_URL}`,
+          termsUrl: organization?.terms_url ?? null,
           privacyUrl: `${origin}${PRIVACYBELEID_URL}`,
         }),
       });
@@ -287,7 +289,7 @@ export async function notifySignerOfEdit(quoteId: string) {
 
   const { data: organization } = await supabase
     .from("organizations")
-    .select("brand_name")
+    .select("brand_name, terms_url")
     .eq("id", quote.organization_id)
     .single();
 
@@ -302,7 +304,7 @@ export async function notifySignerOfEdit(quoteId: string) {
       signerName: signature.signer_name,
       quoteTitle: quote.title,
       shareUrl: `${origin}/offerte/${quote.share_token}`,
-      termsUrl: `${origin}${ALGEMENE_VOORWAARDEN_URL}`,
+      termsUrl: organization?.terms_url ?? null,
       privacyUrl: `${origin}${PRIVACYBELEID_URL}`,
     }),
   });

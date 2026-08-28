@@ -1,5 +1,5 @@
 import "server-only";
-import { Document, Page, Text, View, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Link, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 // Helvetica is een ingebouwde PDF-standaardfont (geen @react-pdf/renderer
@@ -51,9 +51,10 @@ export type CertificateData = {
   ipAddress: string;
   userAgent: string;
   documentHash: string;
-  termsUrl: string;
+  termsUrl: string | null;
   signedAt: string;
   versionNumber: number;
+  aantalPersonen: number | null;
 };
 
 function CertificateDocument({ data }: { data: CertificateData }) {
@@ -89,6 +90,12 @@ function CertificateDocument({ data }: { data: CertificateData }) {
             {formatCurrency(data.total, data.currency)} ({data.priceDisplayLabel})
           </Text>
         </View>
+        {data.aantalPersonen != null && (
+          <View style={styles.row}>
+            <Text style={styles.label}>Aantal personen</Text>
+            <Text style={styles.value}>{data.aantalPersonen}</Text>
+          </View>
+        )}
 
         <View style={styles.divider} />
 
@@ -133,11 +140,15 @@ function CertificateDocument({ data }: { data: CertificateData }) {
         <View style={styles.divider} />
 
         <Text style={{ color: "#46626E" }}>
-          Bij het plaatsen van deze handtekening heeft de ondertekenaar expliciet
-          ingestemd met de algemene voorwaarden van {data.organizationName} (zie
-          {" "}{data.termsUrl}). Dit certificaat is
-          een eenvoudige elektronische handtekening (SES) onder de
-          eIDAS-verordening (EU) nr. 910/2014.
+          Bij het plaatsen van deze handtekening heeft de ondertekenaar expliciet ingestemd met
+          deze offerte{data.termsUrl && <>{" "}en met de </>}
+          {data.termsUrl && (
+            <Link src={data.termsUrl} style={{ color: "#46626E", textDecoration: "underline" }}>
+              algemene voorwaarden
+            </Link>
+          )}
+          {data.termsUrl && ` van ${data.organizationName}`}. Dit certificaat is een eenvoudige
+          elektronische handtekening (SES) onder de eIDAS-verordening (EU) nr. 910/2014.
         </Text>
 
         <Text style={styles.footer}>

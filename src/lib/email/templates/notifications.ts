@@ -6,7 +6,7 @@ export function quoteReceivedClientEmail(input: {
   clientName: string;
   quoteTitle: string;
   shareUrl: string;
-  termsUrl: string;
+  termsUrl: string | null;
   privacyUrl: string;
 }) {
   return emailShell({
@@ -75,7 +75,7 @@ export function reminderClientEmail(input: {
   quoteTitle: string;
   bodyText: string;
   shareUrl: string;
-  termsUrl: string;
+  termsUrl: string | null;
   privacyUrl: string;
 }) {
   return emailShell({
@@ -98,7 +98,7 @@ export function eventReminderClientEmail(input: {
   quoteTitle: string;
   bodyText: string;
   shareUrl: string;
-  termsUrl: string;
+  termsUrl: string | null;
   privacyUrl: string;
 }) {
   return emailShell({

@@ -12,13 +12,14 @@ import type { PackagesBlockContent } from "@/lib/blocks/types";
 import { sendEmail } from "@/lib/email/client";
 import { signingConfirmationClientEmail, signingNotificationAgencyEmail } from "@/lib/email/templates/signing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
-import { ALGEMENE_VOORWAARDEN_URL, PRIVACYBELEID_URL } from "@/lib/legal";
+import { PRIVACYBELEID_URL } from "@/lib/legal";
 
 export type SignQuoteInput = {
   signerName: string;
   signerEmail: string;
   signatureDataUrl: string;
   selections: Selections;
+  aantalPersonen: number | null;
 };
 
 export type SignQuoteResult = { ok: true } | { ok: false; error: string };
@@ -39,6 +40,9 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
   }
   if (!input.signatureDataUrl) {
     return { ok: false, error: "Teken je handtekening voordat je bevestigt." };
+  }
+  if (quote.aantal_personen_actief && (input.aantalPersonen == null || input.aantalPersonen < 1)) {
+    return { ok: false, error: "Vul het aantal personen in voordat je bevestigt." };
   }
 
   const supabase = createAdminClient();
@@ -64,7 +68,7 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
     selections: input.selections,
     total,
     termsAccepted: true,
-    termsUrl: ALGEMENE_VOORWAARDEN_URL,
+    termsUrl: organization.terms_url,
   };
   const documentHash = hashSnapshot(snapshot);
 
@@ -128,7 +132,8 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
     documentHash,
     signedAt: new Date().toISOString(),
     versionNumber,
-    termsUrl: `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}${ALGEMENE_VOORWAARDEN_URL}`,
+    termsUrl: organization.terms_url,
+    aantalPersonen: input.aantalPersonen,
   });
 
   const certificatePath = `${quote.organization_id}/certificates/${signatureId}.pdf`;
@@ -145,6 +150,7 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
       selected_addons: input.selections.addonQuantities,
       subtotal,
       total,
+      aantal_personen: input.aantalPersonen,
     })
     .eq("id", quote.id);
 
@@ -168,7 +174,7 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
       total,
       currency: quote.currency,
       shareUrl,
-      termsUrl: `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}${ALGEMENE_VOORWAARDEN_URL}`,
+      termsUrl: organization.terms_url,
       privacyUrl: `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}${PRIVACYBELEID_URL}`,
     }),
     attachments: [{ filename: "ondertekeningscertificaat.pdf", content: certificatePdf }],

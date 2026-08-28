@@ -91,15 +91,17 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   signature: "Handtekening",
 };
 
-export const BLOCK_ORDER: BlockType[] = [
-  "cover",
-  "text",
-  "gallery",
-  "packages",
-  "timeline",
-  "terms",
-  "signature",
-];
+/**
+ * Bloktypes die via "Blok toevoegen" te kiezen zijn. "terms" en "signature"
+ * staan hier bewust niet meer in: de voorwaarden-zin (met link naar de
+ * geüploade PDF, zie app/src/lib/legal.ts) en de akkoord-en-onderteken-knop
+ * staan al altijd automatisch op de offertepagina, dus die twee blokken
+ * voegden niets toe (op verzoek van de gebruiker verwijderd als keuze).
+ * Het type zelf (BlockType) en de render-/PDF-/vertaalondersteuning ervoor
+ * blijven wel bestaan, als veiligheidsnet mocht een offerte er ooit toch een
+ * bevatten.
+ */
+export const BLOCK_ORDER: BlockType[] = ["cover", "text", "gallery", "packages", "timeline"];
 
 function uid() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto

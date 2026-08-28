@@ -61,6 +61,9 @@ export interface Database {
           logo_horizontal_url: string | null;
           logo_square_url: string | null;
           logo_preference: LogoPreference;
+          terms_url: string | null;
+          aantal_personen_actief: boolean;
+          aantal_personen_kanttekening: string | null;
           brand_theme: Record<string, unknown>;
           status: OrgStatus;
           plan: string | null;
@@ -200,6 +203,8 @@ export interface Database {
           created_by: string | null;
           sent_at: string | null;
           first_viewed_at: string | null;
+          aantal_personen_actief: boolean;
+          aantal_personen: number | null;
           created_at: string;
           updated_at: string;
         };

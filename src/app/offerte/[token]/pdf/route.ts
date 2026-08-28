@@ -5,7 +5,6 @@ import { calculateSubtotal, calculateTotal, defaultSelections, type Selections }
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
 import { renderQuotePdf } from "@/lib/quote-pdf/quote-document";
 import { resolvePreferredLogo } from "@/lib/organization/logo";
-import { ALGEMENE_VOORWAARDEN_URL } from "@/lib/legal";
 import type { PackagesBlockContent } from "@/lib/blocks/types";
 
 export async function GET(
@@ -27,7 +26,7 @@ export async function GET(
   const [{ data: organization }, { data: client }, blocks] = await Promise.all([
     supabase
       .from("organizations")
-      .select("brand_name, logo_horizontal_url, logo_square_url, logo_preference")
+      .select("brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url")
       .eq("id", quote.organization_id)
       .single(),
     quote.client_id
@@ -66,7 +65,7 @@ export async function GET(
     discountAmount,
     total,
     generatedAt: new Date().toISOString(),
-    termsUrl: `${new URL(request.url).origin}${ALGEMENE_VOORWAARDEN_URL}`,
+    termsUrl: organization?.terms_url ?? null,
   });
 
   const safeTitle = quote.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase();

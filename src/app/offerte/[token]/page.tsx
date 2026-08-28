@@ -92,6 +92,10 @@ export default async function PublicQuotePage({
       initialSelections={initialSelections}
       commentsByBlock={commentsByBlock}
       logoUrl={resolvePreferredLogo(data.organization)}
+      organizationName={data.organization.brand_name}
+      termsUrl={data.organization.terms_url}
+      headcountRequired={quote.aantal_personen_actief}
+      headcountNote={data.organization.aantal_personen_kanttekening}
       meta={{
         title: quote.title,
         clientName: client?.name ?? "",

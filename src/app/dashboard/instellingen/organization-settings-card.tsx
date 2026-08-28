@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ImageUploadField } from "@/components/builder/image-upload-field";
+import { PdfUploadField } from "@/components/builder/pdf-upload-field";
 import { Logo } from "@/components/brand/logo";
 import { cn } from "@/lib/utils";
 import type { LogoPreference } from "@/lib/types/database";
@@ -11,6 +12,7 @@ import {
   updateOrganizationSettings,
   updateOrganizationLogo,
   updateLogoPreference,
+  updateOrganizationTerms,
   type OrganizationSettingsFields,
 } from "./actions";
 
@@ -24,6 +26,7 @@ export function OrganizationSettingsCard({
   initialLogoHorizontalUrl,
   initialLogoSquareUrl,
   initialLogoPreference,
+  initialTermsUrl,
   canEdit,
 }: {
   organizationId: string;
@@ -31,12 +34,14 @@ export function OrganizationSettingsCard({
   initialLogoHorizontalUrl: string | null;
   initialLogoSquareUrl: string | null;
   initialLogoPreference: LogoPreference;
+  initialTermsUrl: string | null;
   canEdit: boolean;
 }) {
   const [fields, setFields] = useState(initial);
   const [logoHorizontalUrl, setLogoHorizontalUrl] = useState(initialLogoHorizontalUrl);
   const [logoSquareUrl, setLogoSquareUrl] = useState(initialLogoSquareUrl);
   const [logoPreference, setLogoPreference] = useState(initialLogoPreference);
+  const [termsUrl, setTermsUrl] = useState(initialTermsUrl);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -82,6 +87,18 @@ export function OrganizationSettingsCard({
             <div>
               <dt className="text-ink-400">KvK-nummer</dt>
               <dd className="font-medium text-ink-500">{fields.kvkNumber || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-400">Algemene voorwaarden</dt>
+              <dd className="font-medium text-ink-500">
+                {termsUrl ? (
+                  <a href={termsUrl} target="_blank" rel="noopener noreferrer" className="text-teal-600 underline hover:text-teal-700">
+                    Bekijk PDF
+                  </a>
+                ) : (
+                  "Nog geen algemene voorwaarden geüpload"
+                )}
+              </dd>
             </div>
           </dl>
         </CardContent>
@@ -153,6 +170,28 @@ export function OrganizationSettingsCard({
               ))}
             </div>
           </div>
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-ink-100 pt-4">
+          <span className="text-xs font-semibold text-ink-400">
+            Algemene voorwaarden (PDF) — wordt op offertes, in de PDF en in e-mails gelinkt als
+            &quot;algemene voorwaarden van {fields.brandName || "uw organisatie"}&quot;
+          </span>
+          {!termsUrl && (
+            <p className="text-xs text-ink-400">
+              Nog geen algemene voorwaarden geüpload. Zolang dit veld leeg is, wordt de verwijzing
+              naar voorwaarden op offertes, in de PDF en in e-mails weggelaten.
+            </p>
+          )}
+          <PdfUploadField
+            label="Algemene voorwaarden"
+            organizationId={organizationId}
+            value={termsUrl ?? ""}
+            onChange={(url) => {
+              setTermsUrl(url || null);
+              void updateOrganizationTerms(url);
+            }}
+          />
         </div>
 
         <form

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import type { PriceDisplayMode } from "@/lib/types/database";
 import { signQuote, type SignQuoteInput } from "@/app/offerte/[token]/sign-action";
-import { ALGEMENE_VOORWAARDEN_URL } from "@/lib/legal";
 import { useTranslation } from "@/lib/i18n/language-context";
 
 export function SignModal({
@@ -22,6 +21,10 @@ export function SignModal({
   currency,
   priceDisplay,
   selections,
+  organizationName,
+  termsUrl,
+  headcountRequired,
+  headcountNote,
 }: {
   open: boolean;
   onClose: () => void;
@@ -33,9 +36,14 @@ export function SignModal({
   currency: string;
   priceDisplay: PriceDisplayMode;
   selections: SignQuoteInput["selections"];
+  organizationName: string;
+  termsUrl: string | null;
+  headcountRequired: boolean;
+  headcountNote: string | null;
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [headcount, setHeadcount] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -44,7 +52,7 @@ export function SignModal({
 
   if (!open) return null;
 
-  const canSubmit = name.trim() && email.trim() && agreed;
+  const canSubmit = name.trim() && email.trim() && agreed && (!headcountRequired || headcount.trim());
 
   function handleSubmit() {
     setError(null);
@@ -59,6 +67,7 @@ export function SignModal({
         signerEmail: email.trim(),
         signatureDataUrl: sigRef.current!.toDataUrl(),
         selections,
+        aantalPersonen: headcount.trim() ? Number(headcount) : null,
       });
 
       if (!result.ok) {
@@ -125,6 +134,24 @@ export function SignModal({
               />
             </div>
 
+            {headcountRequired && (
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-semibold text-ink-500">
+                  {t("headcount_label")} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  value={headcount}
+                  onChange={(e) => setHeadcount(e.target.value)}
+                  type="number"
+                  min={1}
+                  required
+                  placeholder={t("headcount_placeholder")}
+                  className="h-11 rounded-brand-sm border border-ink-200 bg-white px-3.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                />
+                {headcountNote && <p className="text-[11px] text-ink-400">{headcountNote}</p>}
+              </div>
+            )}
+
             <SignaturePad ref={sigRef} />
 
             <label className="flex items-start gap-2.5 rounded-brand-sm border border-yellow-300 bg-yellow-50 px-3.5 py-3 text-xs text-ink-500">
@@ -135,17 +162,23 @@ export function SignModal({
                 className="mt-0.5 size-4 shrink-0 accent-teal-600"
               />
               <span>
-                {t("agree_prefix")}{" "}
-                <a
-                  href={ALGEMENE_VOORWAARDEN_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="font-semibold text-teal-700 underline hover:text-teal-800"
-                >
-                  {t("terms_link")}
-                </a>{" "}
-                {t("agree_suffix")}
+                {termsUrl ? (
+                  <>
+                    {t("agree_prefix")}{" "}
+                    <a
+                      href={termsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-semibold text-teal-700 underline hover:text-teal-800"
+                    >
+                      {t("terms_link")}
+                    </a>{" "}
+                    {t("agree_suffix", { org: organizationName })}
+                  </>
+                ) : (
+                  t("agree_no_terms")
+                )}
               </span>
             </label>
 

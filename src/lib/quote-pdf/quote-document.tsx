@@ -1,5 +1,5 @@
 import "server-only";
-import { Document, Page, Text, View, Image, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
+import { Document, Page, Text, View, Image, Link, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { parseHtmlNodes, type HtmlNode } from "./html-nodes";
 import type {
@@ -128,7 +128,7 @@ export type QuotePdfData = {
   discountAmount: number;
   total: number;
   generatedAt: string;
-  termsUrl: string;
+  termsUrl: string | null;
 };
 
 function Run({ run }: { run: { text: string; bold: boolean; italic: boolean } }) {
@@ -342,8 +342,17 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
         </View>
 
         <Text style={styles.footer} fixed>
-          {data.organizationName} · Op deze offerte zijn onze algemene voorwaarden van toepassing
-          ({data.termsUrl}) · Gegenereerd op {formatDate(data.generatedAt)}, kan nadien nog wijzigen.
+          {data.organizationName}
+          {data.termsUrl && (
+            <>
+              {" · Op deze offerte zijn de "}
+              <Link src={data.termsUrl} style={{ color: COLORS.footerGray, textDecoration: "underline" }}>
+                algemene voorwaarden
+              </Link>
+              {` van ${data.organizationName} van toepassing`}
+            </>
+          )}
+          {` · Gegenereerd op ${formatDate(data.generatedAt)}, kan nadien nog wijzigen.`}
         </Text>
         <Text style={styles.pageNumber} fixed render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
       </Page>

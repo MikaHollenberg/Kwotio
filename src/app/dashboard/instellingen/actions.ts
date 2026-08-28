@@ -78,6 +78,29 @@ export async function updateLogoPreference(preference: LogoPreference) {
   revalidatePath("/dashboard/instellingen");
 }
 
+export async function updateOrganizationTerms(termsUrl: string) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const { error } = await supabase
+    .from("organizations")
+    .update({ terms_url: termsUrl || null })
+    .eq("id", organizationId);
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}
+
+export async function updateHeadcountSettings(fields: { actief: boolean; kanttekening: string }) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const { error } = await supabase
+    .from("organizations")
+    .update({
+      aantal_personen_actief: fields.actief,
+      aantal_personen_kanttekening: fields.kanttekening || null,
+    })
+    .eq("id", organizationId);
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}
+
 export type EmailRuleFields = {
   name: string;
   triggerType: EmailTriggerType;

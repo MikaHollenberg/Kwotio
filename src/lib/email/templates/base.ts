@@ -6,18 +6,17 @@ export function emailShell(opts: {
   organizationName: string;
   preheader: string;
   bodyHtml: string;
-  termsUrl?: string;
+  termsUrl?: string | null;
   privacyUrl?: string;
 }) {
+  const termsSentence = opts.termsUrl
+    ? `Op deze offerte zijn de <a href="${opts.termsUrl}" style="color:#46626E;">algemene voorwaarden</a> van ${opts.organizationName} van toepassing.`
+    : "";
+  const privacyLine = opts.privacyUrl
+    ? `<a href="${opts.privacyUrl}" style="color:#46626E;">Privacybeleid</a>`
+    : "";
   const legalLine =
-    opts.termsUrl || opts.privacyUrl
-      ? `<br/>${[
-          opts.termsUrl ? `<a href="${opts.termsUrl}" style="color:#46626E;">Algemene voorwaarden</a>` : null,
-          opts.privacyUrl ? `<a href="${opts.privacyUrl}" style="color:#46626E;">Privacybeleid</a>` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")}`
-      : "";
+    termsSentence || privacyLine ? `<br/>${[termsSentence, privacyLine].filter(Boolean).join(" · ")}` : "";
 
   return `<!doctype html>
 <html lang="nl">

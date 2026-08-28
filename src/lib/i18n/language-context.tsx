@@ -20,5 +20,5 @@ export function useTranslation() {
   const ctx = useContext(LanguageContext);
   if (!ctx) throw new Error("useTranslation must be used within a LanguageProvider");
   const { lang, setLang } = ctx;
-  return { lang, setLang, t: (key: TranslationKey) => translate(key, lang) };
+  return { lang, setLang, t: (key: TranslationKey, vars?: Record<string, string>) => translate(key, lang, vars) };
 }

@@ -8,7 +8,7 @@ export function signingConfirmationClientEmail(input: {
   total: number;
   currency: string;
   shareUrl: string;
-  termsUrl: string;
+  termsUrl: string | null;
   privacyUrl: string;
 }) {
   return emailShell({
@@ -36,7 +36,7 @@ export function quoteEditedAfterSigningClientEmail(input: {
   signerName: string;
   quoteTitle: string;
   shareUrl: string;
-  termsUrl: string;
+  termsUrl: string | null;
   privacyUrl: string;
 }) {
   return emailShell({
