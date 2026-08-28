@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, Building2, ArrowLeft, ShieldCheck } from "lucide-react";
-import { OfferioMark } from "@/components/brand/offerio-mark";
+import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { APP_NAME } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +18,7 @@ export function AdminSidebar() {
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-ink-200/40 bg-white/60 px-4 py-6 lg:flex">
       <div className="mb-8 flex items-center gap-2 px-2">
-        <OfferioMark size={28} />
+        <KwotioMark size={28} />
         <span className="font-display text-lg font-semibold text-ink-500">{APP_NAME}</span>
       </div>
 

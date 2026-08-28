@@ -15,7 +15,7 @@ import { WaveDivider } from "@/components/brand/wave-divider";
 import { StatusBar } from "@/components/preview/status-bar";
 import { CommentThread, type CommentItem } from "@/components/preview/comment-thread";
 import { Logo } from "@/components/brand/logo";
-import { OfferioMark } from "@/components/brand/offerio-mark";
+import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { Button } from "@/components/ui/button";
 import { SignModal } from "@/components/signature/sign-modal";
 import { SuccessCelebration } from "@/components/signature/success-celebration";
@@ -122,7 +122,7 @@ function PublicQuoteViewInner({
       <header className="sticky top-0 z-10 border-b border-ink-200/40 bg-sand-100/90 px-4 py-3 backdrop-blur-sm sm:px-8">
         <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center justify-between gap-3">
-            {logoUrl ? <Logo height={24} logoUrl={logoUrl} /> : <OfferioMark size={24} />}
+            {logoUrl ? <Logo height={24} logoUrl={logoUrl} /> : <KwotioMark size={24} />}
             <div className="sm:hidden">
               <LanguageToggle />
             </div>

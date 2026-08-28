@@ -12,7 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
-import { OfferioMark } from "@/components/brand/offerio-mark";
+import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { cn } from "@/lib/utils";
 
 export const NAV_ITEMS = [
@@ -32,7 +32,7 @@ export function Sidebar({
   /** Horizontaal logo van de organisatie (organizations.logo_horizontal_url).
    * Altijd het horizontale logo hier, ongeacht de logo_preference van de
    * organisatie — die voorkeur geldt elders (offertepagina, PDF). Zonder
-   * eigen logo valt terug op het Offerio-platformmerk, niet op een
+   * eigen logo valt terug op het Kwotio-platformmerk, niet op een
    * specifieke klant-huisstijl. */
   logoUrl?: string | null;
 }) {
@@ -41,7 +41,7 @@ export function Sidebar({
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-ink-200/40 bg-white/60 px-4 py-6 lg:flex">
       <Link href="/dashboard" className="mb-8 px-2">
-        {logoUrl ? <Logo logoUrl={logoUrl} height={32} priority /> : <OfferioMark size={32} />}
+        {logoUrl ? <Logo logoUrl={logoUrl} height={32} priority /> : <KwotioMark size={32} />}
       </Link>
 
       <nav className="flex flex-1 flex-col gap-1">
