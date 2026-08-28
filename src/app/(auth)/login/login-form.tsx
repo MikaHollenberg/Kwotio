@@ -43,7 +43,7 @@ export function LoginForm() {
             required
             autoComplete="email"
             className="h-11 rounded-brand-sm border border-ink-200 bg-white px-3.5 text-sm text-ink-500 outline-none transition-colors duration-200 ease-brand placeholder:text-ink-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
-            placeholder="jij@feestaanhetwater.nl"
+            placeholder="jij@jouwemail.nl"
           />
         </div>
 
