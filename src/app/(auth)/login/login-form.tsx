@@ -13,6 +13,7 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/dashboard";
   const passwordChanged = searchParams.get("wachtwoord_gewijzigd") === "1";
+  const archived = searchParams.get("gearchiveerd") === "1";
 
   return (
     <div>
@@ -26,6 +27,12 @@ export function LoginForm() {
       {passwordChanged && (
         <p className="mt-4 rounded-brand-sm bg-teal-50 px-3.5 py-2.5 text-sm text-teal-700">
           Je wachtwoord is gewijzigd. Log in met je nieuwe wachtwoord.
+        </p>
+      )}
+
+      {archived && (
+        <p className="mt-4 rounded-brand-sm bg-yellow-100 px-3.5 py-2.5 text-sm text-yellow-800">
+          Deze organisatie is niet meer actief. Neem contact op als je denkt dat dit niet klopt.
         </p>
       )}
 

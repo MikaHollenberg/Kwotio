@@ -41,6 +41,33 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Gearchiveerde organisatie: geen toegang meer tot het dashboard, ook niet
+  // met een al bestaande sessie. "Geen organisatie-data terug" wordt hier
+  // bewust hetzelfde behandeld als "gearchiveerd" (fail-closed) — beide
+  // betekenen dat we actief lidmaatschap niet kunnen bevestigen.
+  if (isProtected && user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("organization_id")
+      .eq("id", user.id)
+      .single();
+
+    const { data: organization } = profile
+      ? await supabase
+          .from("organizations")
+          .select("archived_at")
+          .eq("id", profile.organization_id)
+          .single()
+      : { data: null };
+
+    if (!organization || organization.archived_at) {
+      await supabase.auth.signOut();
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("gearchiveerd", "1");
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   if (user && request.nextUrl.pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
