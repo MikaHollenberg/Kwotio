@@ -291,12 +291,13 @@ export function BlockPreview({
               {c.addons.map((addon) => {
                 const qty = selections.addonQuantities[addon.id] ?? 0;
                 const checked = qty > 0;
+                const lineTotal = addon.quantityEditable ? addon.price * (qty || 1) : addon.price;
                 return (
-                  <label
+                  <div
                     key={addon.id}
                     className="flex items-center justify-between gap-3 rounded-brand-sm border border-ink-100 px-3.5 py-3"
                   >
-                    <div className="flex items-center gap-3">
+                    <label className="flex flex-1 items-center gap-3">
                       <input
                         type="checkbox"
                         checked={checked}
@@ -305,7 +306,7 @@ export function BlockPreview({
                             ...selections,
                             addonQuantities: {
                               ...selections.addonQuantities,
-                              [addon.id]: e.target.checked ? (addon.quantityEditable ? 1 : 1) : 0,
+                              [addon.id]: e.target.checked ? (addon.quantityEditable ? addon.defaultQuantity || 1 : 1) : 0,
                             },
                           })
                         }
@@ -315,12 +316,29 @@ export function BlockPreview({
                         <p className="text-sm font-medium text-ink-500">{addon.name}</p>
                         {addon.description && <p className="text-xs text-ink-400">{addon.description}</p>}
                       </div>
+                    </label>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {addon.quantityEditable && checked && (
+                        <input
+                          type="number"
+                          min={1}
+                          value={qty}
+                          onChange={(e) => {
+                            const next = Math.max(1, Math.trunc(Number(e.target.value)) || 1);
+                            onSelectionsChange({
+                              ...selections,
+                              addonQuantities: { ...selections.addonQuantities, [addon.id]: next },
+                            });
+                          }}
+                          className="w-16 rounded-brand-sm border border-ink-200 px-2 py-1 text-right text-sm text-ink-500 outline-none focus:border-teal-400"
+                        />
+                      )}
+                      <span className="text-sm font-medium text-ink-500 whitespace-nowrap">
+                        +{priceLabel(lineTotal, meta.currency, meta.pricePerPerson && !addon.quantityEditable)}
+                        {addon.quantityEditable && !checked ? ` ${t("per_item")}` : ""}
+                      </span>
                     </div>
-                    <span className="text-sm font-medium text-ink-500">
-                      +{priceLabel(addon.price, meta.currency, meta.pricePerPerson && !addon.quantityEditable)}
-                      {addon.quantityEditable ? ` ${t("per_item")}` : ""}
-                    </span>
-                  </label>
+                  </div>
                 );
               })}
             </div>
