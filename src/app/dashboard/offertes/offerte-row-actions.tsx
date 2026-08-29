@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { QuoteStatus } from "@/lib/types/database";
@@ -12,10 +12,12 @@ export function OfferteRowActions({
   quoteId,
   title,
   status,
+  shareToken,
 }: {
   quoteId: string;
   title: string;
   status: QuoteStatus;
+  shareToken: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -35,6 +37,15 @@ export function OfferteRowActions({
 
   return (
     <div className="flex items-center justify-end gap-1">
+      <a
+        href={`/offerte/${shareToken}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Offerte bekijken zoals de klant"
+        className="flex size-8 items-center justify-center rounded-brand-sm text-ink-400 hover:bg-sand-200 hover:text-ink-500"
+      >
+        <Eye className="size-4" />
+      </a>
       <OfferteEditLink
         quoteId={quoteId}
         status={status}

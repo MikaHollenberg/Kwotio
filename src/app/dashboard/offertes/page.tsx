@@ -47,7 +47,9 @@ export default async function OffertesPage() {
   const [{ data: quotes }, { data: clients }] = await Promise.all([
     supabase
       .from("quotes")
-      .select("id, title, status, total, currency, updated_at, event_date, client_id, price_per_person, aantal_personen")
+      .select(
+        "id, title, status, total, currency, updated_at, event_date, client_id, price_per_person, aantal_personen, share_token",
+      )
       .order("updated_at", { ascending: false }),
     supabase.from("clients").select("id, name"),
   ]);
@@ -122,7 +124,7 @@ export default async function OffertesPage() {
                     />
                     <span className="text-xs text-ink-400">Gewijzigd {formatDate(q.updated_at)}</span>
                   </div>
-                  <OfferteRowActions quoteId={q.id} title={q.title} status={q.status} />
+                  <OfferteRowActions quoteId={q.id} title={q.title} status={q.status} shareToken={q.share_token} />
                 </div>
               </div>
             ))}
@@ -176,7 +178,7 @@ export default async function OffertesPage() {
                     </td>
                     <td className="px-5 py-3 text-right text-ink-400">{formatDate(q.updated_at)}</td>
                     <td className="px-5 py-3 text-right">
-                      <OfferteRowActions quoteId={q.id} title={q.title} status={q.status} />
+                      <OfferteRowActions quoteId={q.id} title={q.title} status={q.status} shareToken={q.share_token} />
                     </td>
                   </tr>
                 ))}
