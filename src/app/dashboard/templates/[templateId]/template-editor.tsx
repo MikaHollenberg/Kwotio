@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2, Smartphone, Monitor } from "lucide-react";
 import type { Database } from "@/lib/types/database";
 import type { EventType } from "@/lib/types/database";
-import type { BlockDraft } from "@/lib/blocks/types";
-import { newBlock } from "@/lib/blocks/types";
+import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
+import { newBlock, newBlockFromTemplate } from "@/lib/blocks/types";
 import { EVENT_TYPE_OPTIONS } from "@/lib/blocks/event-types";
 import { updateTemplateMeta, saveTemplateBlocksAction, deleteTemplate } from "@/app/dashboard/templates/actions";
 import { useAutosave } from "@/hooks/use-autosave";
@@ -25,16 +25,19 @@ export function TemplateEditor({
   template,
   initialBlocks,
   organizationId,
+  initialBlockTemplates,
 }: {
   template: Template;
   initialBlocks: BlockDraft[];
   organizationId: string;
+  initialBlockTemplates: BlockTemplateSummary[];
 }) {
   const router = useRouter();
   const [name, setName] = useState(template.name);
   const [eventType, setEventType] = useState<EventType>(template.event_type);
   const [isActive, setIsActive] = useState(template.is_active);
   const [blocks, setBlocks] = useState<BlockDraft[]>(initialBlocks);
+  const [blockTemplates, setBlockTemplates] = useState<BlockTemplateSummary[]>(initialBlockTemplates);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletePending, startDeleteTransition] = useTransition();
@@ -118,8 +121,18 @@ export function TemplateEditor({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">
         <div className="flex flex-col gap-3">
-          <BlockList blocks={blocks} onChange={setBlocks} organizationId={organizationId} />
-          <AddBlockMenu onAdd={(type) => setBlocks([...blocks, newBlock(type, blocks.length)])} />
+          <BlockList
+            blocks={blocks}
+            onChange={setBlocks}
+            organizationId={organizationId}
+            onTemplateSaved={(template) => setBlockTemplates([...blockTemplates, template])}
+          />
+          <AddBlockMenu
+            blockTemplates={blockTemplates}
+            onAdd={(type, template) =>
+              setBlocks([...blocks, template ? newBlockFromTemplate(template, blocks.length) : newBlock(type, blocks.length)])
+            }
+          />
         </div>
 
         <div className="xl:sticky xl:top-6 xl:self-start">

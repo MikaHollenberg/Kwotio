@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
   DndContext,
   closestCenter,
@@ -16,10 +16,12 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown, GripVertical, Trash2 } from "lucide-react";
-import type { BlockDraft } from "@/lib/blocks/types";
+import { ChevronDown, GripVertical, Trash2, BookmarkPlus } from "lucide-react";
+import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
 import { BLOCK_LABELS } from "@/lib/blocks/types";
 import { BlockEditorSwitch } from "@/components/builder/block-editor-switch";
+import { SaveAsBlockTemplateDialog } from "@/components/builder/save-as-block-template-dialog";
+import { createBlockTemplateFromContent } from "@/app/dashboard/templates/blokken/actions";
 import { cn } from "@/lib/utils";
 
 function blockSummary(block: BlockDraft): string {
@@ -34,6 +36,7 @@ function SortableBlockCard({
   onToggle,
   onContentChange,
   onDelete,
+  onSaveAsTemplate,
   organizationId,
 }: {
   block: BlockDraft;
@@ -41,6 +44,7 @@ function SortableBlockCard({
   onToggle: () => void;
   onContentChange: (content: Record<string, unknown>) => void;
   onDelete: () => void;
+  onSaveAsTemplate: () => void;
   organizationId: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -82,7 +86,16 @@ function SortableBlockCard({
 
         <button
           type="button"
+          onClick={onSaveAsTemplate}
+          title="Opslaan als blok-template"
+          className="flex size-8 shrink-0 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-sand-200 hover:text-ink-500"
+        >
+          <BookmarkPlus className="size-4" />
+        </button>
+        <button
+          type="button"
           onClick={onDelete}
+          title="Blok verwijderen"
           className="flex size-8 shrink-0 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
         >
           <Trash2 className="size-4" />
@@ -102,13 +115,32 @@ export function BlockList({
   blocks,
   onChange,
   organizationId,
+  onTemplateSaved,
 }: {
   blocks: BlockDraft[];
   onChange: (blocks: BlockDraft[]) => void;
   organizationId: string;
+  /** Aangeroepen zodra "Opslaan als blok-template" gelukt is, zodat de
+   * nieuwe template meteen in AddBlockMenu verschijnt zonder herladen. */
+  onTemplateSaved?: (template: BlockTemplateSummary) => void;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(blocks[0]?.id ?? null);
+  const [templateSourceBlock, setTemplateSourceBlock] = useState<BlockDraft | null>(null);
+  const [savePending, startSaveTransition] = useTransition();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  function handleSaveAsTemplate(name: string) {
+    if (!templateSourceBlock) return;
+    startSaveTransition(async () => {
+      const template = await createBlockTemplateFromContent({
+        name,
+        type: templateSourceBlock.type,
+        content: templateSourceBlock.content,
+      });
+      onTemplateSaved?.(template);
+      setTemplateSourceBlock(null);
+    });
+  }
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -146,11 +178,21 @@ export function BlockList({
                 onChange(blocks.map((b) => (b.id === block.id ? { ...b, content } : b)))
               }
               onDelete={() => onChange(blocks.filter((b) => b.id !== block.id).map((b, i) => ({ ...b, position: i })))}
+              onSaveAsTemplate={() => setTemplateSourceBlock(block)}
               organizationId={organizationId}
             />
           ))}
         </div>
       </SortableContext>
+
+      <SaveAsBlockTemplateDialog
+        key={templateSourceBlock?.id ?? "none"}
+        open={templateSourceBlock !== null}
+        defaultName={templateSourceBlock ? BLOCK_LABELS[templateSourceBlock.type] : ""}
+        pending={savePending}
+        onSave={handleSaveAsTemplate}
+        onCancel={() => setTemplateSourceBlock(null)}
+      />
     </DndContext>
   );
 }

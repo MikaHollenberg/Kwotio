@@ -181,6 +181,23 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["template_blocks"]["Row"]>;
         Relationships: [];
       };
+      block_templates: {
+        Row: {
+          id: string;
+          organization_id: string;
+          type: BlockType;
+          name: string;
+          content: Record<string, unknown>;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<
+          Database["public"]["Tables"]["block_templates"]["Row"]
+        > & { organization_id: string; type: BlockType; name: string };
+        Update: Partial<Database["public"]["Tables"]["block_templates"]["Row"]>;
+        Relationships: [];
+      };
       quotes: {
         Row: {
           id: string;

@@ -93,6 +93,16 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   signature: "Handtekening",
 };
 
+export const BLOCK_ICONS: Record<BlockType, string> = {
+  cover: "🖼️",
+  text: "📝",
+  gallery: "🌴",
+  packages: "💶",
+  timeline: "🕒",
+  terms: "📄",
+  signature: "✍️",
+};
+
 /**
  * Bloktypes die via "Blok toevoegen" te kiezen zijn. "terms" en "signature"
  * staan hier bewust niet meer in: de voorwaarden-zin (met link naar de
@@ -151,6 +161,68 @@ export function defaultContentFor(type: BlockType): Record<string, unknown> {
 
 export function newBlock(type: BlockType, position: number): BlockDraft {
   return { id: uid(), type, position, content: defaultContentFor(type), isNew: true };
+}
+
+/** Samenvatting van een opgeslagen blok-template, zoals gebruikt door
+ * `AddBlockMenu` en `newBlockFromTemplate`. */
+export type BlockTemplateSummary = {
+  id: string;
+  type: BlockType;
+  name: string;
+  content: Record<string, unknown>;
+};
+
+/**
+ * Regenereert alle client-gegenereerde id's in blok-content die als losse
+ * rijen/opties gelden (galerijfoto's, tijdlijn-items, pakketten/opties) —
+ * nodig omdat dezelfde blok-template op meerdere offertes toegepast kan
+ * worden. Zonder dit zouden twee offertes die dezelfde blok-template
+ * gebruiken dezelfde pakket-/optie-id's krijgen en elkaar in de weg zitten
+ * zodra ze los bewerkt worden (zie ook de upsert-op-id-architectuur in
+ * app/src/lib/blocks/persistence.ts).
+ */
+function regenerateContentIds(type: BlockType, content: Record<string, unknown>): Record<string, unknown> {
+  const cloned = JSON.parse(JSON.stringify(content)) as Record<string, unknown>;
+
+  if (type === "gallery") {
+    const c = cloned as unknown as GalleryBlockContent;
+    c.images = c.images.map((img) => ({ ...img, id: uid() }));
+    return cloned;
+  }
+
+  if (type === "timeline") {
+    const c = cloned as unknown as TimelineBlockContent;
+    c.items = c.items.map((item) => ({ ...item, id: uid() }));
+    return cloned;
+  }
+
+  if (type === "packages") {
+    const c = cloned as unknown as PackagesBlockContent;
+    const idMap = new Map<string, string>();
+    c.packages = c.packages.map((pkg) => {
+      const newId = uid();
+      idMap.set(pkg.id, newId);
+      return { ...pkg, id: newId };
+    });
+    c.addons = c.addons.map((addon) => ({
+      ...addon,
+      id: uid(),
+      packageId: addon.packageId ? (idMap.get(addon.packageId) ?? null) : null,
+    }));
+    return cloned;
+  }
+
+  return cloned;
+}
+
+export function newBlockFromTemplate(template: BlockTemplateSummary, position: number): BlockDraft {
+  return {
+    id: uid(),
+    type: template.type,
+    position,
+    content: regenerateContentIds(template.type, template.content),
+    isNew: true,
+  };
 }
 
 export function newPackage(): PackageDraft {

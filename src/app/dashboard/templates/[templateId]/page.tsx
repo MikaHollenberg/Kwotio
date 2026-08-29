@@ -25,13 +25,23 @@ export default async function TemplateEditorPage({
 
   if (!template) notFound();
 
-  const blocks = await loadTemplateBlocks(supabase, templateId);
+  const organizationId = profile?.organization_id ?? template.organization_id;
+
+  const [blocks, { data: blockTemplates }] = await Promise.all([
+    loadTemplateBlocks(supabase, templateId),
+    supabase
+      .from("block_templates")
+      .select("id, type, name, content")
+      .eq("organization_id", organizationId)
+      .order("name", { ascending: true }),
+  ]);
 
   return (
     <TemplateEditor
       template={template}
       initialBlocks={blocks}
-      organizationId={profile?.organization_id ?? template.organization_id}
+      organizationId={organizationId}
+      initialBlockTemplates={blockTemplates ?? []}
     />
   );
 }

@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { ArrowLeft, Trash2, Smartphone, Monitor, Link2, Send, Unlink, Copy, Check, Languages } from "lucide-react";
 import type { Database, PriceDisplayMode } from "@/lib/types/database";
-import type { BlockDraft } from "@/lib/blocks/types";
-import { newBlock } from "@/lib/blocks/types";
+import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
+import { newBlock, newBlockFromTemplate } from "@/lib/blocks/types";
 import {
   saveQuoteMeta,
   saveQuoteBlocksAction,
@@ -62,6 +62,7 @@ export function QuoteEditor({
   orgHeadcountSettingActive,
   organization,
   teamMembers,
+  initialBlockTemplates,
 }: {
   quote: Quote;
   client: Client;
@@ -73,6 +74,7 @@ export function QuoteEditor({
   orgHeadcountSettingActive: boolean;
   organization: OrganizationHeaderInfo;
   teamMembers: TeamMember[];
+  initialBlockTemplates: BlockTemplateSummary[];
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(quote.title);
@@ -89,6 +91,7 @@ export function QuoteEditor({
   const [clientDisplayCompany, setClientDisplayCompany] = useState(quote.client_display_company ?? "");
   const [referenceNumber, setReferenceNumber] = useState(quote.reference_number ?? "");
   const [blocks, setBlocks] = useState<BlockDraft[]>(initialBlocks);
+  const [blockTemplates, setBlockTemplates] = useState<BlockTemplateSummary[]>(initialBlockTemplates);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [hasTemplate, setHasTemplate] = useState(!!quote.template_id);
   const [status, setStatusLocal] = useState(quote.status);
@@ -430,8 +433,18 @@ export function QuoteEditor({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">
         <div className="flex flex-col gap-3">
-          <BlockList blocks={blocks} onChange={setBlocks} organizationId={organizationId} />
-          <AddBlockMenu onAdd={(type) => setBlocks([...blocks, newBlock(type, blocks.length)])} />
+          <BlockList
+            blocks={blocks}
+            onChange={setBlocks}
+            organizationId={organizationId}
+            onTemplateSaved={(template) => setBlockTemplates([...blockTemplates, template])}
+          />
+          <AddBlockMenu
+            blockTemplates={blockTemplates}
+            onAdd={(type, template) =>
+              setBlocks([...blocks, template ? newBlockFromTemplate(template, blocks.length) : newBlock(type, blocks.length)])
+            }
+          />
         </div>
 
         <div className="xl:sticky xl:top-6 xl:self-start">

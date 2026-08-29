@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ThemeIcon } from "@/components/brand/theme-icon";
 import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS } from "@/lib/blocks/event-types";
+import { TemplatesTabs } from "@/components/builder/templates-tabs";
 
 export default async function TemplatesPage() {
   const supabase = await createClient();
@@ -24,6 +25,8 @@ export default async function TemplatesPage() {
           <Plus className="size-4" /> Nieuw template
         </ButtonLink>
       </div>
+
+      <TemplatesTabs active="offertes" />
 
       {!templates || templates.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
