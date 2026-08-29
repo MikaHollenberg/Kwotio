@@ -44,6 +44,7 @@ export type CertificateData = {
   total: number;
   currency: string;
   priceDisplayLabel: string;
+  pricePerPerson?: boolean;
   signerName: string;
   signerEmail: string;
   method: "canvas" | "typed";
@@ -87,7 +88,8 @@ function CertificateDocument({ data }: { data: CertificateData }) {
         <View style={styles.row}>
           <Text style={styles.label}>Totaalbedrag</Text>
           <Text style={styles.value}>
-            {formatCurrency(data.total, data.currency)} ({data.priceDisplayLabel})
+            {formatCurrency(data.total, data.currency)}
+            {data.pricePerPerson ? " p.p." : ""} ({data.priceDisplayLabel})
           </Text>
         </View>
         {data.aantalPersonen != null && (

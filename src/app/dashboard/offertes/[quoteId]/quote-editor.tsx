@@ -79,6 +79,7 @@ export function QuoteEditor({
   const [eventDate, setEventDate] = useState(quote.event_date ?? "");
   const [validUntil, setValidUntil] = useState(quote.valid_until ?? "");
   const [priceDisplay, setPriceDisplay] = useState<PriceDisplayMode>(quote.price_display);
+  const [pricePerPerson, setPricePerPerson] = useState(quote.price_per_person);
   const [discountAmount, setDiscountAmount] = useState(Number(quote.discount_amount));
   const [aantalPersonenActief, setAantalPersonenActief] = useState(quote.aantal_personen_actief);
   const [handledByProfileId, setHandledByProfileId] = useState(quote.handled_by_profile_id ?? "");
@@ -106,6 +107,7 @@ export function QuoteEditor({
       eventDate,
       validUntil,
       priceDisplay,
+      pricePerPerson,
       discountAmount,
       language,
       blocks,
@@ -124,6 +126,7 @@ export function QuoteEditor({
           eventDate: value.eventDate || null,
           validUntil: value.validUntil || null,
           priceDisplay: value.priceDisplay,
+          pricePerPerson: value.pricePerPerson,
           discountAmount: value.discountAmount,
           language: value.language,
           aantalPersonenActief: value.aantalPersonenActief,
@@ -368,6 +371,23 @@ export function QuoteEditor({
             ))}
           </div>
         </FieldBox>
+        <FieldBox label="Weergave">
+          <div className="flex gap-1 -ml-1 -mt-0.5">
+            {([false, true] as const).map((perPerson) => (
+              <button
+                key={String(perPerson)}
+                type="button"
+                onClick={() => setPricePerPerson(perPerson)}
+                className={cn(
+                  "rounded-brand-sm px-2 py-1 text-xs font-medium transition-colors duration-200 ease-brand",
+                  pricePerPerson === perPerson ? "bg-blue-500 text-white" : "text-ink-400 hover:bg-sand-200",
+                )}
+              >
+                {perPerson ? "Per persoon" : "Totaal"}
+              </button>
+            ))}
+          </div>
+        </FieldBox>
         <FieldBox label="Korting (€)">
           <input
             type="number"
@@ -443,6 +463,7 @@ export function QuoteEditor({
                 eventDate: eventDate || null,
                 currency: quote.currency,
                 priceDisplay,
+                pricePerPerson,
                 discountAmount,
               }}
             />

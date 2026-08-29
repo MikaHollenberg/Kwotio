@@ -82,6 +82,7 @@ export async function saveQuoteMeta(
     eventDate: string | null;
     validUntil: string | null;
     priceDisplay: PriceDisplayMode;
+    pricePerPerson: boolean;
     discountAmount: number;
     language: string;
     aantalPersonenActief: boolean;
@@ -102,6 +103,7 @@ export async function saveQuoteMeta(
       event_date: input.eventDate,
       valid_until: input.validUntil,
       price_display: input.priceDisplay,
+      price_per_person: input.pricePerPerson,
       discount_amount: input.discountAmount,
       language: input.language,
       aantal_personen_actief: input.aantalPersonenActief,

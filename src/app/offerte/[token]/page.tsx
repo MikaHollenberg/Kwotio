@@ -123,6 +123,7 @@ export default async function PublicQuotePage({
         eventDate: quote.event_date,
         currency: quote.currency,
         priceDisplay: quote.price_display,
+        pricePerPerson: quote.price_per_person,
         discountAmount: Number(quote.discount_amount),
       }}
     />

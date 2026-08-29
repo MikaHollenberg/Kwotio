@@ -20,6 +20,7 @@ export function SignModal({
   total,
   currency,
   priceDisplay,
+  pricePerPerson,
   selections,
   organizationName,
   termsUrl,
@@ -35,6 +36,7 @@ export function SignModal({
   total: number;
   currency: string;
   priceDisplay: PriceDisplayMode;
+  pricePerPerson: boolean;
   selections: SignQuoteInput["selections"];
   organizationName: string;
   termsUrl: string | null;
@@ -109,7 +111,8 @@ export function SignModal({
             <div>
               <p className="text-xs text-ink-400">{selectedPackageName ?? ""}</p>
               <p className="font-display text-lg font-semibold text-ink-500">
-                {formatCurrency(total, currency)}{" "}
+                {formatCurrency(total, currency)}
+                {pricePerPerson ? " p.p." : ""}{" "}
                 <span className="text-xs font-normal text-ink-400">
                   ({t(priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
                 </span>

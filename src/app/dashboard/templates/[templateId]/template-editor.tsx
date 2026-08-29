@@ -150,6 +150,7 @@ export function TemplateEditor({
                 eventDate: null,
                 currency: "EUR",
                 priceDisplay: "incl_btw",
+                pricePerPerson: false,
                 discountAmount: 0,
               }}
             />

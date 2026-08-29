@@ -32,7 +32,15 @@ export type QuoteMeta = {
   currency: string;
   priceDisplay: PriceDisplayMode;
   discountAmount: number;
+  pricePerPerson: boolean;
 };
+
+/** "€ 45,00" of "€ 45,00 p.p." — puur een label-wissel, geen rekensom: het
+ * aantal personen is pas bekend zodra de klant tekent (feature 2), dus er
+ * kan tijdens het bekijken/kiezen van de offerte niks gedeeld worden. */
+function priceLabel(amount: number, currency: string, pricePerPerson: boolean) {
+  return `${formatCurrency(amount, currency)}${pricePerPerson ? " p.p." : ""}`;
+}
 
 export function QuotePreview({
   blocks,
@@ -100,10 +108,12 @@ function QuotePreviewInner({
           <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t border-ink-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
             <div>
               <p className="text-xs text-ink-400">
-                {t("total_label")} ({t(meta.priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
+                {t("total_label")}
+                {meta.pricePerPerson ? " p.p." : ""} ({t(meta.priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
               </p>
               <p className="font-display text-xl font-semibold text-ink-500">
                 <AnimatedPrice amount={total} currency={meta.currency} />
+                {meta.pricePerPerson ? " p.p." : ""}
               </p>
             </div>
             <Button size={mode === "mobile" ? "sm" : "md"}>{t("accept_and_sign")}</Button>
@@ -258,7 +268,7 @@ export function BlockPreview({
                     <p className="flex-1 text-sm text-ink-400">{pkg.description}</p>
                     <div className="flex items-center justify-between pt-1">
                       <span className="font-display text-xl font-semibold text-orange-600">
-                        {formatCurrency(pkg.price, meta.currency)}
+                        {priceLabel(pkg.price, meta.currency, meta.pricePerPerson)}
                       </span>
                       <span
                         className={cn(
@@ -307,7 +317,7 @@ export function BlockPreview({
                       </div>
                     </div>
                     <span className="text-sm font-medium text-ink-500">
-                      +{formatCurrency(addon.price, meta.currency)}
+                      +{priceLabel(addon.price, meta.currency, meta.pricePerPerson && !addon.quantityEditable)}
                       {addon.quantityEditable ? ` ${t("per_item")}` : ""}
                     </span>
                   </label>

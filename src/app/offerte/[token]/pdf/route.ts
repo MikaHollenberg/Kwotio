@@ -23,7 +23,7 @@ export async function GET(
   const { data: quote } = await supabase
     .from("quotes")
     .select(
-      "id, organization_id, client_id, title, currency, price_display, discount_amount, event_date, selected_packages, selected_addons, client_display_name, client_display_email, client_display_phone, client_display_company, reference_number, handled_by_profile_id",
+      "id, organization_id, client_id, title, currency, price_display, price_per_person, discount_amount, event_date, selected_packages, selected_addons, client_display_name, client_display_email, client_display_phone, client_display_company, reference_number, handled_by_profile_id",
     )
     .eq("share_token", token)
     .maybeSingle();
@@ -80,6 +80,7 @@ export async function GET(
     eventDate: quote.event_date,
     currency: quote.currency,
     priceDisplayLabel: PRICE_DISPLAY_LABELS[quote.price_display],
+    pricePerPerson: quote.price_per_person,
     blocks,
     selections,
     subtotal,

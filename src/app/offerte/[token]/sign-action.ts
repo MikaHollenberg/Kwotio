@@ -127,6 +127,7 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
     total,
     currency: quote.currency,
     priceDisplayLabel: PRICE_DISPLAY_LABELS[quote.price_display],
+    pricePerPerson: quote.price_per_person,
     signerName: input.signerName.trim(),
     signerEmail: input.signerEmail.trim(),
     method: "canvas",

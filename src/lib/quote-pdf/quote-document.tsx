@@ -137,6 +137,7 @@ export type QuotePdfData = {
   eventDate: string | null;
   currency: string;
   priceDisplayLabel: string;
+  pricePerPerson?: boolean;
   blocks: BlockDraft[];
   selections: Selections;
   subtotal: number;
@@ -315,7 +316,10 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                       <View key={pkg.id} style={[styles.packageCard, isSelected ? styles.packageCardSelected : {}]} wrap={false}>
                         <View style={styles.packageHeaderRow}>
                           <Text style={styles.packageName}>{pkg.name}</Text>
-                          <Text style={styles.packagePrice}>{formatCurrency(pkg.price, data.currency)}</Text>
+                          <Text style={styles.packagePrice}>
+                            {formatCurrency(pkg.price, data.currency)}
+                            {data.pricePerPerson ? " p.p." : ""}
+                          </Text>
                         </View>
                         {pkg.description && <Text style={styles.packageDesc}>{pkg.description}</Text>}
                         {isSelected && <Text style={styles.selectedBadge}>GESELECTEERD PAKKET</Text>}
@@ -334,7 +338,10 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                               {addon.name}
                               {addon.quantityEditable ? ` × ${qty}` : ""}
                             </Text>
-                            <Text style={styles.addonPrice}>{formatCurrency(addon.price * qty, data.currency)}</Text>
+                            <Text style={styles.addonPrice}>
+                              {formatCurrency(addon.price * qty, data.currency)}
+                              {data.pricePerPerson && !addon.quantityEditable ? " p.p." : ""}
+                            </Text>
                           </View>
                         );
                       })}
@@ -390,8 +397,13 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
             </View>
           )}
           <View style={styles.grandTotalRow}>
-            <Text style={styles.grandTotalLabel}>Totaal ({data.priceDisplayLabel})</Text>
-            <Text style={styles.grandTotalValue}>{formatCurrency(data.total, data.currency)}</Text>
+            <Text style={styles.grandTotalLabel}>
+              Totaal{data.pricePerPerson ? " p.p." : ""} ({data.priceDisplayLabel})
+            </Text>
+            <Text style={styles.grandTotalValue}>
+              {formatCurrency(data.total, data.currency)}
+              {data.pricePerPerson ? " p.p." : ""}
+            </Text>
           </View>
         </View>
 

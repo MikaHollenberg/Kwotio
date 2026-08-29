@@ -219,10 +219,12 @@ function PublicQuoteViewInner({
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
             <div>
               <p className="text-xs text-ink-400">
-                {t("total_label")} ({t(meta.priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
+                {t("total_label")}
+                {meta.pricePerPerson ? " p.p." : ""} ({t(meta.priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
               </p>
               <p className="font-display text-xl font-semibold text-ink-500">
                 <AnimatedPrice amount={total} currency={meta.currency} />
+                {meta.pricePerPerson ? " p.p." : ""}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -266,6 +268,7 @@ function PublicQuoteViewInner({
         total={total}
         currency={meta.currency}
         priceDisplay={meta.priceDisplay}
+        pricePerPerson={meta.pricePerPerson}
         selections={selections}
         organizationName={organizationName}
         termsUrl={termsUrl}
