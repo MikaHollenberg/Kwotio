@@ -19,9 +19,13 @@ import { AutosaveIndicator } from "@/components/builder/autosave-indicator";
 import { BlockList } from "@/components/builder/block-list";
 import { AddBlockMenu } from "@/components/builder/add-block-menu";
 import { QuotePreview } from "@/components/preview/quote-preview";
+import type { QuoteHeaderData } from "@/components/preview/quote-header";
+import { resolvePreferredLogo } from "@/lib/organization/logo";
 import { Button } from "@/components/ui/button";
 import { QuoteStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Field, TextInput } from "@/components/builder/field";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CommentsPanel } from "./comments-panel";
 import { SignatureInfoCard } from "./signature-info-card";
 import { EngagementCard } from "./engagement-card";
@@ -33,6 +37,19 @@ type Quote = Database["public"]["Tables"]["quotes"]["Row"];
 type Client = { id: string; name: string; email: string | null } | null;
 type Comment = Database["public"]["Tables"]["comments"]["Row"];
 type Signature = Database["public"]["Tables"]["signatures"]["Row"];
+type OrganizationHeaderInfo = Pick<
+  Database["public"]["Tables"]["organizations"]["Row"],
+  | "brand_name"
+  | "logo_horizontal_url"
+  | "logo_square_url"
+  | "logo_preference"
+  | "address"
+  | "kvk_number"
+  | "btw_number"
+  | "contact_email"
+  | "contact_phone"
+> | null;
+type TeamMember = { id: string; name: string };
 
 export function QuoteEditor({
   quote,
@@ -43,6 +60,8 @@ export function QuoteEditor({
   engagement,
   organizationId,
   orgHeadcountSettingActive,
+  organization,
+  teamMembers,
 }: {
   quote: Quote;
   client: Client;
@@ -52,6 +71,8 @@ export function QuoteEditor({
   engagement: QuoteEngagement;
   organizationId: string;
   orgHeadcountSettingActive: boolean;
+  organization: OrganizationHeaderInfo;
+  teamMembers: TeamMember[];
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(quote.title);
@@ -60,6 +81,12 @@ export function QuoteEditor({
   const [priceDisplay, setPriceDisplay] = useState<PriceDisplayMode>(quote.price_display);
   const [discountAmount, setDiscountAmount] = useState(Number(quote.discount_amount));
   const [aantalPersonenActief, setAantalPersonenActief] = useState(quote.aantal_personen_actief);
+  const [handledByProfileId, setHandledByProfileId] = useState(quote.handled_by_profile_id ?? "");
+  const [clientDisplayName, setClientDisplayName] = useState(quote.client_display_name ?? "");
+  const [clientDisplayEmail, setClientDisplayEmail] = useState(quote.client_display_email ?? "");
+  const [clientDisplayPhone, setClientDisplayPhone] = useState(quote.client_display_phone ?? "");
+  const [clientDisplayCompany, setClientDisplayCompany] = useState(quote.client_display_company ?? "");
+  const [referenceNumber, setReferenceNumber] = useState(quote.reference_number ?? "");
   const [blocks, setBlocks] = useState<BlockDraft[]>(initialBlocks);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [hasTemplate, setHasTemplate] = useState(!!quote.template_id);
@@ -74,7 +101,22 @@ export function QuoteEditor({
   const [deletePending, startDeleteTransition] = useTransition();
 
   const autosaveStatus = useAutosave(
-    { title, eventDate, validUntil, priceDisplay, discountAmount, language, blocks, aantalPersonenActief },
+    {
+      title,
+      eventDate,
+      validUntil,
+      priceDisplay,
+      discountAmount,
+      language,
+      blocks,
+      aantalPersonenActief,
+      handledByProfileId,
+      clientDisplayName,
+      clientDisplayEmail,
+      clientDisplayPhone,
+      clientDisplayCompany,
+      referenceNumber,
+    },
     async (value) => {
       await Promise.all([
         saveQuoteMeta(quote.id, {
@@ -85,11 +127,34 @@ export function QuoteEditor({
           discountAmount: value.discountAmount,
           language: value.language,
           aantalPersonenActief: value.aantalPersonenActief,
+          handledByProfileId: value.handledByProfileId || null,
+          clientDisplayName: value.clientDisplayName,
+          clientDisplayEmail: value.clientDisplayEmail,
+          clientDisplayPhone: value.clientDisplayPhone,
+          clientDisplayCompany: value.clientDisplayCompany,
+          referenceNumber: value.referenceNumber,
         }),
         saveQuoteBlocksAction(quote.id, value.blocks),
       ]);
     },
   );
+
+  const handledByName = teamMembers.find((m) => m.id === handledByProfileId)?.name ?? null;
+  const headerData: QuoteHeaderData = {
+    organizationName: organization?.brand_name ?? "",
+    organizationLogoUrl: organization ? resolvePreferredLogo(organization) : null,
+    organizationAddress: organization?.address as QuoteHeaderData["organizationAddress"],
+    organizationKvk: organization?.kvk_number ?? null,
+    organizationBtw: organization?.btw_number ?? null,
+    organizationEmail: organization?.contact_email ?? null,
+    organizationPhone: organization?.contact_phone ?? null,
+    handledByName,
+    clientName: clientDisplayName || null,
+    clientEmail: clientDisplayEmail || null,
+    clientPhone: clientDisplayPhone || null,
+    clientCompany: clientDisplayCompany || null,
+    referenceNumber: referenceNumber || null,
+  };
 
   const shareUrl =
     typeof window !== "undefined" ? `${window.location.origin}/offerte/${quote.share_token}` : "";
@@ -223,6 +288,52 @@ export function QuoteEditor({
 
       <CommentsPanel quoteId={quote.id} comments={initialComments} blocks={blocks} />
 
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Kop van de offerte</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Field label="Behandeld door">
+            <select
+              value={handledByProfileId}
+              onChange={(e) => setHandledByProfileId(e.target.value)}
+              className="h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+            >
+              <option value="">Geen</option>
+              {teamMembers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Klantnaam">
+              <TextInput value={clientDisplayName} onChange={(e) => setClientDisplayName(e.target.value)} />
+            </Field>
+            <Field label="Klant bedrijfsnaam">
+              <TextInput value={clientDisplayCompany} onChange={(e) => setClientDisplayCompany(e.target.value)} />
+            </Field>
+            <Field label="Klant e-mailadres">
+              <TextInput
+                type="email"
+                value={clientDisplayEmail}
+                onChange={(e) => setClientDisplayEmail(e.target.value)}
+              />
+            </Field>
+            <Field label="Klant telefoonnummer">
+              <TextInput value={clientDisplayPhone} onChange={(e) => setClientDisplayPhone(e.target.value)} />
+            </Field>
+            <Field label="Referentienummer (inkooporder e.d., optioneel)">
+              <TextInput value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} />
+            </Field>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <FieldBox label="Eventdatum">
           <input
@@ -325,6 +436,7 @@ export function QuoteEditor({
             <QuotePreview
               blocks={blocks}
               mode={previewMode}
+              headerData={headerData}
               meta={{
                 title,
                 clientName: client?.name ?? "",

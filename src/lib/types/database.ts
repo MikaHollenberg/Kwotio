@@ -206,6 +206,12 @@ export interface Database {
           first_viewed_at: string | null;
           aantal_personen_actief: boolean;
           aantal_personen: number | null;
+          handled_by_profile_id: string | null;
+          client_display_name: string | null;
+          client_display_email: string | null;
+          client_display_phone: string | null;
+          client_display_company: string | null;
+          reference_number: string | null;
           created_at: string;
           updated_at: string;
         };

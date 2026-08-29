@@ -17,21 +17,23 @@ export async function GET(
   const { data: quote } = await supabase
     .from("quotes")
     .select(
-      "id, organization_id, client_id, title, currency, price_display, discount_amount, event_date, selected_package_id, selected_addons",
+      "id, organization_id, client_id, title, currency, price_display, discount_amount, event_date, selected_package_id, selected_addons, client_display_name, client_display_email, client_display_phone, client_display_company, reference_number, handled_by_profile_id",
     )
     .eq("share_token", token)
     .maybeSingle();
   if (!quote) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
 
-  const [{ data: organization }, { data: client }, blocks] = await Promise.all([
+  const [{ data: organization }, { data: handledBy }, blocks] = await Promise.all([
     supabase
       .from("organizations")
-      .select("brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url")
+      .select(
+        "brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, address, kvk_number, btw_number, contact_email, contact_phone",
+      )
       .eq("id", quote.organization_id)
       .single(),
-    quote.client_id
-      ? supabase.from("clients").select("name").eq("id", quote.client_id).single()
-      : Promise.resolve({ data: null as { name: string } | null }),
+    quote.handled_by_profile_id
+      ? supabase.from("profiles").select("full_name, email").eq("id", quote.handled_by_profile_id).maybeSingle()
+      : Promise.resolve({ data: null as { full_name: string | null; email: string } | null }),
     loadQuoteBlocks(supabase, quote.id),
   ]);
 
@@ -54,8 +56,20 @@ export async function GET(
   const pdf = await renderQuotePdf({
     organizationName: organization?.brand_name ?? "Feest aan het Water",
     organizationLogoUrl: organization ? resolvePreferredLogo(organization) : null,
+    organizationAddress: organization?.address as
+      | { street?: string; postalCode?: string; city?: string; country?: string }
+      | null,
+    organizationKvk: organization?.kvk_number ?? null,
+    organizationBtw: organization?.btw_number ?? null,
+    organizationEmail: organization?.contact_email ?? null,
+    organizationPhone: organization?.contact_phone ?? null,
+    handledByName: handledBy?.full_name || handledBy?.email || null,
     quoteTitle: quote.title,
-    clientName: client?.name ?? "",
+    clientName: quote.client_display_name ?? "",
+    clientEmail: quote.client_display_email,
+    clientPhone: quote.client_display_phone,
+    clientCompany: quote.client_display_company,
+    referenceNumber: quote.reference_number,
     eventDate: quote.event_date,
     currency: quote.currency,
     priceDisplayLabel: PRICE_DISPLAY_LABELS[quote.price_display],

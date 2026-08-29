@@ -12,6 +12,7 @@ export type PublicQuoteData = {
   quote: Quote;
   organization: Organization;
   client: ClientRow | null;
+  handledByName: string | null;
   blocks: Awaited<ReturnType<typeof loadQuoteBlocks>>;
   comments: Comment[];
 };
@@ -32,18 +33,25 @@ export async function getQuoteByToken(token: string): Promise<PublicQuoteData | 
   if (quoteError) throw quoteError;
   if (!quote) return null;
 
-  const [{ data: organization, error: orgError }, { data: client, error: clientError }, { data: comments, error: commentsError }] =
-    await Promise.all([
-      supabase.from("organizations").select("*").eq("id", quote.organization_id).single(),
-      quote.client_id
-        ? supabase.from("clients").select("*").eq("id", quote.client_id).single()
-        : Promise.resolve({ data: null, error: null }),
-      supabase
-        .from("comments")
-        .select("*")
-        .eq("quote_id", quote.id)
-        .order("created_at", { ascending: true }),
-    ]);
+  const [
+    { data: organization, error: orgError },
+    { data: client, error: clientError },
+    { data: comments, error: commentsError },
+    { data: handledBy },
+  ] = await Promise.all([
+    supabase.from("organizations").select("*").eq("id", quote.organization_id).single(),
+    quote.client_id
+      ? supabase.from("clients").select("*").eq("id", quote.client_id).single()
+      : Promise.resolve({ data: null, error: null }),
+    supabase
+      .from("comments")
+      .select("*")
+      .eq("quote_id", quote.id)
+      .order("created_at", { ascending: true }),
+    quote.handled_by_profile_id
+      ? supabase.from("profiles").select("full_name, email").eq("id", quote.handled_by_profile_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
   if (orgError) throw orgError;
   if (clientError) throw clientError;
   if (commentsError) throw commentsError;
@@ -54,6 +62,7 @@ export async function getQuoteByToken(token: string): Promise<PublicQuoteData | 
     quote,
     organization: organization!,
     client: client ?? null,
+    handledByName: handledBy?.full_name ?? handledBy?.email ?? null,
     blocks,
     comments: comments ?? [],
   };

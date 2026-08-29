@@ -30,11 +30,22 @@ export default async function QuoteEditorPage({
       : Promise.resolve({ data: null }),
   ]);
 
-  const { data: organization } = await supabase
-    .from("organizations")
-    .select("aantal_personen_actief")
-    .eq("id", profile?.organization_id ?? quote.organization_id)
-    .single();
+  const organizationId = profile?.organization_id ?? quote.organization_id;
+
+  const [{ data: organization }, { data: teamMembers }] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select(
+        "aantal_personen_actief, brand_name, logo_horizontal_url, logo_square_url, logo_preference, address, kvk_number, btw_number, contact_email, contact_phone",
+      )
+      .eq("id", organizationId)
+      .single(),
+    supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .eq("organization_id", organizationId)
+      .order("full_name", { ascending: true }),
+  ]);
 
   const [blocks, { data: comments }, { data: signature }, engagement] = await Promise.all([
     loadQuoteBlocks(supabase, quoteId),
@@ -57,8 +68,10 @@ export default async function QuoteEditorPage({
       initialComments={comments ?? []}
       signature={signature}
       engagement={engagement}
-      organizationId={profile?.organization_id ?? quote.organization_id}
+      organizationId={organizationId}
       orgHeadcountSettingActive={organization?.aantal_personen_actief ?? false}
+      organization={organization ?? null}
+      teamMembers={(teamMembers ?? []).map((m) => ({ id: m.id, name: m.full_name || m.email }))}
     />
   );
 }

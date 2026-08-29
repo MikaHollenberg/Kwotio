@@ -16,6 +16,7 @@ import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
 import { useQuoteSelections } from "@/hooks/use-quote-selections";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { WaveDivider } from "@/components/brand/wave-divider";
+import { QuoteHeaderSection, type QuoteHeaderData } from "@/components/preview/quote-header";
 import { AnimatedPrice } from "@/components/preview/animated-price";
 import { SunWatermark } from "@/components/brand/sun-watermark";
 import { Button } from "@/components/ui/button";
@@ -37,16 +38,18 @@ export function QuotePreview({
   blocks,
   meta,
   mode = "desktop",
+  headerData,
 }: {
   blocks: BlockDraft[];
   meta: QuoteMeta;
   mode?: "desktop" | "mobile";
+  headerData?: QuoteHeaderData;
 }) {
   // De builder-preview is altijd Nederlands — de taalwisselaar zelf is
   // uitsluitend voor de klant-facing offertepagina (sectie 3.10).
   return (
     <LanguageProvider initialLang="nl">
-      <QuotePreviewInner blocks={blocks} meta={meta} mode={mode} />
+      <QuotePreviewInner blocks={blocks} meta={meta} mode={mode} headerData={headerData} />
     </LanguageProvider>
   );
 }
@@ -55,10 +58,12 @@ function QuotePreviewInner({
   blocks,
   meta,
   mode,
+  headerData,
 }: {
   blocks: BlockDraft[];
   meta: QuoteMeta;
   mode: "desktop" | "mobile";
+  headerData?: QuoteHeaderData;
 }) {
   const { packagesContent, selections, setSelections, subtotal } = useQuoteSelections(blocks);
   const total = calculateTotal({ subtotal, discountAmount: meta.discountAmount });
@@ -74,6 +79,7 @@ function QuotePreviewInner({
       )}
     >
       <div className="font-sans text-ink-500">
+        {headerData && <QuoteHeaderSection data={headerData} />}
         {sorted.map((block, i) => (
           <div key={block.id}>
             {i > 0 && (

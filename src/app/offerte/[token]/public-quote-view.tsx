@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { AnimatedPrice } from "@/components/preview/animated-price";
 import { BlockPreview, type QuoteMeta } from "@/components/preview/quote-preview";
 import { WaveDivider } from "@/components/brand/wave-divider";
+import { QuoteHeaderSection, type QuoteHeaderData } from "@/components/preview/quote-header";
 import { StatusBar } from "@/components/preview/status-bar";
 import { CommentThread, type CommentItem } from "@/components/preview/comment-thread";
 import { Logo } from "@/components/brand/logo";
@@ -38,6 +39,7 @@ export function PublicQuoteView(props: {
   termsUrl: string | null;
   headcountRequired: boolean;
   headcountNote: string | null;
+  headerData: QuoteHeaderData;
 }) {
   return (
     <LanguageProvider initialLang={props.initialLang}>
@@ -79,6 +81,7 @@ function PublicQuoteViewInner({
   termsUrl,
   headcountRequired,
   headcountNote,
+  headerData,
 }: {
   token: string;
   blocks: BlockDraft[];
@@ -92,6 +95,7 @@ function PublicQuoteViewInner({
   termsUrl: string | null;
   headcountRequired: boolean;
   headcountNote: string | null;
+  headerData: QuoteHeaderData;
 }) {
   const { t } = useTranslation();
   const { packagesContent, selections, setSelections, subtotal } = useQuoteSelections(
@@ -158,6 +162,7 @@ function PublicQuoteViewInner({
 
       <main className="mx-auto mt-6 max-w-3xl px-0">
         <div className="overflow-hidden bg-white shadow-sm sm:rounded-brand-lg">
+          <QuoteHeaderSection data={headerData} />
           {sorted.map((block, i) => (
             <BlockSection
               key={block.id}

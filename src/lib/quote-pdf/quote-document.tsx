@@ -112,11 +112,26 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: COLORS.footerGray,
   },
+  infoHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 18 },
+  infoBlock: { maxWidth: "48%" },
+  infoLabel: { fontSize: 7.5, fontWeight: 700, color: COLORS.footerGray, marginBottom: 3, textTransform: "uppercase" },
+  infoLine: { fontSize: 9, color: COLORS.muted },
+  infoLineStrong: { fontSize: 9.5, fontWeight: 700, color: COLORS.ink },
 });
 
 export type QuotePdfData = {
   organizationName: string;
   organizationLogoUrl?: string | null;
+  organizationAddress?: { street?: string; postalCode?: string; city?: string; country?: string } | null;
+  organizationKvk?: string | null;
+  organizationBtw?: string | null;
+  organizationEmail?: string | null;
+  organizationPhone?: string | null;
+  handledByName?: string | null;
+  clientEmail?: string | null;
+  clientPhone?: string | null;
+  clientCompany?: string | null;
+  referenceNumber?: string | null;
   quoteTitle: string;
   clientName: string;
   eventDate: string | null;
@@ -193,6 +208,45 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
             <Text style={styles.brand}>{data.organizationName}</Text>
           )}
           <Text style={styles.badge}>OFFERTE</Text>
+        </View>
+
+        <View style={styles.infoHeader}>
+          <View style={styles.infoBlock}>
+            {(data.clientName || data.clientCompany || data.clientEmail || data.clientPhone || data.referenceNumber) && (
+              <>
+                <Text style={styles.infoLabel}>Offerte voor</Text>
+                {data.clientName && <Text style={styles.infoLineStrong}>{data.clientName}</Text>}
+                {data.clientCompany && <Text style={styles.infoLine}>{data.clientCompany}</Text>}
+                {data.clientEmail && <Text style={styles.infoLine}>{data.clientEmail}</Text>}
+                {data.clientPhone && <Text style={styles.infoLine}>{data.clientPhone}</Text>}
+                {data.referenceNumber && <Text style={styles.infoLine}>Ref: {data.referenceNumber}</Text>}
+              </>
+            )}
+          </View>
+          <View style={[styles.infoBlock, { alignItems: "flex-end" }]}>
+            <Text style={[styles.infoLineStrong, { textAlign: "right" }]}>{data.organizationName}</Text>
+            {(() => {
+              const addr = data.organizationAddress;
+              const addressLine = addr
+                ? [addr.street, [addr.postalCode, addr.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")
+                : "";
+              return addressLine ? (
+                <Text style={[styles.infoLine, { textAlign: "right" }]}>{addressLine}</Text>
+              ) : null;
+            })()}
+            {(data.organizationKvk || data.organizationBtw) && (
+              <Text style={[styles.infoLine, { textAlign: "right" }]}>
+                {data.organizationKvk && `KvK ${data.organizationKvk}`}
+                {data.organizationKvk && data.organizationBtw && " · "}
+                {data.organizationBtw && `Btw ${data.organizationBtw}`}
+              </Text>
+            )}
+            {data.organizationEmail && <Text style={[styles.infoLine, { textAlign: "right" }]}>{data.organizationEmail}</Text>}
+            {data.organizationPhone && <Text style={[styles.infoLine, { textAlign: "right" }]}>{data.organizationPhone}</Text>}
+            {data.handledByName && (
+              <Text style={[styles.infoLine, { textAlign: "right", marginTop: 3 }]}>Behandeld door: {data.handledByName}</Text>
+            )}
+          </View>
         </View>
 
         {sorted.map((block) => {

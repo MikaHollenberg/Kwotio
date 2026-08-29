@@ -39,6 +39,12 @@ export async function createQuote(input: {
 }) {
   const { supabase, organizationId, userId } = await requireOrganization();
 
+  const { data: client } = await supabase
+    .from("clients")
+    .select("name, email, phone, company_name")
+    .eq("id", input.clientId)
+    .maybeSingle();
+
   const { data: quote, error } = await supabase
     .from("quotes")
     .insert({
@@ -48,6 +54,11 @@ export async function createQuote(input: {
       title: input.title,
       event_date: input.eventDate,
       created_by: userId,
+      handled_by_profile_id: userId,
+      client_display_name: client?.name ?? null,
+      client_display_email: client?.email ?? null,
+      client_display_phone: client?.phone ?? null,
+      client_display_company: client?.company_name ?? null,
     })
     .select("id")
     .single();
@@ -74,6 +85,12 @@ export async function saveQuoteMeta(
     discountAmount: number;
     language: string;
     aantalPersonenActief: boolean;
+    handledByProfileId: string | null;
+    clientDisplayName: string;
+    clientDisplayEmail: string;
+    clientDisplayPhone: string;
+    clientDisplayCompany: string;
+    referenceNumber: string;
   },
 ) {
   const { supabase } = await requireOrganization();
@@ -88,6 +105,12 @@ export async function saveQuoteMeta(
       discount_amount: input.discountAmount,
       language: input.language,
       aantal_personen_actief: input.aantalPersonenActief,
+      handled_by_profile_id: input.handledByProfileId,
+      client_display_name: input.clientDisplayName || null,
+      client_display_email: input.clientDisplayEmail || null,
+      client_display_phone: input.clientDisplayPhone || null,
+      client_display_company: input.clientDisplayCompany || null,
+      reference_number: input.referenceNumber || null,
     })
     .eq("id", quoteId);
   if (error) throw error;

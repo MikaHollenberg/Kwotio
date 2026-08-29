@@ -10,6 +10,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import type { CommentItem } from "@/components/preview/comment-thread";
 import type { Selections } from "@/lib/blocks/pricing";
 import type { Lang } from "@/lib/i18n/translations";
+import type { QuoteHeaderData } from "@/components/preview/quote-header";
 
 export async function generateMetadata({
   params,
@@ -82,6 +83,25 @@ export default async function PublicQuotePage({
 
   const isExpired = !!quote.valid_until && new Date(quote.valid_until) < new Date(new Date().toDateString());
 
+  const orgAddress = data.organization.address as
+    | { street?: string; postalCode?: string; city?: string; country?: string }
+    | null;
+  const headerData: QuoteHeaderData = {
+    organizationName: data.organization.brand_name,
+    organizationLogoUrl: resolvePreferredLogo(data.organization),
+    organizationAddress: orgAddress,
+    organizationKvk: data.organization.kvk_number,
+    organizationBtw: data.organization.btw_number,
+    organizationEmail: data.organization.contact_email,
+    organizationPhone: data.organization.contact_phone,
+    handledByName: data.handledByName,
+    clientName: quote.client_display_name,
+    clientEmail: quote.client_display_email,
+    clientPhone: quote.client_display_phone,
+    clientCompany: quote.client_display_company,
+    referenceNumber: quote.reference_number,
+  };
+
   return (
     <PublicQuoteView
       token={token}
@@ -96,6 +116,7 @@ export default async function PublicQuotePage({
       termsUrl={data.organization.terms_url}
       headcountRequired={quote.aantal_personen_actief}
       headcountNote={data.organization.aantal_personen_kanttekening}
+      headerData={headerData}
       meta={{
         title: quote.title,
         clientName: client?.name ?? "",
