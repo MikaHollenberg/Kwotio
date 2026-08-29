@@ -21,28 +21,43 @@ function decodeEntities(text: string): string {
 
 /**
  * Beperkte HTML-parser voor content uit de TipTap StarterKit-editor
- * (`rich-text-editor.tsx`): alleen p, strong/b, em/i, ul/ol/li, h1-h6, br.
- * Onbekende tags worden genegeerd (tekst blijft staan, opmaak vervalt) i.p.v.
- * te crashen — bedoeld voor @react-pdf/renderer, dat geen HTML rendert.
+ * (`rich-text-editor.tsx`): alleen p, strong/b, em/i, ul/ol/li, h1-h6, br
+ * krijgen daadwerkelijk effect. Élke andere/onbekende tag — inclusief een
+ * <p> die TipTap standaard binnen een <li> nestelt, of een geneste
+ * <ul>/<ol>/<li> van een sub-lijst — wordt hier als tag herkend en
+ * overgeslagen (tekst blijft staan, opmaak/structuur vervalt) i.p.v. te
+ * crashen. Bedoeld voor @react-pdf/renderer, dat geen HTML rendert.
+ *
+ * Belangrijk: de tag-alternatieven in tokenRe matchen bewust ELKE
+ * geldige tagnaam (niet alleen de bekende), anders herkent de regex een
+ * onbekende tag als geen-van-beide-alternatieven en valt hij terug op de
+ * tekst-groep vanaf het teken ná de "<" — dat leverde precies de kapotte
+ * "p&gt;...tekst.../p&gt;"-fragmenten op die in de PDF verschenen zodra een
+ * lijst-item zijn tekst in een <p> had staan.
  */
 function parseInlineRuns(html: string): TextRun[] {
   const runs: TextRun[] = [];
   let bold = false;
   let italic = false;
-  const tokenRe = /<(\/?)(strong|b|em|i|br)[^>]*>|([^<]+)/gi;
+  const tokenRe = /<(\/?)([a-zA-Z][\w-]*)\b[^>]*>|([^<]+)/g;
   let match: RegExpExecArray | null;
   while ((match = tokenRe.exec(html))) {
     const [, closing, tag, text] = match;
     if (text !== undefined) {
       const decoded = decodeEntities(text);
       if (decoded) runs.push({ text: decoded, bold, italic });
-    } else if (tag === "br") {
+      continue;
+    }
+    const tagName = tag.toLowerCase();
+    if (tagName === "br") {
       runs.push({ text: "\n", bold, italic });
-    } else if (tag === "strong" || tag === "b") {
+    } else if (tagName === "strong" || tagName === "b") {
       bold = !closing;
-    } else if (tag === "em" || tag === "i") {
+    } else if (tagName === "em" || tagName === "i") {
       italic = !closing;
     }
+    // Alle andere tags (p, span, div, ul, ol, li, ...) worden bewust
+    // genegeerd: overgeslagen i.p.v. als letterlijke tekst te lekken.
   }
   return runs;
 }
