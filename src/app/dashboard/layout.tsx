@@ -31,7 +31,11 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-sand-100">
-      <Sidebar showAdmin={profile?.is_super_admin ?? false} logoUrl={organization?.logo_horizontal_url} />
+      <Sidebar
+        showAdmin={profile?.is_super_admin ?? false}
+        logoUrl={organization?.logo_horizontal_url}
+        organizationName={organization?.brand_name}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         <DashboardShell
           fullName={profile?.full_name ?? null}

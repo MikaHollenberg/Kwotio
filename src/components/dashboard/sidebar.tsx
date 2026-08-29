@@ -27,6 +27,7 @@ export const NAV_ITEMS = [
 export function Sidebar({
   showAdmin = false,
   logoUrl,
+  organizationName,
 }: {
   showAdmin?: boolean;
   /** Horizontaal logo van de organisatie (organizations.logo_horizontal_url).
@@ -35,6 +36,8 @@ export function Sidebar({
    * eigen logo valt terug op het Kwotio-platformmerk, niet op een
    * specifieke klant-huisstijl. */
   logoUrl?: string | null;
+  /** organizations.brand_name — getoond onderin de sidebar. */
+  organizationName?: string | null;
 }) {
   const pathname = usePathname();
 
@@ -77,10 +80,8 @@ export function Sidebar({
         </Link>
       )}
 
-      <div className="mt-auto rounded-brand-sm bg-sand-200 px-3 py-3 text-xs text-ink-400">
-        Feest aan het Water
-        <br />
-        Caribbean Bar Uitgeest
+      <div className="mt-auto rounded-brand-sm bg-sand-200 px-3 py-3 text-xs font-medium text-ink-400">
+        {organizationName ?? "Kwotio"}
       </div>
     </aside>
   );
