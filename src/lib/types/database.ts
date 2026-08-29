@@ -127,6 +127,7 @@ export interface Database {
           phone: string | null;
           company_name: string | null;
           notes: string | null;
+          archived_at: string | null;
           created_at: string;
           updated_at: string;
         };

@@ -28,6 +28,7 @@ export async function searchClients(query: string) {
     .from("clients")
     .select("id, name, email, phone, company_name")
     .eq("organization_id", organizationId)
+    .is("archived_at", null)
     .ilike("name", `%${query}%`)
     .order("name", { ascending: true })
     .limit(10);
@@ -118,4 +119,25 @@ export async function deleteClient(clientId: string) {
   if (error) throw error;
   revalidatePath("/dashboard/klanten");
   redirect("/dashboard/klanten");
+}
+
+export async function archiveClient(clientId: string) {
+  const { supabase } = await requireOrganizationId();
+  const { error } = await supabase
+    .from("clients")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", clientId);
+  if (error) throw error;
+  revalidatePath("/dashboard/klanten");
+  revalidatePath("/dashboard/klanten/archief");
+  revalidatePath(`/dashboard/klanten/${clientId}`);
+}
+
+export async function unarchiveClient(clientId: string) {
+  const { supabase } = await requireOrganizationId();
+  const { error } = await supabase.from("clients").update({ archived_at: null }).eq("id", clientId);
+  if (error) throw error;
+  revalidatePath("/dashboard/klanten");
+  revalidatePath("/dashboard/klanten/archief");
+  revalidatePath(`/dashboard/klanten/${clientId}`);
 }

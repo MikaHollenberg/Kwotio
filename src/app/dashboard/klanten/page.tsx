@@ -1,8 +1,9 @@
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Archive } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ClientNotesButton } from "@/components/dashboard/client-notes-button";
+import { ClientRowActions } from "./client-row-actions";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default async function KlantenPage() {
@@ -11,6 +12,7 @@ export default async function KlantenPage() {
     supabase
       .from("clients")
       .select("id, name, email, phone, company_name, notes, created_at")
+      .is("archived_at", null)
       .order("name", { ascending: true }),
     supabase.from("quotes").select("client_id, total, status"),
   ]);
@@ -31,9 +33,14 @@ export default async function KlantenPage() {
           <p className="text-sm text-ink-400">Klant-CRM</p>
           <h2 className="font-display text-2xl font-semibold text-ink-500">Klanten</h2>
         </div>
-        <ButtonLink href="/dashboard/klanten/nieuw">
-          <Plus className="size-4" /> Nieuwe klant
-        </ButtonLink>
+        <div className="flex items-center gap-2">
+          <ButtonLink href="/dashboard/klanten/archief" variant="outline">
+            <Archive className="size-4" /> Gearchiveerde klanten
+          </ButtonLink>
+          <ButtonLink href="/dashboard/klanten/nieuw">
+            <Plus className="size-4" /> Nieuwe klant
+          </ButtonLink>
+        </div>
       </div>
 
       {!clients || clients.length === 0 ? (
@@ -78,7 +85,8 @@ export default async function KlantenPage() {
                   <th className="px-5 py-3 text-right">Offertes</th>
                   <th className="px-5 py-3 text-right">Geaccepteerde waarde</th>
                   <th className="px-5 py-3 text-right">Klant sinds</th>
-                  <th className="px-5 py-3 text-right"></th>
+                  <th className="px-5 py-3"></th>
+                  <th className="px-5 py-3 text-right">Acties</th>
                 </tr>
               </thead>
               <tbody>
@@ -100,6 +108,9 @@ export default async function KlantenPage() {
                       <td className="px-5 py-3 text-right text-ink-400">{formatDate(c.created_at)}</td>
                       <td className="px-5 py-3 text-right">
                         {c.notes && <ClientNotesButton clientName={c.name} notes={c.notes} />}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <ClientRowActions clientId={c.id} name={c.name} archived={false} />
                       </td>
                     </tr>
                   );

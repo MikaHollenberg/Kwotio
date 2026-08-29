@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Trash2, FileDown, Mail, Phone, Building2 } from "lucide-react";
+import { ArrowLeft, Trash2, Archive, ArchiveRestore, FileDown, Mail, Phone, Building2 } from "lucide-react";
 import type { Database } from "@/lib/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuoteStatusBadge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import { AutosaveIndicator } from "@/components/builder/autosave-indicator";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAutosave } from "@/hooks/use-autosave";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { updateClient, deleteClient } from "@/app/dashboard/klanten/actions";
+import { updateClient, deleteClient, archiveClient, unarchiveClient } from "@/app/dashboard/klanten/actions";
 
 type ClientRow = Database["public"]["Tables"]["clients"]["Row"];
 type QuoteRow = {
@@ -43,7 +43,10 @@ export function ClientDetail({
   const [companyName, setCompanyName] = useState(client.company_name ?? "");
   const [notes, setNotes] = useState(client.notes ?? "");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [deletePending, startDeleteTransition] = useTransition();
+  const [archivePending, startArchiveTransition] = useTransition();
+  const isArchived = !!client.archived_at;
   const certificateSet = new Set(quoteIdsWithCertificate);
 
   const acceptedValue = quotes
@@ -75,14 +78,51 @@ export function ClientDetail({
             </div>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
-          <Trash2 className="size-4" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {isArchived ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={archivePending}
+              title="Klant herstellen"
+              onClick={() => startArchiveTransition(() => unarchiveClient(client.id))}
+            >
+              <ArchiveRestore className="size-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={archivePending}
+              title="Klant archiveren"
+              onClick={() => setArchiveConfirmOpen(true)}
+            >
+              <Archive className="size-4" />
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
 
+        <ConfirmDialog
+          open={archiveConfirmOpen}
+          title="Klant archiveren"
+          description={`"${name}" wordt uit het standaardoverzicht gehaald. Alle gegevens en offertes blijven bestaan — je kunt dit later ongedaan maken via "Gearchiveerde klanten".`}
+          confirmLabel="Archiveren"
+          pending={archivePending}
+          onConfirm={() =>
+            startArchiveTransition(async () => {
+              await archiveClient(client.id);
+              setArchiveConfirmOpen(false);
+            })
+          }
+          onCancel={() => setArchiveConfirmOpen(false)}
+        />
         <ConfirmDialog
           open={deleteConfirmOpen}
           title="Klant verwijderen"
-          description={`Weet je zeker dat je klant "${name}" wilt verwijderen?`}
+          description={`Weet je zeker dat je klant "${name}" wilt verwijderen? Dit kan niet ongedaan gemaakt worden. Offertes van deze klant blijven bestaan, maar verliezen de koppeling met dit klantprofiel.`}
           confirmLabel="Verwijderen"
           danger
           pending={deletePending}
@@ -95,6 +135,12 @@ export function ClientDetail({
           onCancel={() => setDeleteConfirmOpen(false)}
         />
       </div>
+
+      {isArchived && (
+        <div className="rounded-brand-sm border border-yellow-200 bg-yellow-50 px-4 py-2.5 text-sm text-yellow-800">
+          Deze klant is gearchiveerd en staat niet meer in het standaardoverzicht.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1.4fr]">
         <Card>
