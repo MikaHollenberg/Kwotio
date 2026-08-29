@@ -127,7 +127,6 @@ export function ClientCombobox({
                 <input
                   value={newCompany}
                   onChange={(e) => setNewCompany(e.target.value)}
-                  placeholder="bijv. Feest aan het Water"
                   className={inputClass}
                 />
               </label>
