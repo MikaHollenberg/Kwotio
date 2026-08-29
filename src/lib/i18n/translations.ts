@@ -73,6 +73,31 @@ const dict = {
   headcount_label: { nl: "Aantal personen", en: "Number of people" },
   headcount_placeholder: { nl: "bijv. 45", en: "e.g. 45" },
 
+  request_changes: { nl: "Wijziging aanvragen", en: "Request changes" },
+  request_changes_intro: {
+    nl: "Laat weten wat je aangepast wilt hebben — het bureau neemt hierover contact met je op.",
+    en: "Let us know what you'd like changed — the agency will get in touch with you about it.",
+  },
+  request_changes_placeholder: { nl: "Wat wil je aangepast hebben?", en: "What would you like changed?" },
+  request_changes_submit: { nl: "Versturen", en: "Send" },
+  request_changes_sending: { nl: "Bezig met versturen…", en: "Sending…" },
+  request_changes_sent_title: { nl: "Verstuurd", en: "Sent" },
+  request_changes_sent_body: {
+    nl: "Je wijzigingsverzoek is verstuurd. Het bureau neemt contact met je op.",
+    en: "Your change request has been sent. The agency will get in touch with you.",
+  },
+  decline_quote: { nl: "Afwijzen", en: "Decline" },
+  decline_confirm_title: { nl: "Offerte afwijzen?", en: "Decline this quote?" },
+  decline_confirm_description: {
+    nl: "Weet je zeker dat je deze offerte wilt afwijzen? Het bureau wordt hiervan op de hoogte gesteld.",
+    en: "Are you sure you want to decline this quote? The agency will be notified.",
+  },
+  decline_confirm_button: { nl: "Ja, afwijzen", en: "Yes, decline" },
+  declined_banner: {
+    nl: "Je hebt deze offerte afgewezen. Neem contact op als je van gedachten bent veranderd.",
+    en: "You've declined this quote. Get in touch if you've changed your mind.",
+  },
+
   thank_you: { nl: "Bedankt", en: "Thank you" },
   celebration_body: {
     nl: "Je offerte is ondertekend en bevestigd. Je ontvangt een e-mail met het ondertekeningscertificaat.",

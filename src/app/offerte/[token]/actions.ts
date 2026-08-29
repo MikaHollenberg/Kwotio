@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
-import { quoteOpenedAgencyEmail, newCommentAgencyEmail } from "@/lib/email/templates/notifications";
+import { quoteOpenedAgencyEmail, quoteDeclinedAgencyEmail, newCommentAgencyEmail } from "@/lib/email/templates/notifications";
 import type { Selections } from "@/lib/blocks/pricing";
 
 const ACCESS_COOKIE_PREFIX = "qac_";
@@ -58,7 +58,7 @@ async function notifyAgency(
 async function logActivity(
   supabase: ReturnType<typeof createAdminClient>,
   quoteId: string,
-  type: "viewed" | "section_viewed" | "option_changed" | "comment_added",
+  type: "viewed" | "section_viewed" | "option_changed" | "comment_added" | "declined",
   metadata: Record<string, unknown> = {},
 ) {
   const h = await headers();
@@ -124,6 +124,32 @@ export async function trackView(token: string) {
       }),
     }));
   }
+}
+
+export async function declineQuote(token: string) {
+  const quote = await getQuoteIdByToken(token);
+  if (!quote) return;
+  if (quote.status === "geaccepteerd" || quote.status === "geweigerd") return;
+  const supabase = createAdminClient();
+
+  await supabase.from("quotes").update({ status: "geweigerd" }).eq("id", quote.id);
+  await logActivity(supabase, quote.id, "declined");
+
+  const client = quote.client_id
+    ? (await supabase.from("clients").select("name").eq("id", quote.client_id).maybeSingle()).data
+    : null;
+
+  await notifyAgency(supabase, quote, ({ organizationName, dashboardUrl }) => ({
+    subject: `${client?.name ?? "Een klant"} heeft "${quote.title}" afgewezen`,
+    html: quoteDeclinedAgencyEmail({
+      organizationName,
+      quoteTitle: quote.title,
+      clientName: client?.name ?? "Een klant",
+      dashboardUrl,
+    }),
+  }));
+
+  revalidatePath(`/offerte/${token}`);
 }
 
 export async function trackSectionView(token: string, blockId: string) {

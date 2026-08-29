@@ -39,7 +39,8 @@ export type ActivityEventType =
   | "signed"
   | "reminder_sent"
   | "downloaded_pdf"
-  | "event_reminder_sent";
+  | "event_reminder_sent"
+  | "declined";
 export type EmailTriggerType = "days_after_sent_no_reaction" | "days_before_event";
 export type SignatureMethod = "canvas" | "typed";
 export type PriceDisplayMode = "incl_btw" | "excl_btw";

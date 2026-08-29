@@ -46,6 +46,26 @@ export function quoteOpenedAgencyEmail(input: {
   });
 }
 
+export function quoteDeclinedAgencyEmail(input: {
+  organizationName: string;
+  quoteTitle: string;
+  clientName: string;
+  dashboardUrl: string;
+}) {
+  return emailShell({
+    organizationName: input.organizationName,
+    preheader: `${input.clientName} heeft "${input.quoteTitle}" afgewezen.`,
+    bodyHtml: `
+      <h1 style="font-size:20px;margin:0 0 12px;">Offerte afgewezen</h1>
+      <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
+        <strong>${input.clientName}</strong> heeft <strong>${input.quoteTitle}</strong> zojuist
+        afgewezen.
+      </p>
+      ${emailButton("Bekijk in dashboard", input.dashboardUrl)}
+    `,
+  });
+}
+
 export function newCommentAgencyEmail(input: {
   organizationName: string;
   quoteTitle: string;

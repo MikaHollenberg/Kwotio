@@ -1,4 +1,4 @@
-import { Eye, MousePointerClick, MessageCircle, PenLine, Send, ScrollText } from "lucide-react";
+import { Eye, MousePointerClick, MessageCircle, PenLine, Send, ScrollText, ThumbsDown } from "lucide-react";
 import type { ActivityEventType } from "@/lib/types/database";
 import type { RecentActivityItem } from "@/lib/stats/queries";
 
@@ -12,6 +12,7 @@ const ACTIVITY_CONFIG: Record<ActivityEventType, { label: string; icon: React.Co
   reminder_sent: { label: "herinnering verzonden", icon: Send },
   downloaded_pdf: { label: "PDF gedownload", icon: ScrollText },
   event_reminder_sent: { label: "evenement-herinnering verzonden", icon: Send },
+  declined: { label: "afgewezen", icon: ThumbsDown },
 };
 
 function timeAgo(iso: string) {

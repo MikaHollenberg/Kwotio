@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { Download } from "lucide-react";
+import { Download, MessageSquareText, ThumbsDown } from "lucide-react";
 import type { BlockDraft, PackagesBlockContent } from "@/lib/blocks/types";
 import type { Selections } from "@/lib/blocks/pricing";
 import type { QuoteStatus } from "@/lib/types/database";
@@ -20,10 +20,12 @@ import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { Button } from "@/components/ui/button";
 import { SignModal } from "@/components/signature/sign-modal";
 import { SuccessCelebration } from "@/components/signature/success-celebration";
+import { RequestChangesModal } from "@/components/preview/request-changes-modal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
 import { LanguageProvider, useTranslation } from "@/lib/i18n/language-context";
 import type { Lang } from "@/lib/i18n/translations";
-import { trackView, trackSectionView, updateSelection, submitComment } from "./actions";
+import { trackView, trackSectionView, updateSelection, submitComment, declineQuote } from "./actions";
 
 export function PublicQuoteView(props: {
   token: string;
@@ -108,9 +110,13 @@ function PublicQuoteViewInner({
   const [comments, setComments] = useState(commentsByBlock);
   const [currentStatus, setCurrentStatus] = useState(status);
   const [showSignModal, setShowSignModal] = useState(false);
+  const [showRequestChanges, setShowRequestChanges] = useState(false);
+  const [declineConfirmOpen, setDeclineConfirmOpen] = useState(false);
+  const [declinePending, setDeclinePending] = useState(false);
   const [celebration, setCelebration] = useState<{ signerName: string } | null>(null);
   const skipFirstSave = useRef(true);
   const isSigned = currentStatus === "geaccepteerd";
+  const isDeclined = currentStatus === "geweigerd";
 
   useEffect(() => {
     void trackView(token);
@@ -159,7 +165,15 @@ function PublicQuoteViewInner({
         </div>
       </header>
 
-      {isExpired && !isSigned && (
+      {isDeclined && (
+        <div className="mx-auto mt-4 max-w-3xl px-4 sm:px-0">
+          <div className="rounded-brand-sm bg-red-50 px-4 py-2.5 text-sm text-red-800">
+            {t("declined_banner")}
+          </div>
+        </div>
+      )}
+
+      {isExpired && !isSigned && !isDeclined && (
         <div className="mx-auto mt-4 max-w-3xl px-4 sm:px-0">
           <div className="rounded-brand-sm bg-yellow-100 px-4 py-2.5 text-sm text-yellow-800">
             {t("expired_banner")}
@@ -242,17 +256,60 @@ function PublicQuoteViewInner({
                 >
                   <Download className="size-4" /> {t("download_certificate")}
                 </a>
+              ) : isDeclined ? (
+                <Button disabled variant="outline">
+                  {t("status_geweigerd")}
+                </Button>
               ) : isExpired ? (
                 <Button disabled title="Deze offerte is verlopen — neem contact op voor een actuele versie">
                   Verlopen
                 </Button>
               ) : (
-                <Button onClick={() => setShowSignModal(true)}>{t("accept_and_sign")}</Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setDeclineConfirmOpen(true)}
+                    title={t("decline_quote")}
+                  >
+                    <ThumbsDown className="size-4" />
+                    <span className="hidden sm:inline">{t("decline_quote")}</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowRequestChanges(true)}
+                    title={t("request_changes")}
+                  >
+                    <MessageSquareText className="size-4" />
+                    <span className="hidden sm:inline">{t("request_changes")}</span>
+                  </Button>
+                  <Button onClick={() => setShowSignModal(true)}>{t("accept_and_sign")}</Button>
+                </>
               )}
             </div>
           </div>
         </div>
       )}
+
+      <RequestChangesModal open={showRequestChanges} onClose={() => setShowRequestChanges(false)} token={token} />
+
+      <ConfirmDialog
+        open={declineConfirmOpen}
+        title={t("decline_confirm_title")}
+        description={t("decline_confirm_description")}
+        confirmLabel={t("decline_confirm_button")}
+        cancelLabel={t("close")}
+        danger
+        pending={declinePending}
+        onConfirm={() => {
+          setDeclinePending(true);
+          void declineQuote(token).then(() => {
+            setDeclinePending(false);
+            setDeclineConfirmOpen(false);
+            setCurrentStatus("geweigerd");
+          });
+        }}
+        onCancel={() => setDeclineConfirmOpen(false)}
+      />
 
       <SignModal
         open={showSignModal}
