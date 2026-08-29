@@ -2,6 +2,7 @@ import { Plus, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ClientNotesButton } from "@/components/dashboard/client-notes-button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default async function KlantenPage() {
@@ -9,7 +10,7 @@ export default async function KlantenPage() {
   const [{ data: clients }, { data: quotes }] = await Promise.all([
     supabase
       .from("clients")
-      .select("id, name, email, phone, company_name, created_at")
+      .select("id, name, email, phone, company_name, notes, created_at")
       .order("name", { ascending: true }),
     supabase.from("quotes").select("client_id, total, status"),
   ]);
@@ -77,6 +78,7 @@ export default async function KlantenPage() {
                   <th className="px-5 py-3 text-right">Offertes</th>
                   <th className="px-5 py-3 text-right">Geaccepteerde waarde</th>
                   <th className="px-5 py-3 text-right">Klant sinds</th>
+                  <th className="px-5 py-3 text-right"></th>
                 </tr>
               </thead>
               <tbody>
@@ -96,6 +98,9 @@ export default async function KlantenPage() {
                         {stats.value > 0 ? formatCurrency(stats.value) : "—"}
                       </td>
                       <td className="px-5 py-3 text-right text-ink-400">{formatDate(c.created_at)}</td>
+                      <td className="px-5 py-3 text-right">
+                        {c.notes && <ClientNotesButton clientName={c.name} notes={c.notes} />}
+                      </td>
                     </tr>
                   );
                 })}

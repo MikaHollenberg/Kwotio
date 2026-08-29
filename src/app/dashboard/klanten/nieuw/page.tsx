@@ -39,7 +39,7 @@ export default function NieuweKlantPage() {
             <Field label="Bedrijfsnaam (optioneel)">
               <TextInput value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
             </Field>
-            <Field label="Telefoonnummer">
+            <Field label="Telefoonnummer (optioneel)">
               <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} />
             </Field>
             <Field label="Interne notities">
