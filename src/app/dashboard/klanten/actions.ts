@@ -118,7 +118,6 @@ export async function deleteClient(clientId: string) {
   const { error } = await supabase.from("clients").delete().eq("id", clientId);
   if (error) throw error;
   revalidatePath("/dashboard/klanten");
-  redirect("/dashboard/klanten");
 }
 
 export async function archiveClient(clientId: string) {
