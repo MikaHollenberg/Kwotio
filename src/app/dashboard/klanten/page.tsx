@@ -7,7 +7,10 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 export default async function KlantenPage() {
   const supabase = await createClient();
   const [{ data: clients }, { data: quotes }] = await Promise.all([
-    supabase.from("clients").select("id, name, email, phone, created_at").order("name", { ascending: true }),
+    supabase
+      .from("clients")
+      .select("id, name, email, phone, company_name, created_at")
+      .order("name", { ascending: true }),
     supabase.from("quotes").select("client_id, total, status"),
   ]);
 
@@ -50,7 +53,9 @@ export default async function KlantenPage() {
               return (
                 <a key={c.id} href={`/dashboard/klanten/${c.id}`} className="flex flex-col gap-1 p-4 hover:bg-sand-100">
                   <span className="font-medium text-ink-500">{c.name}</span>
-                  <span className="text-xs text-ink-400">{c.email || c.phone || "—"}</span>
+                  <span className="text-xs text-ink-400">
+                    {[c.company_name, c.email || c.phone].filter(Boolean).join(" · ") || "—"}
+                  </span>
                   <div className="flex items-center justify-between pt-1 text-xs text-ink-400">
                     <span>{stats.count} offertes · klant sinds {formatDate(c.created_at)}</span>
                     <span className="font-medium text-ink-500">
@@ -67,6 +72,7 @@ export default async function KlantenPage() {
               <thead>
                 <tr className="border-b border-ink-100 text-left text-xs font-semibold uppercase tracking-wide text-ink-400">
                   <th className="px-5 py-3">Naam</th>
+                  <th className="px-5 py-3">Bedrijf</th>
                   <th className="px-5 py-3">Contact</th>
                   <th className="px-5 py-3 text-right">Offertes</th>
                   <th className="px-5 py-3 text-right">Geaccepteerde waarde</th>
@@ -83,6 +89,7 @@ export default async function KlantenPage() {
                           {c.name}
                         </a>
                       </td>
+                      <td className="px-5 py-3 text-ink-400">{c.company_name || "—"}</td>
                       <td className="px-5 py-3 text-ink-400">{c.email || c.phone || "—"}</td>
                       <td className="px-5 py-3 text-right text-ink-500">{stats.count}</td>
                       <td className="px-5 py-3 text-right font-medium text-ink-500">

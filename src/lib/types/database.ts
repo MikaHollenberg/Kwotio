@@ -131,6 +131,7 @@ export interface Database {
           name: string;
           email: string | null;
           phone: string | null;
+          company_name: string | null;
           notes: string | null;
           created_at: string;
           updated_at: string;

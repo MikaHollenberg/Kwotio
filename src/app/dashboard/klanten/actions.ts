@@ -26,7 +26,7 @@ export async function searchClients(query: string) {
 
   const { data, error } = await supabase
     .from("clients")
-    .select("id, name, email, phone")
+    .select("id, name, email, phone, company_name")
     .eq("organization_id", organizationId)
     .ilike("name", `%${query}%`)
     .order("name", { ascending: true })
@@ -36,34 +36,50 @@ export async function searchClients(query: string) {
   return data ?? [];
 }
 
-export async function createClientRecord(input: { name: string; email?: string; phone?: string }) {
+export async function createClientRecord(input: { name: string; email: string; phone?: string; companyName?: string }) {
   const { supabase, organizationId } = await requireOrganizationId();
+
+  if (!input.name.trim() || !input.email.trim()) {
+    throw new Error("Naam en e-mailadres zijn verplicht.");
+  }
 
   const { data, error } = await supabase
     .from("clients")
     .insert({
       organization_id: organizationId,
       name: input.name,
-      email: input.email || null,
+      email: input.email,
       phone: input.phone || null,
+      company_name: input.companyName || null,
     })
-    .select("id, name, email, phone")
+    .select("id, name, email, phone, company_name")
     .single();
   if (error) throw error;
 
   return data;
 }
 
-export async function createClientAndRedirect(input: { name: string; email?: string; phone?: string; notes?: string }) {
+export async function createClientAndRedirect(input: {
+  name: string;
+  email: string;
+  phone?: string;
+  companyName?: string;
+  notes?: string;
+}) {
   const { supabase, organizationId } = await requireOrganizationId();
+
+  if (!input.name.trim() || !input.email.trim()) {
+    throw new Error("Naam en e-mailadres zijn verplicht.");
+  }
 
   const { data, error } = await supabase
     .from("clients")
     .insert({
       organization_id: organizationId,
       name: input.name,
-      email: input.email || null,
+      email: input.email,
       phone: input.phone || null,
+      company_name: input.companyName || null,
       notes: input.notes || null,
     })
     .select("id")
@@ -76,7 +92,7 @@ export async function createClientAndRedirect(input: { name: string; email?: str
 
 export async function updateClient(
   clientId: string,
-  input: { name: string; email: string; phone: string; notes: string },
+  input: { name: string; email: string; phone: string; companyName: string; notes: string },
 ) {
   const { supabase } = await requireOrganizationId();
 
@@ -86,6 +102,7 @@ export async function updateClient(
       name: input.name,
       email: input.email || null,
       phone: input.phone || null,
+      company_name: input.companyName || null,
       notes: input.notes || null,
     })
     .eq("id", clientId);

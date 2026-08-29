@@ -10,6 +10,7 @@ export default function NieuweKlantPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [notes, setNotes] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -26,14 +27,17 @@ export default function NieuweKlantPage() {
             className="flex flex-col gap-4"
             onSubmit={(e) => {
               e.preventDefault();
-              startTransition(() => createClientAndRedirect({ name, email, phone, notes }));
+              startTransition(() => createClientAndRedirect({ name, email, phone, companyName, notes }));
             }}
           >
             <Field label="Naam">
               <TextInput value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
             </Field>
             <Field label="E-mailadres">
-              <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <TextInput type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </Field>
+            <Field label="Bedrijfsnaam (optioneel)">
+              <TextInput value={companyName} onChange={(e) => setCompanyName(e.target.value)} />
             </Field>
             <Field label="Telefoonnummer">
               <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} />
@@ -41,7 +45,7 @@ export default function NieuweKlantPage() {
             <Field label="Interne notities">
               <TextArea value={notes} onChange={(e) => setNotes(e.target.value)} />
             </Field>
-            <Button type="submit" disabled={pending || !name} className="mt-2">
+            <Button type="submit" disabled={pending || !name || !email} className="mt-2">
               {pending ? "Bezig…" : "Klant aanmaken"}
             </Button>
           </form>

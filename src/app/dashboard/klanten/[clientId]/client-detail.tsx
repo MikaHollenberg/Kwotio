@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Trash2, FileDown, Mail, Phone } from "lucide-react";
+import { ArrowLeft, Trash2, FileDown, Mail, Phone, Building2 } from "lucide-react";
 import type { Database } from "@/lib/types/database";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuoteStatusBadge } from "@/components/ui/badge";
@@ -40,6 +40,7 @@ export function ClientDetail({
   const [name, setName] = useState(client.name);
   const [email, setEmail] = useState(client.email ?? "");
   const [phone, setPhone] = useState(client.phone ?? "");
+  const [companyName, setCompanyName] = useState(client.company_name ?? "");
   const [notes, setNotes] = useState(client.notes ?? "");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletePending, startDeleteTransition] = useTransition();
@@ -49,7 +50,7 @@ export function ClientDetail({
     .filter((q) => q.status === "geaccepteerd")
     .reduce((sum, q) => sum + Number(q.total), 0);
 
-  const status = useAutosave({ name, email, phone, notes }, async (value) => {
+  const status = useAutosave({ name, email, phone, companyName, notes }, async (value) => {
     await updateClient(client.id, value);
   });
 
@@ -116,6 +117,12 @@ export function ClientDetail({
               <div className="relative">
                 <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-300" />
                 <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} className="pl-9" />
+              </div>
+            </Field>
+            <Field label="Bedrijfsnaam">
+              <div className="relative">
+                <Building2 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-300" />
+                <TextInput value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="pl-9" />
               </div>
             </Field>
             <Field label="Interne notities">
