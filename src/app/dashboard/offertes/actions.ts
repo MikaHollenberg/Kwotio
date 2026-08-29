@@ -39,11 +39,10 @@ export async function createQuote(input: {
 }) {
   const { supabase, organizationId, userId } = await requireOrganization();
 
-  const { data: client } = await supabase
-    .from("clients")
-    .select("name, email, phone, company_name")
-    .eq("id", input.clientId)
-    .maybeSingle();
+  const [{ data: client }, { data: organization }] = await Promise.all([
+    supabase.from("clients").select("name, email, phone, company_name").eq("id", input.clientId).maybeSingle(),
+    supabase.from("organizations").select("aantal_personen_actief").eq("id", organizationId).single(),
+  ]);
 
   const { data: quote, error } = await supabase
     .from("quotes")
@@ -59,6 +58,16 @@ export async function createQuote(input: {
       client_display_email: client?.email ?? null,
       client_display_phone: client?.phone ?? null,
       client_display_company: client?.company_name ?? null,
+      // Standaardwaarden voor een nieuwe offerte — blijven per offerte gewoon
+      // aanpasbaar in de meta-balk van de editor. aantal_personen_actief volgt
+      // de organisatie-instelling: alleen aanzetten als het bureau deze
+      // functie zelf al heeft geactiveerd, anders zou de klant bij een
+      // organisatie die dit nooit aanzette opeens verplicht een aantal moeten
+      // invullen bij ondertekenen (quote.aantal_personen_actief stuurt dat
+      // rechtstreeks, los van de organisatie-instelling).
+      price_display: "excl_btw",
+      price_per_person: true,
+      aantal_personen_actief: organization?.aantal_personen_actief ?? false,
     })
     .select("id")
     .single();
