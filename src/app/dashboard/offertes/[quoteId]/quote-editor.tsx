@@ -234,7 +234,7 @@ export function QuoteEditor({
               })
             }
           >
-            <Send className="size-4" /> {sending ? "Bezig…" : "Versturen"}
+            <Send className="size-4" /> {sending ? "Bezig…" : status === "concept" ? "Offerte aanmaken" : "Versturen"}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
             <Trash2 className="size-4" />
