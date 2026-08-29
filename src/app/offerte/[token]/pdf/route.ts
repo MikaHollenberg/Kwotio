@@ -9,7 +9,7 @@ import {
   type PackagesBlockInput,
 } from "@/lib/blocks/pricing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
-import { renderQuotePdf } from "@/lib/quote-pdf/quote-document";
+import { renderQuotePdf, type QuotePdfSignatureData } from "@/lib/quote-pdf/quote-document";
 import { resolvePreferredLogo } from "@/lib/organization/logo";
 import type { PackagesBlockContent } from "@/lib/blocks/types";
 
@@ -23,7 +23,7 @@ export async function GET(
   const { data: quote } = await supabase
     .from("quotes")
     .select(
-      "id, organization_id, client_id, title, currency, price_display, price_per_person, discount_amount, event_date, selected_packages, selected_addons, client_display_name, client_display_email, client_display_phone, client_display_company, reference_number, handled_by_profile_id",
+      "id, organization_id, client_id, title, currency, price_display, price_per_person, discount_amount, event_date, selected_packages, selected_addons, client_display_name, client_display_email, client_display_phone, client_display_company, reference_number, handled_by_profile_id, status, aantal_personen",
     )
     .eq("share_token", token)
     .maybeSingle();
@@ -60,6 +60,47 @@ export async function GET(
   const discountAmount = Number(quote.discount_amount);
   const total = calculateTotal({ subtotal, discountAmount });
 
+  let signatureData: QuotePdfSignatureData | null = null;
+  if (quote.status === "geaccepteerd") {
+    const { data: signature } = await supabase
+      .from("signatures")
+      .select(
+        "signer_name, signer_email, method, signature_image_url, typed_name, ip_address, user_agent, document_hash, signed_at, quote_version_id",
+      )
+      .eq("quote_id", quote.id)
+      .order("signed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (signature) {
+      const [{ data: version }, signatureImageDataUri] = await Promise.all([
+        supabase.from("quote_versions").select("version_number").eq("id", signature.quote_version_id).maybeSingle(),
+        signature.signature_image_url
+          ? supabase.storage
+              .from("quote-documents")
+              .download(signature.signature_image_url)
+              .then(async ({ data: file }) =>
+                file ? `data:image/png;base64,${Buffer.from(await file.arrayBuffer()).toString("base64")}` : null,
+              )
+          : Promise.resolve(null),
+      ]);
+
+      signatureData = {
+        signerName: signature.signer_name,
+        signerEmail: signature.signer_email,
+        method: signature.method,
+        typedName: signature.typed_name,
+        ipAddress: signature.ip_address,
+        userAgent: signature.user_agent,
+        documentHash: signature.document_hash,
+        signedAt: signature.signed_at,
+        versionNumber: version?.version_number ?? 1,
+        signatureImageDataUri,
+        aantalPersonen: quote.aantal_personen,
+      };
+    }
+  }
+
   const pdf = await renderQuotePdf({
     organizationName: organization?.brand_name ?? "Feest aan het Water",
     organizationLogoUrl: organization ? resolvePreferredLogo(organization) : null,
@@ -88,6 +129,7 @@ export async function GET(
     total,
     generatedAt: new Date().toISOString(),
     termsUrl: organization?.terms_url ?? null,
+    signature: signatureData,
   });
 
   const safeTitle = quote.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase();

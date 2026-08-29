@@ -117,7 +117,54 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 7.5, fontWeight: 700, color: COLORS.footerGray, marginBottom: 3, textTransform: "uppercase" },
   infoLine: { fontSize: 9, color: COLORS.muted },
   infoLineStrong: { fontSize: 9.5, fontWeight: 700, color: COLORS.ink },
+  signedBadge: {
+    backgroundColor: COLORS.yellow,
+    color: COLORS.ink,
+    fontSize: 8,
+    fontWeight: 700,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 10,
+  },
+  signTitle: { fontSize: 18, fontWeight: 700, marginBottom: 4 },
+  signSubtitle: { fontSize: 10.5, color: COLORS.muted, marginBottom: 16 },
+  signSectionTitle: { fontSize: 12, fontWeight: 700, marginTop: 16, marginBottom: 8, color: COLORS.ink },
+  signRow: { flexDirection: "row", marginBottom: 5 },
+  signLabel: { width: 150, color: COLORS.muted, fontSize: 9.5 },
+  signValue: { flex: 1, fontWeight: 700, fontSize: 9.5, color: COLORS.ink },
+  signatureImageBox: {
+    borderWidth: 1,
+    borderColor: COLORS.sandBorder,
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 6,
+    marginBottom: 4,
+    alignItems: "flex-start",
+  },
+  signatureImage: { height: 70, objectFit: "contain" },
+  hashBox: {
+    backgroundColor: COLORS.sand,
+    padding: 10,
+    borderRadius: 6,
+    fontSize: 8,
+    fontFamily: "Helvetica",
+    marginTop: 4,
+  },
 });
+
+export type QuotePdfSignatureData = {
+  signerName: string;
+  signerEmail: string;
+  method: "canvas" | "typed";
+  typedName: string | null;
+  ipAddress: string;
+  userAgent: string;
+  documentHash: string;
+  signedAt: string;
+  versionNumber: number;
+  signatureImageDataUri: string | null;
+  aantalPersonen: number | null;
+};
 
 export type QuotePdfData = {
   organizationName: string;
@@ -145,6 +192,7 @@ export type QuotePdfData = {
   total: number;
   generatedAt: string;
   termsUrl: string | null;
+  signature?: QuotePdfSignatureData | null;
 };
 
 function Run({ run }: { run: { text: string; bold: boolean; italic: boolean } }) {
@@ -422,6 +470,100 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
         </Text>
         <Text style={styles.pageNumber} fixed render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
       </Page>
+
+      {data.signature && (
+        <Page size="A4" style={styles.page} wrap>
+          <View style={styles.header}>
+            {data.organizationLogoUrl ? (
+              // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer's Image is a PDF primitive, not an <img>; it has no alt prop
+              <Image src={data.organizationLogoUrl} style={styles.logo} />
+            ) : (
+              <Text style={styles.brand}>{data.organizationName}</Text>
+            )}
+            <Text style={styles.signedBadge}>DIGITAAL ONDERTEKEND</Text>
+          </View>
+
+          <Text style={styles.signTitle}>Ondertekeningsbewijs</Text>
+          <Text style={styles.signSubtitle}>
+            Aanvullend bewijs bij offerte &quot;{data.quoteTitle}&quot; — versie {data.signature.versionNumber}
+          </Text>
+
+          <Text style={styles.signSectionTitle}>Ondertekenaar</Text>
+          <View style={styles.signRow}>
+            <Text style={styles.signLabel}>Naam</Text>
+            <Text style={styles.signValue}>{data.signature.signerName}</Text>
+          </View>
+          <View style={styles.signRow}>
+            <Text style={styles.signLabel}>E-mailadres</Text>
+            <Text style={styles.signValue}>{data.signature.signerEmail}</Text>
+          </View>
+          <View style={styles.signRow}>
+            <Text style={styles.signLabel}>Methode</Text>
+            <Text style={styles.signValue}>
+              {data.signature.method === "canvas"
+                ? "Getekende handtekening (canvas)"
+                : `Getypte naam: "${data.signature.typedName}"`}
+            </Text>
+          </View>
+          <View style={styles.signRow}>
+            <Text style={styles.signLabel}>Tijdstempel</Text>
+            <Text style={styles.signValue}>
+              {formatDate(data.signature.signedAt)} {new Date(data.signature.signedAt).toLocaleTimeString("nl-NL")}
+            </Text>
+          </View>
+          <View style={styles.signRow}>
+            <Text style={styles.signLabel}>IP-adres</Text>
+            <Text style={styles.signValue}>{data.signature.ipAddress}</Text>
+          </View>
+          <View style={styles.signRow}>
+            <Text style={styles.signLabel}>User-agent</Text>
+            <Text style={styles.signValue}>{data.signature.userAgent}</Text>
+          </View>
+          {data.signature.aantalPersonen != null && (
+            <View style={styles.signRow}>
+              <Text style={styles.signLabel}>Aantal personen</Text>
+              <Text style={styles.signValue}>{data.signature.aantalPersonen}</Text>
+            </View>
+          )}
+
+          {data.signature.signatureImageDataUri && (
+            <View style={styles.signatureImageBox} wrap={false}>
+              {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer's Image is a PDF primitive, not an <img>; it has no alt prop */}
+              <Image src={data.signature.signatureImageDataUri} style={styles.signatureImage} />
+            </View>
+          )}
+
+          <View style={styles.divider} />
+
+          <Text style={styles.signSectionTitle}>Documentintegriteit</Text>
+          <Text style={styles.paragraph}>
+            Onderstaande cryptografische hash (SHA-256) is berekend over de exacte inhoud van de
+            offerte op het moment van ondertekenen. Elke latere wijziging aan de offerte-inhoud is
+            hiermee aantoonbaar.
+          </Text>
+          <Text style={styles.hashBox}>{data.signature.documentHash}</Text>
+
+          <View style={styles.divider} />
+
+          <Text style={styles.paragraph}>
+            Bij het plaatsen van deze handtekening heeft de ondertekenaar expliciet ingestemd met
+            deze offerte{data.termsUrl && <>{" "}en met de </>}
+            {data.termsUrl && (
+              <Link src={data.termsUrl} style={{ color: COLORS.muted, textDecoration: "underline" }}>
+                algemene voorwaarden
+              </Link>
+            )}
+            {data.termsUrl && ` van ${data.organizationName}`}. Dit certificaat is een eenvoudige
+            elektronische handtekening (SES) onder de eIDAS-verordening (EU) nr. 910/2014.
+          </Text>
+
+          <Text style={styles.footer} fixed>
+            {data.organizationName}
+            {` · Gegenereerd op ${formatDate(data.generatedAt)}.`}
+          </Text>
+          <Text style={styles.pageNumber} fixed render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+        </Page>
+      )}
     </Document>
   );
 }
