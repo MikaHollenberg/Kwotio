@@ -1,6 +1,13 @@
-import { FileDown, TrendingUp, TrendingDown, Clock3 } from "lucide-react";
+import { FileDown, TrendingUp, TrendingDown, Clock3, Users, Trophy, CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getPipeline, getMonthlySeries, getTemplatePerformance } from "@/lib/stats/queries";
+import {
+  getPipeline,
+  getMonthlySeries,
+  getTemplatePerformance,
+  getExpectedGuestsThisMonth,
+  getPopularPackageThisMonth,
+  getBusiestDayThisMonth,
+} from "@/lib/stats/queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PipelineStatusChart } from "@/components/dashboard/pipeline-status-chart";
 import { GrowthComparison } from "@/components/dashboard/growth-comparison";
@@ -22,11 +29,39 @@ export default async function StatistiekenPage() {
     .single();
   const organizationId = profile!.organization_id;
 
-  const [pipeline, monthlySeries, templatePerformance] = await Promise.all([
+  const [pipeline, monthlySeries, templatePerformance, expectedGuests, popularPackage, busiestDay] = await Promise.all([
     getPipeline(supabase, organizationId),
     getMonthlySeries(supabase, organizationId),
     getTemplatePerformance(supabase, organizationId),
+    getExpectedGuestsThisMonth(supabase, organizationId),
+    getPopularPackageThisMonth(supabase, organizationId),
+    getBusiestDayThisMonth(supabase, organizationId),
   ]);
+
+  const busiestDayLabel = busiestDay
+    ? new Date(busiestDay.date).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })
+    : null;
+
+  const funStats = [
+    {
+      label: "Verwachte gasten deze maand",
+      icon: Users,
+      value: expectedGuests > 0 ? String(expectedGuests) : "—",
+      accent: "bg-blue-50 text-blue-600",
+    },
+    {
+      label: "Populairste pakket deze maand",
+      icon: Trophy,
+      value: popularPackage ? `${popularPackage.name} (${popularPackage.count}×)` : "Nog geen keuzes",
+      accent: "bg-yellow-50 text-yellow-700",
+    },
+    {
+      label: "Drukste dag deze maand",
+      icon: CalendarDays,
+      value: busiestDay ? `${busiestDayLabel} (${busiestDay.count} events)` : "Nog geen events",
+      accent: "bg-emerald-50 text-emerald-600",
+    },
+  ];
 
   const exportRows = Object.entries(pipeline).flatMap(([status, quotes]) =>
     quotes.map((q) => ({
@@ -100,6 +135,22 @@ export default async function StatistiekenPage() {
           <GrowthComparison series={monthlySeries} />
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {funStats.map(({ label, icon: Icon, value, accent }) => (
+          <Card key={label}>
+            <CardContent className="flex items-center gap-4">
+              <div className={`flex size-11 shrink-0 items-center justify-center rounded-brand-sm ${accent}`}>
+                <Icon className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-ink-400">{label}</p>
+                <p className="truncate font-display text-xl font-semibold text-ink-500">{value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <Card>
         <CardHeader>

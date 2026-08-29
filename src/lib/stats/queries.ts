@@ -90,6 +90,130 @@ export async function getDashboardKpis(supabase: Client, organizationId: string)
 }
 
 // ---------------------------------------------------------------------------
+// "Leuke" maand-statistieken (dashboard-overzicht + statistiekenpagina) —
+// populairste pakket, verwachte gasten en drukste dag deze maand. Alle drie
+// tellen alleen geaccepteerde offertes mee: een concept/verstuurde offerte
+// zegt nog niets over wat een klant daadwerkelijk kiest of wanneer een event
+// echt doorgaat.
+// ---------------------------------------------------------------------------
+
+export type PopularPackage = { name: string; count: number };
+
+export async function getPopularPackageThisMonth(
+  supabase: Client,
+  organizationId: string,
+): Promise<PopularPackage | null> {
+  const { data: quotes } = await supabase
+    .from("quotes")
+    .select("id, selected_packages")
+    .eq("organization_id", organizationId)
+    .eq("status", "geaccepteerd");
+  if (!quotes || quotes.length === 0) return null;
+
+  const { data: signatures } = await supabase
+    .from("signatures")
+    .select("quote_id, signed_at")
+    .in(
+      "quote_id",
+      quotes.map((q) => q.id),
+    );
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const signedThisMonthQuoteIds = new Set(
+    (signatures ?? []).filter((s) => new Date(s.signed_at) >= startOfMonth).map((s) => s.quote_id),
+  );
+  if (signedThisMonthQuoteIds.size === 0) return null;
+
+  const packageIds = new Set<string>();
+  for (const q of quotes) {
+    if (!signedThisMonthQuoteIds.has(q.id)) continue;
+    const selected = (q.selected_packages as Record<string, string | null>) ?? {};
+    for (const packageId of Object.values(selected)) {
+      if (packageId) packageIds.add(packageId);
+    }
+  }
+  if (packageIds.size === 0) return null;
+
+  // Elk pakket krijgt zijn eigen database-id per offerte (ook pakketten met
+  // dezelfde naam, bv. uit hetzelfde template) — tellen op id zou "populair"
+  // dus nooit over meerdere offertes heen kunnen meten. Aggregeer daarom op
+  // naam.
+  const { data: packages } = await supabase.from("quote_packages").select("id, name").in("id", [...packageIds]);
+  const nameById = new Map((packages ?? []).map((p) => [p.id, p.name]));
+
+  const nameCounts = new Map<string, number>();
+  for (const q of quotes) {
+    if (!signedThisMonthQuoteIds.has(q.id)) continue;
+    const selected = (q.selected_packages as Record<string, string | null>) ?? {};
+    for (const packageId of Object.values(selected)) {
+      const name = packageId ? nameById.get(packageId) : undefined;
+      if (!name) continue;
+      nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1);
+    }
+  }
+  if (nameCounts.size === 0) return null;
+
+  const [name, count] = [...nameCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+  return { name, count };
+}
+
+/**
+ * Som van `aantal_personen` van geaccepteerde offertes met een evenement
+ * deze maand — dus gebaseerd op wanneer het event plaatsvindt, niet wanneer
+ * ondertekend is. Offertes zonder ingevuld aantal (functie staat uit, of nog
+ * niet ondertekend) tellen niet mee.
+ */
+export async function getExpectedGuestsThisMonth(supabase: Client, organizationId: string): Promise<number> {
+  const { data } = await supabase
+    .from("quotes")
+    .select("aantal_personen, event_date")
+    .eq("organization_id", organizationId)
+    .eq("status", "geaccepteerd")
+    .not("event_date", "is", null)
+    .not("aantal_personen", "is", null);
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  return (data ?? [])
+    .filter((q) => {
+      const eventDate = new Date(q.event_date as string);
+      return eventDate >= startOfMonth && eventDate < startOfNextMonth;
+    })
+    .reduce((sum, q) => sum + (q.aantal_personen ?? 0), 0);
+}
+
+/** De kalenderdag met de meeste geaccepteerde events deze maand. */
+export type BusiestDay = { date: string; count: number };
+
+export async function getBusiestDayThisMonth(supabase: Client, organizationId: string): Promise<BusiestDay | null> {
+  const { data } = await supabase
+    .from("quotes")
+    .select("event_date")
+    .eq("organization_id", organizationId)
+    .eq("status", "geaccepteerd")
+    .not("event_date", "is", null);
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+  const countsByDate = new Map<string, number>();
+  for (const q of data ?? []) {
+    const dateStr = q.event_date as string;
+    const eventDate = new Date(dateStr);
+    if (eventDate < startOfMonth || eventDate >= startOfNextMonth) continue;
+    countsByDate.set(dateStr, (countsByDate.get(dateStr) ?? 0) + 1);
+  }
+  if (countsByDate.size === 0) return null;
+
+  const [date, count] = [...countsByDate.entries()].sort((a, b) => b[1] - a[1])[0];
+  return { date, count };
+}
+
+// ---------------------------------------------------------------------------
 // Template-prestaties (statistiekenpagina) — populariteit + conversie per
 // template. Alleen offertes die vanuit een template gestart zijn tellen mee
 // (template_id niet null) — losse/custom offertes horen hier bewust niet bij.

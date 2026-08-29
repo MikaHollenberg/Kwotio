@@ -1,11 +1,11 @@
-import { FileText, TrendingUp, Clock, Euro } from "lucide-react";
+import { FileText, TrendingUp, Clock, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
-import { getDashboardKpis, getRecentActivity, getUpcomingEvents } from "@/lib/stats/queries";
+import { getDashboardKpis, getPopularPackageThisMonth, getRecentActivity, getUpcomingEvents } from "@/lib/stats/queries";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { EventsCalendar } from "@/components/dashboard/events-calendar";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 
 export default async function DashboardOverviewPage() {
   const supabase = await createClient();
@@ -19,8 +19,9 @@ export default async function DashboardOverviewPage() {
     .single();
   const organizationId = profile!.organization_id;
 
-  const [kpis, recentActivity, upcomingEvents] = await Promise.all([
+  const [kpis, popularPackage, recentActivity, upcomingEvents] = await Promise.all([
     getDashboardKpis(supabase, organizationId),
+    getPopularPackageThisMonth(supabase, organizationId),
     getRecentActivity(supabase, organizationId),
     getUpcomingEvents(supabase, organizationId),
   ]);
@@ -37,7 +38,11 @@ export default async function DashboardOverviewPage() {
       icon: Clock,
       value: kpis.avgDaysToAccept === null ? "—" : `${kpis.avgDaysToAccept.toFixed(1)}d`,
     },
-    { label: "Pipeline-waarde", icon: Euro, value: formatCurrency(kpis.pipelineValue) },
+    {
+      label: "Populairste pakket deze maand",
+      icon: Trophy,
+      value: popularPackage ? `${popularPackage.name} (${popularPackage.count}×)` : "Nog geen keuzes deze maand",
+    },
   ];
 
   return (
