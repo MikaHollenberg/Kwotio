@@ -2,26 +2,25 @@
 
 import { useState } from "react";
 import type { BlockDraft, PackagesBlockContent } from "@/lib/blocks/types";
-import { defaultSelections, calculateSubtotal, type Selections } from "@/lib/blocks/pricing";
+import { defaultSelections, calculateSubtotal, type Selections, type PackagesBlockInput } from "@/lib/blocks/pricing";
 
 export function useQuoteSelections(blocks: BlockDraft[], initial?: Selections) {
-  const packagesBlock = blocks.find((b) => b.type === "packages");
-  const packagesContent = packagesBlock?.content as PackagesBlockContent | undefined;
+  const packagesBlocks = blocks.filter((b) => b.type === "packages");
+  const blocksInput: PackagesBlockInput[] = packagesBlocks.map((b) => {
+    const content = b.content as PackagesBlockContent;
+    return { blockId: b.id, packages: content.packages, addons: content.addons };
+  });
 
-  const key = `${packagesBlock?.id ?? ""}:${packagesContent?.packages.length ?? 0}:${packagesContent?.addons.length ?? 0}`;
+  const key = blocksInput.map((b) => `${b.blockId}:${b.packages.length}:${b.addons.length}`).join("|");
   const [resolvedKey, setResolvedKey] = useState(key);
-  const [selections, setSelections] = useState<Selections>(
-    () => initial ?? defaultSelections(packagesContent?.packages ?? [], packagesContent?.addons ?? []),
-  );
+  const [selections, setSelections] = useState<Selections>(() => initial ?? defaultSelections(blocksInput));
 
   if (key !== resolvedKey) {
     setResolvedKey(key);
-    setSelections(defaultSelections(packagesContent?.packages ?? [], packagesContent?.addons ?? []));
+    setSelections(defaultSelections(blocksInput));
   }
 
-  const subtotal = packagesContent
-    ? calculateSubtotal(packagesContent.packages, packagesContent.addons, selections)
-    : 0;
+  const subtotal = calculateSubtotal(blocksInput, selections);
 
-  return { packagesBlock, packagesContent, selections, setSelections, subtotal };
+  return { packagesBlocks, blocksInput, selections, setSelections, subtotal };
 }

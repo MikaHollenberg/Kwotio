@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getQuoteByToken } from "@/lib/public-quote/data";
 import { hashSnapshot } from "@/lib/signing/hash";
 import { renderCertificatePdf } from "@/lib/signing/pdf-certificate";
-import { calculateSubtotal, calculateTotal, type Selections } from "@/lib/blocks/pricing";
+import { calculateSubtotal, calculateTotal, type Selections, type PackagesBlockInput } from "@/lib/blocks/pricing";
 import type { PackagesBlockContent } from "@/lib/blocks/types";
 import { sendEmail } from "@/lib/email/client";
 import { signingConfirmationClientEmail, signingNotificationAgencyEmail } from "@/lib/email/templates/signing";
@@ -50,13 +50,17 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
   const ipAddress = h.get("x-forwarded-for") ?? "onbekend";
   const userAgent = h.get("user-agent") ?? "onbekend";
 
-  const packagesBlock = blocks.find((b) => b.type === "packages");
-  const packagesContent = packagesBlock?.content as PackagesBlockContent | undefined;
-  const subtotal = packagesContent
-    ? calculateSubtotal(packagesContent.packages, packagesContent.addons, input.selections)
-    : 0;
+  const packagesBlocksInput: PackagesBlockInput[] = blocks
+    .filter((b) => b.type === "packages")
+    .map((b) => {
+      const content = b.content as PackagesBlockContent;
+      return { blockId: b.id, packages: content.packages, addons: content.addons };
+    });
+  const subtotal = calculateSubtotal(packagesBlocksInput, input.selections);
   const total = calculateTotal({ subtotal, discountAmount: Number(quote.discount_amount) });
-  const selectedPackage = packagesContent?.packages.find((p) => p.id === input.selections.packageId);
+  const selectedPackageNames = packagesBlocksInput
+    .map((b) => b.packages.find((p) => p.id === input.selections.packageIdByBlock[b.blockId])?.name)
+    .filter((name): name is string => !!name);
 
   const snapshot = {
     quoteId: quote.id,
@@ -119,7 +123,7 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
     organizationName: organization.brand_name,
     quoteTitle: quote.title,
     clientName: client?.name ?? input.signerName,
-    selectedPackageName: selectedPackage?.name ?? null,
+    selectedPackageName: selectedPackageNames.length > 0 ? selectedPackageNames.join(", ") : null,
     total,
     currency: quote.currency,
     priceDisplayLabel: PRICE_DISPLAY_LABELS[quote.price_display],
@@ -146,7 +150,7 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
     .from("quotes")
     .update({
       status: "geaccepteerd",
-      selected_package_id: input.selections.packageId,
+      selected_packages: input.selections.packageIdByBlock,
       selected_addons: input.selections.addonQuantities,
       subtotal,
       total,

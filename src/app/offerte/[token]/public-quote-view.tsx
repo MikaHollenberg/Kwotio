@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { Download } from "lucide-react";
-import type { BlockDraft } from "@/lib/blocks/types";
+import type { BlockDraft, PackagesBlockContent } from "@/lib/blocks/types";
 import type { Selections } from "@/lib/blocks/pricing";
 import type { QuoteStatus } from "@/lib/types/database";
 import { useQuoteSelections } from "@/hooks/use-quote-selections";
@@ -98,7 +98,7 @@ function PublicQuoteViewInner({
   headerData: QuoteHeaderData;
 }) {
   const { t } = useTranslation();
-  const { packagesContent, selections, setSelections, subtotal } = useQuoteSelections(
+  const { packagesBlocks, selections, setSelections, subtotal } = useQuoteSelections(
     blocks,
     initialSelections,
   );
@@ -124,12 +124,19 @@ function PublicQuoteViewInner({
       return;
     }
     const timeout = setTimeout(() => {
-      void updateSelection(token, selections.packageId, selections.addonQuantities);
+      void updateSelection(token, selections);
     }, 600);
     return () => clearTimeout(timeout);
   }, [token, selections, isSigned]);
 
-  const selectedPackageName = packagesContent?.packages.find((p) => p.id === selections.packageId)?.name ?? null;
+  const selectedPackageName =
+    packagesBlocks
+      .map((b) => {
+        const content = b.content as PackagesBlockContent;
+        return content.packages.find((p) => p.id === selections.packageIdByBlock[b.id])?.name;
+      })
+      .filter(Boolean)
+      .join(", ") || null;
   const certificateHref = `/offerte/${token}/certificaat`;
   const pdfHref = `/offerte/${token}/pdf`;
 
@@ -207,7 +214,7 @@ function PublicQuoteViewInner({
         </p>
       </main>
 
-      {packagesContent && (
+      {packagesBlocks.length > 0 && (
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-ink-100 bg-white/95 px-4 py-4 backdrop-blur-sm sm:px-8">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
             <div>

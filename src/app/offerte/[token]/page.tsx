@@ -74,11 +74,11 @@ export default async function PublicQuotePage({
     });
   }
 
-  const selectedPackageId = quote.selected_package_id ?? null;
+  const selectedPackages = (quote.selected_packages as Record<string, string | null>) ?? {};
   const selectedAddons = quote.selected_addons ?? {};
-  const hasPriorSelection = selectedPackageId !== null || Object.keys(selectedAddons).length > 0;
+  const hasPriorSelection = Object.keys(selectedPackages).length > 0 || Object.keys(selectedAddons).length > 0;
   const initialSelections: Selections | undefined = hasPriorSelection
-    ? { packageId: selectedPackageId, addonQuantities: selectedAddons as Record<string, number> }
+    ? { packageIdByBlock: selectedPackages, addonQuantities: selectedAddons as Record<string, number> }
     : undefined;
 
   const isExpired = !!quote.valid_until && new Date(quote.valid_until) < new Date(new Date().toDateString());

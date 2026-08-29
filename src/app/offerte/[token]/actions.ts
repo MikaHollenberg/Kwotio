@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
 import { quoteOpenedAgencyEmail, newCommentAgencyEmail } from "@/lib/email/templates/notifications";
+import type { Selections } from "@/lib/blocks/pricing";
 
 const ACCESS_COOKIE_PREFIX = "qac_";
 
@@ -132,21 +133,20 @@ export async function trackSectionView(token: string, blockId: string) {
   await logActivity(supabase, quote.id, "section_viewed", { blockId });
 }
 
-export async function updateSelection(
-  token: string,
-  selectedPackageId: string | null,
-  addonQuantities: Record<string, number>,
-) {
+export async function updateSelection(token: string, selections: Selections) {
   const quote = await getQuoteIdByToken(token);
   if (!quote) return;
   const supabase = createAdminClient();
 
   await supabase
     .from("quotes")
-    .update({ selected_package_id: selectedPackageId, selected_addons: addonQuantities })
+    .update({ selected_packages: selections.packageIdByBlock, selected_addons: selections.addonQuantities })
     .eq("id", quote.id);
 
-  await logActivity(supabase, quote.id, "option_changed", { selectedPackageId, addonQuantities });
+  await logActivity(supabase, quote.id, "option_changed", {
+    selectedPackages: selections.packageIdByBlock,
+    addonQuantities: selections.addonQuantities,
+  });
 }
 
 export async function submitComment(

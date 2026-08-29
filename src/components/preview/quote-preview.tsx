@@ -65,7 +65,7 @@ function QuotePreviewInner({
   mode: "desktop" | "mobile";
   headerData?: QuoteHeaderData;
 }) {
-  const { packagesContent, selections, setSelections, subtotal } = useQuoteSelections(blocks);
+  const { packagesBlocks, selections, setSelections, subtotal } = useQuoteSelections(blocks);
   const total = calculateTotal({ subtotal, discountAmount: meta.discountAmount });
   const { t } = useTranslation();
 
@@ -96,7 +96,7 @@ function QuotePreviewInner({
           </div>
         ))}
 
-        {packagesContent && (
+        {packagesBlocks.length > 0 && (
           <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t border-ink-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
             <div>
               <p className="text-xs text-ink-400">
@@ -219,12 +219,17 @@ export function BlockPreview({
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {c.packages.map((pkg) => {
-              const isSelected = selections.packageId === pkg.id;
+              const isSelected = selections.packageIdByBlock[block.id] === pkg.id;
               return (
                 <button
                   key={pkg.id}
                   type="button"
-                  onClick={() => onSelectionsChange({ ...selections, packageId: pkg.id })}
+                  onClick={() =>
+                    onSelectionsChange({
+                      ...selections,
+                      packageIdByBlock: { ...selections.packageIdByBlock, [block.id]: pkg.id },
+                    })
+                  }
                   className={cn(
                     "flex flex-col overflow-hidden rounded-brand-lg border-2 text-left transition-all duration-200 ease-brand",
                     isSelected ? "border-orange-500 shadow-md" : "border-ink-100 hover:border-ink-200",

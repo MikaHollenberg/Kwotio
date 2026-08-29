@@ -1,33 +1,49 @@
 import type { PackageAddon, PackageDraft } from "@/lib/blocks/types";
 
+/**
+ * Eén keuze per "Pakketten & prijzen"-blok (blockId -> gekozen pakket-id),
+ * zodat meerdere pakketten-blokken in dezelfde offerte onafhankelijk van
+ * elkaar gekozen kunnen worden — hun prijzen worden allemaal bij elkaar
+ * opgeteld. Addon-ids zijn al uniek over de hele offerte heen (client-
+ * gegenereerde UUID's), dus die blijven gewoon in één platte map.
+ */
 export type Selections = {
-  packageId: string | null;
+  packageIdByBlock: Record<string, string | null>;
   addonQuantities: Record<string, number>;
 };
 
-export function defaultSelections(
-  packages: PackageDraft[],
-  addons: PackageAddon[],
-): Selections {
-  const defaultPackage = packages.find((p) => p.isDefaultSelected) ?? packages[0];
+export type PackagesBlockInput = {
+  blockId: string;
+  packages: PackageDraft[];
+  addons: PackageAddon[];
+};
+
+export function defaultSelections(blocks: PackagesBlockInput[]): Selections {
+  const packageIdByBlock: Record<string, string | null> = {};
   const addonQuantities: Record<string, number> = {};
-  for (const addon of addons) {
-    addonQuantities[addon.id] = addon.quantityEditable ? 0 : 0;
+
+  for (const { blockId, packages, addons } of blocks) {
+    const defaultPackage = packages.find((p) => p.isDefaultSelected) ?? packages[0];
+    packageIdByBlock[blockId] = defaultPackage?.id ?? null;
+    for (const addon of addons) {
+      addonQuantities[addon.id] = 0;
+    }
   }
-  return { packageId: defaultPackage?.id ?? null, addonQuantities };
+
+  return { packageIdByBlock, addonQuantities };
 }
 
-export function calculateSubtotal(
-  packages: PackageDraft[],
-  addons: PackageAddon[],
-  selections: Selections,
-): number {
-  const selectedPackage = packages.find((p) => p.id === selections.packageId);
-  let total = selectedPackage?.price ?? 0;
+export function calculateSubtotal(blocks: PackagesBlockInput[], selections: Selections): number {
+  let total = 0;
 
-  for (const addon of addons) {
-    const qty = selections.addonQuantities?.[addon.id] ?? 0;
-    if (qty > 0) total += addon.price * qty;
+  for (const { blockId, packages, addons } of blocks) {
+    const selectedPackage = packages.find((p) => p.id === selections.packageIdByBlock[blockId]);
+    total += selectedPackage?.price ?? 0;
+
+    for (const addon of addons) {
+      const qty = selections.addonQuantities?.[addon.id] ?? 0;
+      if (qty > 0) total += addon.price * qty;
+    }
   }
 
   return total;

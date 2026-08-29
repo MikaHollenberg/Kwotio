@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadQuoteBlocks } from "@/lib/blocks/persistence";
-import { calculateSubtotal, calculateTotal, defaultSelections, type Selections } from "@/lib/blocks/pricing";
+import {
+  calculateSubtotal,
+  calculateTotal,
+  defaultSelections,
+  type Selections,
+  type PackagesBlockInput,
+} from "@/lib/blocks/pricing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
 import { renderQuotePdf } from "@/lib/quote-pdf/quote-document";
 import { resolvePreferredLogo } from "@/lib/organization/logo";
@@ -17,7 +23,7 @@ export async function GET(
   const { data: quote } = await supabase
     .from("quotes")
     .select(
-      "id, organization_id, client_id, title, currency, price_display, discount_amount, event_date, selected_package_id, selected_addons, client_display_name, client_display_email, client_display_phone, client_display_company, reference_number, handled_by_profile_id",
+      "id, organization_id, client_id, title, currency, price_display, discount_amount, event_date, selected_packages, selected_addons, client_display_name, client_display_email, client_display_phone, client_display_company, reference_number, handled_by_profile_id",
     )
     .eq("share_token", token)
     .maybeSingle();
@@ -37,19 +43,20 @@ export async function GET(
     loadQuoteBlocks(supabase, quote.id),
   ]);
 
-  const packagesBlock = blocks.find((b) => b.type === "packages");
-  const packagesContent = packagesBlock?.content as PackagesBlockContent | undefined;
+  const packagesBlocksInput: PackagesBlockInput[] = blocks
+    .filter((b) => b.type === "packages")
+    .map((b) => {
+      const content = b.content as PackagesBlockContent;
+      return { blockId: b.id, packages: content.packages, addons: content.addons };
+    });
 
-  const hasPriorSelection = quote.selected_package_id !== null || Object.keys(quote.selected_addons ?? {}).length > 0;
+  const selectedPackages = (quote.selected_packages as Record<string, string | null>) ?? {};
+  const hasPriorSelection = Object.keys(selectedPackages).length > 0 || Object.keys(quote.selected_addons ?? {}).length > 0;
   const selections: Selections = hasPriorSelection
-    ? { packageId: quote.selected_package_id, addonQuantities: (quote.selected_addons as Record<string, number>) ?? {} }
-    : packagesContent
-      ? defaultSelections(packagesContent.packages, packagesContent.addons)
-      : { packageId: null, addonQuantities: {} };
+    ? { packageIdByBlock: selectedPackages, addonQuantities: (quote.selected_addons as Record<string, number>) ?? {} }
+    : defaultSelections(packagesBlocksInput);
 
-  const subtotal = packagesContent
-    ? calculateSubtotal(packagesContent.packages, packagesContent.addons, selections)
-    : 0;
+  const subtotal = calculateSubtotal(packagesBlocksInput, selections);
   const discountAmount = Number(quote.discount_amount);
   const total = calculateTotal({ subtotal, discountAmount });
 

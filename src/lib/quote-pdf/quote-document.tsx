@@ -310,7 +310,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                   {c.intro && <Text style={styles.sectionIntro}>{c.intro}</Text>}
 
                   {c.packages.map((pkg) => {
-                    const isSelected = data.selections.packageId === pkg.id;
+                    const isSelected = data.selections.packageIdByBlock[block.id] === pkg.id;
                     return (
                       <View key={pkg.id} style={[styles.packageCard, isSelected ? styles.packageCardSelected : {}]} wrap={false}>
                         <View style={styles.packageHeaderRow}>

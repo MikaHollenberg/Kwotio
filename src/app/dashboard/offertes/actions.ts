@@ -137,22 +137,23 @@ async function recalculateTotals(
     .single();
   if (!quote) return;
 
-  const { data: packageBlock } = await supabase
+  const { data: packageBlocks } = await supabase
     .from("quote_blocks")
     .select("id")
     .eq("quote_id", quoteId)
-    .eq("type", "packages")
-    .maybeSingle();
+    .eq("type", "packages");
 
   let subtotal = 0;
-  if (packageBlock) {
+  for (const block of packageBlocks ?? []) {
     const { data: defaultPackage } = await supabase
       .from("quote_packages")
       .select("price")
-      .eq("quote_block_id", packageBlock.id)
+      .eq("quote_block_id", block.id)
       .eq("is_default_selected", true)
+      .order("sort_order", { ascending: true })
+      .limit(1)
       .maybeSingle();
-    subtotal = defaultPackage ? Number(defaultPackage.price) : 0;
+    subtotal += defaultPackage ? Number(defaultPackage.price) : 0;
   }
 
   const total = calculateTotal({
