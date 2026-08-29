@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, QuoteStatus, ActivityEventType } from "@/lib/types/database";
+import { calculateActualQuoteValue } from "@/lib/blocks/pricing";
 
 type Client = SupabaseClient<Database>;
 
@@ -22,9 +23,11 @@ export type DashboardKpis = {
 export async function getDashboardKpis(supabase: Client, organizationId: string): Promise<DashboardKpis> {
   const { data } = await supabase
     .from("quotes")
-    .select("id, status, total, sent_at, created_at, template_id")
+    .select("id, status, total, sent_at, created_at, template_id, price_per_person, aantal_personen")
     .eq("organization_id", organizationId);
   const rows = data ?? [];
+  const actualValue = (q: (typeof rows)[number]) =>
+    calculateActualQuoteValue({ total: Number(q.total), pricePerPerson: q.price_per_person, aantalPersonen: q.aantal_personen });
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -34,11 +37,11 @@ export async function getDashboardKpis(supabase: Client, organizationId: string)
   const acceptedRows = rows.filter((q) => q.status === "geaccepteerd");
   const conversionRate = sentRows.length > 0 ? acceptedRows.length / sentRows.length : null;
 
-  const avgQuoteValue = rows.length > 0 ? rows.reduce((sum, q) => sum + Number(q.total), 0) / rows.length : 0;
+  const avgQuoteValue = rows.length > 0 ? rows.reduce((sum, q) => sum + actualValue(q), 0) / rows.length : 0;
 
   const pipelineValue = rows
     .filter((q) => OPEN_STATUSES.includes(q.status))
-    .reduce((sum, q) => sum + Number(q.total), 0);
+    .reduce((sum, q) => sum + actualValue(q), 0);
 
   let avgDaysToAccept: number | null = null;
   if (acceptedRows.length > 0) {
@@ -191,7 +194,7 @@ export async function getPipeline(
   const [{ data: quotes }, { data: clients }] = await Promise.all([
     supabase
       .from("quotes")
-      .select("id, title, status, total, currency, updated_at, client_id")
+      .select("id, title, status, total, currency, updated_at, client_id, price_per_person, aantal_personen")
       .eq("organization_id", organizationId)
       .order("updated_at", { ascending: false }),
     supabase.from("clients").select("id, name").eq("organization_id", organizationId),
@@ -213,7 +216,7 @@ export async function getPipeline(
       id: q.id,
       title: q.title,
       clientName: q.client_id ? (nameById.get(q.client_id) ?? null) : null,
-      total: Number(q.total),
+      total: calculateActualQuoteValue({ total: Number(q.total), pricePerPerson: q.price_per_person, aantalPersonen: q.aantal_personen }),
       currency: q.currency,
       updatedAt: q.updated_at,
     });
@@ -234,7 +237,7 @@ export type MonthlySeriesPoint = { monthKey: string; label: string; count: numbe
 export async function getMonthlySeries(supabase: Client, organizationId: string): Promise<MonthlySeriesPoint[]> {
   const { data } = await supabase
     .from("quotes")
-    .select("created_at, total")
+    .select("created_at, total, price_per_person, aantal_personen")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: true });
   const rows = data ?? [];
@@ -259,7 +262,11 @@ export async function getMonthlySeries(supabase: Client, organizationId: string)
       monthKey: `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`,
       label: monthStart.toLocaleDateString("nl-NL", { month: "short", year: "numeric" }),
       count: inMonth.length,
-      total: inMonth.reduce((sum, q) => sum + Number(q.total), 0),
+      total: inMonth.reduce(
+        (sum, q) =>
+          sum + calculateActualQuoteValue({ total: Number(q.total), pricePerPerson: q.price_per_person, aantalPersonen: q.aantal_personen }),
+        0,
+      ),
     });
   }
   return points;

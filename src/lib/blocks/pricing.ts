@@ -58,3 +58,23 @@ export function calculateTotal({
 }) {
   return Math.max(0, subtotal - discountAmount);
 }
+
+/**
+ * `quotes.total` is bij prijs-per-persoon-offertes het bedrag PER PERSOON, niet
+ * het werkelijke totaal (zie price-display-architectuur: bewust geen rekensom
+ * tijdens het bekijken/kiezen, want het aantal is pas bij ondertekenen bekend).
+ * Deze helper is voor intern gebruik (bureau-overzichten/statistieken, nooit
+ * klant-facing): zodra het aantal bekend is, vermenigvuldigt hij; anders valt
+ * hij terug op het kale (p.p.-)bedrag.
+ */
+export function calculateActualQuoteValue({
+  total,
+  pricePerPerson,
+  aantalPersonen,
+}: {
+  total: number;
+  pricePerPerson: boolean;
+  aantalPersonen: number | null;
+}): number {
+  return pricePerPerson && aantalPersonen != null ? total * aantalPersonen : total;
+}

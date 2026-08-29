@@ -6,14 +6,48 @@ import { QuoteStatusBadge, STATUS_LABELS } from "@/components/ui/badge";
 import { ExportCsvButton } from "@/components/dashboard/export-csv-button";
 import { OfferteRowActions } from "./offerte-row-actions";
 import { OfferteEditLink } from "./offerte-edit-link";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, cn } from "@/lib/utils";
+import { calculateActualQuoteValue } from "@/lib/blocks/pricing";
+
+function QuoteValueCell({
+  total,
+  currency,
+  pricePerPerson,
+  aantalPersonen,
+  align = "left",
+}: {
+  total: number;
+  currency: string;
+  pricePerPerson: boolean;
+  aantalPersonen: number | null;
+  align?: "left" | "right";
+}) {
+  const knowsHeadcount = pricePerPerson && aantalPersonen != null;
+
+  if (!knowsHeadcount) {
+    return (
+      <span className="font-medium text-ink-500">
+        {formatCurrency(total, currency)}
+        {pricePerPerson ? " p.p." : ""}
+      </span>
+    );
+  }
+
+  const actualValue = calculateActualQuoteValue({ total, pricePerPerson, aantalPersonen });
+  return (
+    <div className={cn("flex flex-col", align === "right" && "items-end")}>
+      <span className="font-medium text-ink-500">{formatCurrency(actualValue, currency)}</span>
+      <span className="text-xs text-ink-400">{formatCurrency(total, currency)} p.p.</span>
+    </div>
+  );
+}
 
 export default async function OffertesPage() {
   const supabase = await createClient();
   const [{ data: quotes }, { data: clients }] = await Promise.all([
     supabase
       .from("quotes")
-      .select("id, title, status, total, currency, updated_at, event_date, client_id")
+      .select("id, title, status, total, currency, updated_at, event_date, client_id, price_per_person, aantal_personen")
       .order("updated_at", { ascending: false }),
     supabase.from("clients").select("id, name"),
   ]);
@@ -24,7 +58,12 @@ export default async function OffertesPage() {
     Klant: (q.client_id && clientNameById.get(q.client_id)) ?? "",
     Status: STATUS_LABELS[q.status],
     Eventdatum: q.event_date ? formatDate(q.event_date) : "",
-    Bedrag: Number(q.total),
+    Bedrag: calculateActualQuoteValue({
+      total: Number(q.total),
+      pricePerPerson: q.price_per_person,
+      aantalPersonen: q.aantal_personen,
+    }),
+    "Prijs p.p.": q.price_per_person ? Number(q.total) : "",
     Valuta: q.currency,
     "Laatst gewijzigd": formatDate(q.updated_at),
   }));
@@ -75,7 +114,12 @@ export default async function OffertesPage() {
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex flex-col">
-                    <span className="font-medium text-ink-500">{formatCurrency(Number(q.total), q.currency)}</span>
+                    <QuoteValueCell
+                      total={Number(q.total)}
+                      currency={q.currency}
+                      pricePerPerson={q.price_per_person}
+                      aantalPersonen={q.aantal_personen}
+                    />
                     <span className="text-xs text-ink-400">Gewijzigd {formatDate(q.updated_at)}</span>
                   </div>
                   <OfferteRowActions quoteId={q.id} title={q.title} status={q.status} />
@@ -121,8 +165,14 @@ export default async function OffertesPage() {
                     <td className="px-5 py-3 text-ink-400">
                       {q.event_date ? formatDate(q.event_date) : "—"}
                     </td>
-                    <td className="px-5 py-3 text-right font-medium text-ink-500">
-                      {formatCurrency(Number(q.total), q.currency)}
+                    <td className="px-5 py-3 text-right">
+                      <QuoteValueCell
+                        total={Number(q.total)}
+                        currency={q.currency}
+                        pricePerPerson={q.price_per_person}
+                        aantalPersonen={q.aantal_personen}
+                        align="right"
+                      />
                     </td>
                     <td className="px-5 py-3 text-right text-ink-400">{formatDate(q.updated_at)}</td>
                     <td className="px-5 py-3 text-right">
