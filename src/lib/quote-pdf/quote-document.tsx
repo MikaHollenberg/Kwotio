@@ -395,6 +395,12 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                       })}
                     </View>
                   )}
+
+                  {c.pdfUrl && (
+                    <Link src={c.pdfUrl} style={{ fontSize: 9.5, color: COLORS.brand, textDecoration: "underline", marginTop: 8 }}>
+                      Bijlage: bekijk PDF
+                    </Link>
+                  )}
                 </View>
               );
             }

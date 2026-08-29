@@ -49,6 +49,7 @@ export function mergeContentEn(
         intro: (overlay.intro as string) ?? c.intro,
         packages: c.packages.map((p) => ({ ...p, ...packages[p.id] })),
         addons: c.addons.map((a) => ({ ...a, ...addons[a.id] })),
+        pdfUrl: c.pdfUrl,
       };
     }
 

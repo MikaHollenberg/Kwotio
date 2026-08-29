@@ -41,6 +41,8 @@ export type PackagesBlockContent = {
   intro: string;
   packages: PackageDraft[];
   addons: PackageAddon[];
+  /** Eén PDF-bijlage voor het hele blok (bijv. een menukaart), niet per pakket. */
+  pdfUrl: string;
 };
 
 export type TimelineItem = { id: string; time: string; title: string; description: string };
@@ -130,6 +132,7 @@ export function defaultContentFor(type: BlockType): Record<string, unknown> {
         intro: "",
         packages: [],
         addons: [],
+        pdfUrl: "",
       } satisfies PackagesBlockContent;
     case "timeline":
       return { heading: "Planning op de dag", items: [] } satisfies TimelineBlockContent;

@@ -130,8 +130,14 @@ export async function loadQuoteBlocks(supabase: Client, quoteId: string): Promis
       defaultQuantity: a.default_quantity,
     }));
 
-    const content = row.content as { heading?: string; intro?: string };
-    const resolvedContent = { heading: content.heading ?? "", intro: content.intro ?? "", packages, addons };
+    const content = row.content as { heading?: string; intro?: string; pdfUrl?: string };
+    const resolvedContent = {
+      heading: content.heading ?? "",
+      intro: content.intro ?? "",
+      packages,
+      addons,
+      pdfUrl: content.pdfUrl ?? "",
+    };
     blocks.push({
       id: row.id,
       type: "packages",
@@ -177,7 +183,7 @@ export async function saveQuoteBlocks(supabase: Client, quoteId: string, blocks:
           quote_id: quoteId,
           type: "packages",
           position: i,
-          content: { heading: content.heading, intro: content.intro },
+          content: { heading: content.heading, intro: content.intro, pdfUrl: content.pdfUrl },
         },
         { onConflict: "id" },
       );

@@ -3,6 +3,7 @@ import type { PackagesBlockContent } from "@/lib/blocks/types";
 import { newPackage, newAddon } from "@/lib/blocks/types";
 import { Field, TextInput, TextArea } from "@/components/builder/field";
 import { ImageUploadField } from "@/components/builder/image-upload-field";
+import { PdfUploadField } from "@/components/builder/pdf-upload-field";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,19 @@ export function PackagesBlockEditor({
             onChange={(e) => onChange({ ...content, intro: e.target.value })}
           />
         </Field>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-semibold text-ink-400">
+          Bijlage (PDF, optioneel) — bijv. een menukaart, zichtbaar en downloadbaar voor de klant
+          bij dit hele blok
+        </span>
+        <PdfUploadField
+          label="Bijlage"
+          organizationId={organizationId}
+          value={content.pdfUrl}
+          onChange={(url) => onChange({ ...content, pdfUrl: url })}
+        />
       </div>
 
       <div>
