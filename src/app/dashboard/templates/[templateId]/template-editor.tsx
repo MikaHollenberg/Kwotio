@@ -5,15 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Trash2, Smartphone, Monitor } from "lucide-react";
 import type { Database } from "@/lib/types/database";
-import type { EventType } from "@/lib/types/database";
 import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
 import { newBlock, newBlockFromTemplate } from "@/lib/blocks/types";
-import { EVENT_TYPE_OPTIONS } from "@/lib/blocks/event-types";
 import { updateTemplateMeta, saveTemplateBlocksAction, deleteTemplate } from "@/app/dashboard/templates/actions";
 import { useAutosave } from "@/hooks/use-autosave";
 import { AutosaveIndicator } from "@/components/builder/autosave-indicator";
 import { BlockList } from "@/components/builder/block-list";
 import { AddBlockMenu } from "@/components/builder/add-block-menu";
+import { TextInput } from "@/components/builder/field";
 import { QuotePreview } from "@/components/preview/quote-preview";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -34,7 +33,7 @@ export function TemplateEditor({
 }) {
   const router = useRouter();
   const [name, setName] = useState(template.name);
-  const [eventType, setEventType] = useState<EventType>(template.event_type);
+  const [eventType, setEventType] = useState(template.event_type);
   const [isActive, setIsActive] = useState(template.is_active);
   const [blocks, setBlocks] = useState<BlockDraft[]>(initialBlocks);
   const [blockTemplates, setBlockTemplates] = useState<BlockTemplateSummary[]>(initialBlockTemplates);
@@ -77,17 +76,12 @@ export function TemplateEditor({
         </div>
 
         <div className="flex items-center gap-2">
-          <select
+          <TextInput
             value={eventType}
-            onChange={(e) => setEventType(e.target.value as EventType)}
-            className="h-9 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
-          >
-            {EVENT_TYPE_OPTIONS.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            onChange={(e) => setEventType(e.target.value)}
+            placeholder="Type offerte"
+            className="h-9 w-44"
+          />
           <label className="flex items-center gap-1.5 text-sm text-ink-400">
             <input
               type="checkbox"

@@ -5,13 +5,6 @@
  */
 
 export type UserRole = "owner" | "admin" | "member" | "readonly";
-export type EventType =
-  | "bedrijfsuitje"
-  | "vrijgezellenfeest"
-  | "trouwerij"
-  | "familiedag"
-  | "teambuilding"
-  | "overig";
 export type BlockType =
   | "cover"
   | "text"
@@ -149,7 +142,7 @@ export interface Database {
           id: string;
           organization_id: string;
           name: string;
-          event_type: EventType;
+          event_type: string;
           description: string | null;
           thumbnail_url: string | null;
           language: string;

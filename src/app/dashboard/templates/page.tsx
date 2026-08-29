@@ -3,8 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ThemeIcon } from "@/components/brand/theme-icon";
-import { EVENT_TYPE_LABELS, EVENT_TYPE_ICONS } from "@/lib/blocks/event-types";
+import { ThemeIcon, detectThemeIcon } from "@/components/brand/theme-icon";
 import { TemplatesTabs } from "@/components/builder/templates-tabs";
 
 export default async function TemplatesPage() {
@@ -40,22 +39,29 @@ export default async function TemplatesPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {templates.map((t) => (
-            <a key={t.id} href={`/dashboard/templates/${t.id}`}>
-              <Card className="h-full transition-shadow duration-200 ease-brand hover:shadow-md">
-                <CardContent className="flex h-full flex-col gap-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <ThemeIcon icon={EVENT_TYPE_ICONS[t.event_type]} size={36} />
-                    {!t.is_active && <Badge tone="neutral">Inactief</Badge>}
-                  </div>
-                  <div>
-                    <p className="font-display text-lg font-semibold text-ink-500">{t.name}</p>
-                    <p className="text-sm text-ink-400">{EVENT_TYPE_LABELS[t.event_type]}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </a>
-          ))}
+          {templates.map((t) => {
+            const iconKey = detectThemeIcon(t.event_type);
+            return (
+              <a key={t.id} href={`/dashboard/templates/${t.id}`}>
+                <Card className="h-full transition-shadow duration-200 ease-brand hover:shadow-md">
+                  <CardContent className="flex h-full flex-col gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      {iconKey ? (
+                        <ThemeIcon icon={iconKey} size={36} />
+                      ) : (
+                        <LayoutTemplate className="size-9 text-ink-300" />
+                      )}
+                      {!t.is_active && <Badge tone="neutral">Inactief</Badge>}
+                    </div>
+                    <div>
+                      <p className="font-display text-lg font-semibold text-ink-500">{t.name}</p>
+                      <p className="text-sm text-ink-400">{t.event_type}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </a>
+            );
+          })}
         </div>
       )}
     </div>

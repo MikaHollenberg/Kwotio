@@ -6,12 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, TextInput } from "@/components/builder/field";
 import { ClientCombobox, type SelectedClient } from "@/components/builder/client-combobox";
 import { Button } from "@/components/ui/button";
-import { EVENT_TYPE_LABELS } from "@/lib/blocks/event-types";
-import type { EventType } from "@/lib/types/database";
 import { createQuote } from "@/app/dashboard/offertes/actions";
 import { cn } from "@/lib/utils";
 
-type TemplateOption = { id: string; name: string; event_type: EventType };
+type TemplateOption = { id: string; name: string; event_type: string };
 
 function TemplateDropdown({
   templates,
@@ -49,7 +47,7 @@ function TemplateDropdown({
           {selected ? (
             <>
               <p className="text-sm font-medium text-ink-500">{selected.name}</p>
-              <p className="text-xs text-ink-400">{EVENT_TYPE_LABELS[selected.event_type]}</p>
+              <p className="text-xs text-ink-400">{selected.event_type}</p>
             </>
           ) : (
             <p className="text-sm font-medium text-ink-400">Kies een template…</p>
@@ -72,7 +70,7 @@ function TemplateDropdown({
             >
               <span className="min-w-0">
                 <span className="font-medium text-ink-500">{t.name}</span>
-                <span className="ml-2 text-xs text-ink-400">{EVENT_TYPE_LABELS[t.event_type]}</span>
+                <span className="ml-2 text-xs text-ink-400">{t.event_type}</span>
               </span>
               {t.id === selectedId && <Check className="size-4 shrink-0 text-teal-600" />}
             </button>

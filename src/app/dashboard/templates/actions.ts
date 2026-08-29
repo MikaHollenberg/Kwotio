@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { saveTemplateBlocks } from "@/lib/blocks/persistence";
 import type { BlockDraft } from "@/lib/blocks/types";
-import type { EventType } from "@/lib/types/database";
 
 async function requireOrganizationId() {
   const supabase = await createClient();
@@ -24,7 +23,7 @@ async function requireOrganizationId() {
   return { supabase, organizationId: profile.organization_id, userId: user.id };
 }
 
-export async function createTemplate(input: { name: string; eventType: EventType }) {
+export async function createTemplate(input: { name: string; eventType: string }) {
   const { supabase, organizationId, userId } = await requireOrganizationId();
 
   const { data, error } = await supabase
@@ -44,7 +43,7 @@ export async function createTemplate(input: { name: string; eventType: EventType
 
 export async function updateTemplateMeta(
   templateId: string,
-  input: { name: string; eventType: EventType; language: string; isActive: boolean },
+  input: { name: string; eventType: string; language: string; isActive: boolean },
 ) {
   const { supabase } = await requireOrganizationId();
 
