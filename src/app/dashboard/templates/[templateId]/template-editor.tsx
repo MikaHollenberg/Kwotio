@@ -3,11 +3,17 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Trash2, Smartphone, Monitor } from "lucide-react";
+import { ArrowLeft, Trash2, Archive, ArchiveRestore, Smartphone, Monitor } from "lucide-react";
 import type { Database } from "@/lib/types/database";
 import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
 import { newBlock, newBlockFromTemplate } from "@/lib/blocks/types";
-import { updateTemplateMeta, saveTemplateBlocksAction, deleteTemplate } from "@/app/dashboard/templates/actions";
+import {
+  updateTemplateMeta,
+  saveTemplateBlocksAction,
+  deleteTemplate,
+  archiveTemplate,
+  unarchiveTemplate,
+} from "@/app/dashboard/templates/actions";
 import { useAutosave } from "@/hooks/use-autosave";
 import { AutosaveIndicator } from "@/components/builder/autosave-indicator";
 import { BlockList } from "@/components/builder/block-list";
@@ -40,6 +46,9 @@ export function TemplateEditor({
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletePending, startDeleteTransition] = useTransition();
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [archivePending, startArchiveTransition] = useTransition();
+  const isArchived = !!template.archived_at;
 
   const status = useAutosave({ name, eventType, isActive, blocks }, async (value) => {
     await Promise.all([
@@ -91,10 +100,45 @@ export function TemplateEditor({
             />
             Actief
           </label>
+          {isArchived ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={archivePending}
+              title="Template herstellen"
+              onClick={() => startArchiveTransition(() => unarchiveTemplate(template.id))}
+            >
+              <ArchiveRestore className="size-4" />
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={archivePending}
+              title="Template archiveren"
+              onClick={() => setArchiveConfirmOpen(true)}
+            >
+              <Archive className="size-4" />
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
             <Trash2 className="size-4" />
           </Button>
 
+          <ConfirmDialog
+            open={archiveConfirmOpen}
+            title="Template archiveren"
+            description={`"${name}" wordt uit het standaardoverzicht gehaald en kan niet meer gekozen worden bij nieuwe offertes. Je kunt dit later ongedaan maken via "Gearchiveerde templates".`}
+            confirmLabel="Archiveren"
+            pending={archivePending}
+            onConfirm={() => {
+              startArchiveTransition(async () => {
+                await archiveTemplate(template.id);
+                setArchiveConfirmOpen(false);
+              });
+            }}
+            onCancel={() => setArchiveConfirmOpen(false)}
+          />
           <ConfirmDialog
             open={deleteConfirmOpen}
             title="Template verwijderen"
@@ -112,6 +156,13 @@ export function TemplateEditor({
           />
         </div>
       </div>
+
+      {isArchived && (
+        <div className="rounded-brand-sm border border-yellow-200 bg-yellow-50 px-4 py-2.5 text-sm text-yellow-800">
+          Dit template is gearchiveerd, staat niet meer in het standaardoverzicht en kan niet meer
+          gekozen worden bij nieuwe offertes.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">
         <div className="flex flex-col gap-3">

@@ -148,6 +148,7 @@ export interface Database {
           thumbnail_url: string | null;
           language: string;
           is_active: boolean;
+          archived_at: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;

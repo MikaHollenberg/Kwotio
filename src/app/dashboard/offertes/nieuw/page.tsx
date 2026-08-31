@@ -7,6 +7,7 @@ export default async function NieuweOffertePage() {
     .from("templates")
     .select("id, name, event_type")
     .eq("is_active", true)
+    .is("archived_at", null)
     .order("name", { ascending: true });
 
   return <NieuweOfferteForm templates={templates ?? []} />;

@@ -75,3 +75,38 @@ export async function deleteTemplate(templateId: string) {
   revalidatePath("/dashboard/templates");
   redirect("/dashboard/templates");
 }
+
+/** Zelfde als deleteTemplate, maar zonder redirect — voor gebruik vanuit de
+ * lijst-/archiefpagina zelf (waar je al bent), zodat de aanroeper de fout
+ * veilig in een try/catch kan afvangen. deleteTemplate's eigen redirect()
+ * zou daar, wanneer verpakt in try/catch, per ongeluk als mislukking
+ * opgevangen worden — dit is Next.js-gedrag bij redirect() binnen een
+ * server action. */
+export async function deleteTemplateFromList(templateId: string) {
+  const { supabase } = await requireOrganizationId();
+  const { error } = await supabase.from("templates").delete().eq("id", templateId);
+  if (error) throw error;
+  revalidatePath("/dashboard/templates");
+  revalidatePath("/dashboard/templates/archief");
+}
+
+export async function archiveTemplate(templateId: string) {
+  const { supabase } = await requireOrganizationId();
+  const { error } = await supabase
+    .from("templates")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", templateId);
+  if (error) throw error;
+  revalidatePath("/dashboard/templates");
+  revalidatePath("/dashboard/templates/archief");
+  revalidatePath(`/dashboard/templates/${templateId}`);
+}
+
+export async function unarchiveTemplate(templateId: string) {
+  const { supabase } = await requireOrganizationId();
+  const { error } = await supabase.from("templates").update({ archived_at: null }).eq("id", templateId);
+  if (error) throw error;
+  revalidatePath("/dashboard/templates");
+  revalidatePath("/dashboard/templates/archief");
+  revalidatePath(`/dashboard/templates/${templateId}`);
+}
