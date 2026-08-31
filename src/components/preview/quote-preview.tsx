@@ -238,7 +238,12 @@ export function BlockPreview({
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {c.packages.map((pkg) => {
               const isSelected = selectedIds.includes(pkg.id);
-              const disabled = !isSelected && atMax;
+              // Bij maxSelections 1 blijft dit gewoon radiobutton-gedrag: een
+              // ander pakket klikken vervangt de keuze altijd, ongeacht "atMax"
+              // (dat is bij 1 immers al waar zodra het standaardpakket
+              // voorgeselecteerd staat). Alleen bij 2+ keuzes dimmen/blokkeren
+              // we andere kaarten zodra het maximum bereikt is.
+              const disabled = maxSelections > 1 && !isSelected && atMax;
               return (
                 <button
                   key={pkg.id}
