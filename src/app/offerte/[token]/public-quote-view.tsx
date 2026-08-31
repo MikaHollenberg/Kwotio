@@ -137,11 +137,11 @@ function PublicQuoteViewInner({
 
   const selectedPackageName =
     packagesBlocks
-      .map((b) => {
+      .flatMap((b) => {
         const content = b.content as PackagesBlockContent;
-        return content.packages.find((p) => p.id === selections.packageIdByBlock[b.id])?.name;
+        const selectedIds = selections.packageIdByBlock[b.id] ?? [];
+        return content.packages.filter((p) => selectedIds.includes(p.id)).map((p) => p.name);
       })
-      .filter(Boolean)
       .join(", ") || null;
   const certificateHref = `/offerte/${token}/certificaat`;
   const pdfHref = `/offerte/${token}/pdf`;

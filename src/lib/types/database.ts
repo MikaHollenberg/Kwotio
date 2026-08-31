@@ -211,7 +211,7 @@ export interface Database {
           share_token: string;
           access_code: string | null;
           brand_override: Record<string, unknown>;
-          selected_packages: Record<string, string | null>;
+          selected_packages: Record<string, string[]>;
           selected_addons: Record<string, number>;
           created_by: string | null;
           sent_at: string | null;

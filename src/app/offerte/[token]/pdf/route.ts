@@ -5,6 +5,7 @@ import {
   calculateSubtotal,
   calculateTotal,
   defaultSelections,
+  normalizeSelectedPackages,
   type Selections,
   type PackagesBlockInput,
 } from "@/lib/blocks/pricing";
@@ -50,7 +51,7 @@ export async function GET(
       return { blockId: b.id, packages: content.packages, addons: content.addons };
     });
 
-  const selectedPackages = (quote.selected_packages as Record<string, string | null>) ?? {};
+  const selectedPackages = normalizeSelectedPackages(quote.selected_packages as Record<string, unknown> | null);
   const hasPriorSelection = Object.keys(selectedPackages).length > 0 || Object.keys(quote.selected_addons ?? {}).length > 0;
   const selections: Selections = hasPriorSelection
     ? { packageIdByBlock: selectedPackages, addonQuantities: (quote.selected_addons as Record<string, number>) ?? {} }

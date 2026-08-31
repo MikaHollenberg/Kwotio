@@ -27,6 +27,7 @@ const dict = {
   most_chosen: { nl: "Meest gekozen", en: "Most popular" },
   no_photos: { nl: "Nog geen foto's toegevoegd.", en: "No photos added yet." },
   packages_pdf_attachment: { nl: "Download bijlage (PDF)", en: "Download attachment (PDF)" },
+  choose_up_to_packages: { nl: "Kies maximaal {count} pakketten", en: "Choose up to {count} packages" },
 
   accept_and_sign: { nl: "Akkoord & ondertekenen", en: "Approve & sign" },
   sign_coming_note: {

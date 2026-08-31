@@ -44,6 +44,8 @@ export type PackagesBlockContent = {
   /** Tot twee PDF-bijlagen voor het hele blok (bijv. een menukaart), niet per pakket. */
   pdfUrl: string;
   pdfUrl2: string;
+  /** Hoeveel pakketten de klant tegelijk mag kiezen binnen dit blok. */
+  maxSelections: 1 | 2;
 };
 
 export type TimelineItem = { id: string; time: string; title: string; description: string };
@@ -145,6 +147,7 @@ export function defaultContentFor(type: BlockType): Record<string, unknown> {
         addons: [],
         pdfUrl: "",
         pdfUrl2: "",
+        maxSelections: 1,
       } satisfies PackagesBlockContent;
     case "timeline":
       return { heading: "Planning op de dag", items: [] } satisfies TimelineBlockContent;

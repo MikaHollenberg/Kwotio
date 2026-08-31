@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, QuoteStatus, ActivityEventType } from "@/lib/types/database";
-import { calculateActualQuoteValue } from "@/lib/blocks/pricing";
+import { calculateActualQuoteValue, normalizeSelectedPackages } from "@/lib/blocks/pricing";
 
 type Client = SupabaseClient<Database>;
 
@@ -128,9 +128,9 @@ export async function getPopularPackageThisMonth(
   const packageIds = new Set<string>();
   for (const q of quotes) {
     if (!signedThisMonthQuoteIds.has(q.id)) continue;
-    const selected = (q.selected_packages as Record<string, string | null>) ?? {};
-    for (const packageId of Object.values(selected)) {
-      if (packageId) packageIds.add(packageId);
+    const selected = normalizeSelectedPackages(q.selected_packages as Record<string, unknown> | null);
+    for (const packageId of Object.values(selected).flat()) {
+      packageIds.add(packageId);
     }
   }
   if (packageIds.size === 0) return null;
@@ -145,9 +145,9 @@ export async function getPopularPackageThisMonth(
   const nameCounts = new Map<string, number>();
   for (const q of quotes) {
     if (!signedThisMonthQuoteIds.has(q.id)) continue;
-    const selected = (q.selected_packages as Record<string, string | null>) ?? {};
-    for (const packageId of Object.values(selected)) {
-      const name = packageId ? nameById.get(packageId) : undefined;
+    const selected = normalizeSelectedPackages(q.selected_packages as Record<string, unknown> | null);
+    for (const packageId of Object.values(selected).flat()) {
+      const name = nameById.get(packageId);
       if (!name) continue;
       nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1);
     }

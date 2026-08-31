@@ -58,9 +58,11 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
     });
   const subtotal = calculateSubtotal(packagesBlocksInput, input.selections);
   const total = calculateTotal({ subtotal, discountAmount: Number(quote.discount_amount) });
-  const selectedPackageNames = packagesBlocksInput
-    .map((b) => b.packages.find((p) => p.id === input.selections.packageIdByBlock[b.blockId])?.name)
-    .filter((name): name is string => !!name);
+  const selectedPackageNames = packagesBlocksInput.flatMap((b) =>
+    b.packages
+      .filter((p) => (input.selections.packageIdByBlock[b.blockId] ?? []).includes(p.id))
+      .map((p) => p.name),
+  );
 
   const snapshot = {
     quoteId: quote.id,

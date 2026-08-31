@@ -1,14 +1,21 @@
 import type { PackageAddon, PackageDraft } from "@/lib/blocks/types";
 
 /**
- * Eén keuze per "Pakketten & prijzen"-blok (blockId -> gekozen pakket-id),
- * zodat meerdere pakketten-blokken in dezelfde offerte onafhankelijk van
- * elkaar gekozen kunnen worden — hun prijzen worden allemaal bij elkaar
- * opgeteld. Addon-ids zijn al uniek over de hele offerte heen (client-
- * gegenereerde UUID's), dus die blijven gewoon in één platte map.
+ * Gekozen pakket-id('s) per "Pakketten & prijzen"-blok (blockId -> array van
+ * gekozen pakket-id's), zodat meerdere pakketten-blokken in dezelfde offerte
+ * onafhankelijk van elkaar gekozen kunnen worden — hun prijzen worden
+ * allemaal bij elkaar opgeteld. Een blok staat standaard op maximaal 1 keuze
+ * (array met 0 of 1 element), maar kan ingesteld worden op maximaal 2 (zie
+ * `PackagesBlockContent.maxSelections`) — dan tellen beide gekozen
+ * pakketprijzen mee. Addon-ids zijn al uniek over de hele offerte heen
+ * (client-gegenereerde UUID's), dus die blijven gewoon in één platte map.
+ *
+ * Bestaande offertes (vóór deze feature) hebben deze kolom nog in het oude,
+ * platte formaat (`Record<string, string | null>`) staan in de database —
+ * gebruik `normalizeSelectedPackages()` bij het uitlezen van opgeslagen data.
  */
 export type Selections = {
-  packageIdByBlock: Record<string, string | null>;
+  packageIdByBlock: Record<string, string[]>;
   addonQuantities: Record<string, number>;
 };
 
@@ -18,13 +25,28 @@ export type PackagesBlockInput = {
   addons: PackageAddon[];
 };
 
+/** Zet een (mogelijk oud, plat) `selected_packages`-jsonb-object om naar de
+ * huidige array-vorm — oude rijen hebben per blok een losse string of
+ * `null` in plaats van een array. */
+export function normalizeSelectedPackages(
+  raw: Record<string, unknown> | null | undefined,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const [blockId, value] of Object.entries(raw ?? {})) {
+    if (Array.isArray(value)) result[blockId] = value as string[];
+    else if (typeof value === "string") result[blockId] = [value];
+    else result[blockId] = [];
+  }
+  return result;
+}
+
 export function defaultSelections(blocks: PackagesBlockInput[]): Selections {
-  const packageIdByBlock: Record<string, string | null> = {};
+  const packageIdByBlock: Record<string, string[]> = {};
   const addonQuantities: Record<string, number> = {};
 
   for (const { blockId, packages, addons } of blocks) {
     const defaultPackage = packages.find((p) => p.isDefaultSelected) ?? packages[0];
-    packageIdByBlock[blockId] = defaultPackage?.id ?? null;
+    packageIdByBlock[blockId] = defaultPackage ? [defaultPackage.id] : [];
     for (const addon of addons) {
       addonQuantities[addon.id] = 0;
     }
@@ -37,8 +59,10 @@ export function calculateSubtotal(blocks: PackagesBlockInput[], selections: Sele
   let total = 0;
 
   for (const { blockId, packages, addons } of blocks) {
-    const selectedPackage = packages.find((p) => p.id === selections.packageIdByBlock[blockId]);
-    total += selectedPackage?.price ?? 0;
+    const selectedIds = selections.packageIdByBlock[blockId] ?? [];
+    for (const pkg of packages) {
+      if (selectedIds.includes(pkg.id)) total += pkg.price;
+    }
 
     for (const addon of addons) {
       const qty = selections.addonQuantities?.[addon.id] ?? 0;

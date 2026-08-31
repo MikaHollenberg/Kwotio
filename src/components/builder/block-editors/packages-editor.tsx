@@ -35,6 +35,27 @@ export function PackagesBlockEditor({
 
       <div className="flex flex-col gap-2">
         <span className="text-xs font-semibold text-ink-400">
+          Aantal pakketten dat de klant mag kiezen in dit blok
+        </span>
+        <div className="flex w-fit gap-1 rounded-brand-sm bg-sand-200 p-1">
+          {([1, 2] as const).map((max) => (
+            <button
+              key={max}
+              type="button"
+              onClick={() => onChange({ ...content, maxSelections: max })}
+              className={cn(
+                "rounded-[calc(var(--radius-brand-sm)_-_2px)] px-3 py-1.5 text-sm font-medium transition-colors",
+                content.maxSelections === max ? "bg-teal-600 text-white" : "text-ink-400 hover:text-ink-500",
+              )}
+            >
+              {max === 1 ? "1 pakket" : "2 pakketten"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <span className="text-xs font-semibold text-ink-400">
           Bijlagen (PDF, optioneel, max. 2) — bijv. een menukaart, zichtbaar en downloadbaar voor de
           klant bij dit hele blok
         </span>

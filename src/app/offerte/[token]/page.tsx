@@ -8,7 +8,7 @@ import { AccessGate } from "./access-gate";
 import { PublicQuoteView } from "./public-quote-view";
 import { checkRateLimit } from "@/lib/rate-limit";
 import type { CommentItem } from "@/components/preview/comment-thread";
-import type { Selections } from "@/lib/blocks/pricing";
+import { normalizeSelectedPackages, type Selections } from "@/lib/blocks/pricing";
 import type { Lang } from "@/lib/i18n/translations";
 import type { QuoteHeaderData } from "@/components/preview/quote-header";
 
@@ -74,7 +74,7 @@ export default async function PublicQuotePage({
     });
   }
 
-  const selectedPackages = (quote.selected_packages as Record<string, string | null>) ?? {};
+  const selectedPackages = normalizeSelectedPackages(quote.selected_packages as Record<string, unknown> | null);
   const selectedAddons = quote.selected_addons ?? {};
   const hasPriorSelection = Object.keys(selectedPackages).length > 0 || Object.keys(selectedAddons).length > 0;
   const initialSelections: Selections | undefined = hasPriorSelection

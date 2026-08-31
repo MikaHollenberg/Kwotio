@@ -222,27 +222,48 @@ export function BlockPreview({
 
     case "packages": {
       const c = activeContent as PackagesBlockContent;
+      const maxSelections = c.maxSelections ?? 1;
+      const selectedIds = selections.packageIdByBlock[block.id] ?? [];
+      const atMax = selectedIds.length >= maxSelections;
       return (
         <div className="px-6 py-10">
           <SectionHeading>{c.heading}</SectionHeading>
           {c.intro && <p className="mt-2 text-sm text-ink-400">{c.intro}</p>}
+          {maxSelections > 1 && (
+            <p className="mt-1 text-xs font-medium text-ink-400">
+              {t("choose_up_to_packages", { count: String(maxSelections) })}
+            </p>
+          )}
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {c.packages.map((pkg) => {
-              const isSelected = selections.packageIdByBlock[block.id] === pkg.id;
+              const isSelected = selectedIds.includes(pkg.id);
+              const disabled = !isSelected && atMax;
               return (
                 <button
                   key={pkg.id}
                   type="button"
-                  onClick={() =>
+                  disabled={disabled}
+                  onClick={() => {
+                    if (disabled) return;
+                    let next: string[];
+                    if (maxSelections === 1) {
+                      if (isSelected) return;
+                      next = [pkg.id];
+                    } else if (isSelected) {
+                      next = selectedIds.filter((id) => id !== pkg.id);
+                    } else {
+                      next = [...selectedIds, pkg.id];
+                    }
                     onSelectionsChange({
                       ...selections,
-                      packageIdByBlock: { ...selections.packageIdByBlock, [block.id]: pkg.id },
-                    })
-                  }
+                      packageIdByBlock: { ...selections.packageIdByBlock, [block.id]: next },
+                    });
+                  }}
                   className={cn(
                     "flex flex-col overflow-hidden rounded-brand-lg border-2 text-left transition-all duration-200 ease-brand",
                     isSelected ? "border-orange-500 shadow-md" : "border-ink-100 hover:border-ink-200",
+                    disabled && "opacity-40 hover:border-ink-100",
                   )}
                 >
                   {pkg.photoUrl && (
