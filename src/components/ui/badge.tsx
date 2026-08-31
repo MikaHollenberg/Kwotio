@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import type { ComponentProps } from "react";
 import type { QuoteStatus } from "@/lib/types/database";
 
-const tones = {
+export const tones = {
   neutral: "bg-ink-50 text-ink-500 border-ink-200",
   blue: "bg-blue-50 text-blue-700 border-blue-200",
   teal: "bg-teal-50 text-teal-700 border-teal-200",
