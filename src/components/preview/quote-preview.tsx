@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Check, FileText, Star } from "lucide-react";
+import { Check, FileText, Star, Image as ImageIcon } from "lucide-react";
 import type { BlockDraft } from "@/lib/blocks/types";
 import type {
   CoverBlockContent,
@@ -235,8 +235,8 @@ export function BlockPreview({
             </p>
           )}
 
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            {c.packages.map((pkg) => {
+          <div className="mt-5 flex flex-col overflow-hidden rounded-brand-lg border border-ink-100">
+            {c.packages.map((pkg, i) => {
               const isSelected = selectedIds.includes(pkg.id);
               // Bij maxSelections 1 blijft dit gewoon radiobutton-gedrag: een
               // ander pakket klikken vervangt de keuze altijd, ongeacht "atMax"
@@ -266,46 +266,45 @@ export function BlockPreview({
                     });
                   }}
                   className={cn(
-                    "flex flex-col overflow-hidden rounded-brand-lg border-2 text-left transition-all duration-200 ease-brand",
-                    isSelected ? "border-orange-500 shadow-md" : "border-ink-100 hover:border-ink-200",
-                    disabled && "opacity-40 hover:border-ink-100",
+                    "flex items-center gap-3 px-3.5 py-3 text-left transition-colors duration-200 ease-brand",
+                    i > 0 && "border-t border-ink-100",
+                    isSelected ? "bg-orange-50" : "hover:bg-sand-100",
+                    disabled && "opacity-40 hover:bg-transparent",
                   )}
                 >
-                  {pkg.photoUrl && (
-                    <div className="relative aspect-[16/10] bg-sand-200">
-                      <Image
-                        src={pkg.photoUrl}
-                        alt=""
-                        fill
-                        sizes="(min-width: 640px) 50vw, 100vw"
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="font-display text-lg font-semibold text-ink-500">{pkg.name}</span>
+                  <div className="relative size-11 shrink-0 overflow-hidden rounded-brand-sm bg-sand-200">
+                    {pkg.photoUrl ? (
+                      <Image src={pkg.photoUrl} alt="" fill sizes="44px" className="object-cover" />
+                    ) : (
+                      <div className="flex size-full items-center justify-center text-ink-300">
+                        <ImageIcon className="size-4" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className="min-w-0 truncate font-display text-sm font-semibold text-ink-500">
+                        {pkg.name}
+                      </span>
                       {pkg.isDefaultSelected && (
-                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
-                          <Star className="size-3 fill-yellow-600 text-yellow-600" /> {t("most_chosen")}
+                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-800">
+                          <Star className="size-2.5 fill-yellow-600 text-yellow-600" /> {t("most_chosen")}
                         </span>
                       )}
                     </div>
-                    <p className="flex-1 text-sm text-ink-400">{pkg.description}</p>
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="font-display text-xl font-semibold text-orange-600">
-                        {priceLabel(pkg.price, meta.currency, meta.pricePerPerson)}
-                      </span>
-                      <span
-                        className={cn(
-                          "flex size-6 items-center justify-center rounded-full border-2",
-                          isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-ink-200",
-                        )}
-                      >
-                        {isSelected && <Check className="size-3.5" />}
-                      </span>
-                    </div>
+                    {pkg.description && <p className="truncate text-xs text-ink-400">{pkg.description}</p>}
                   </div>
+                  <span className="shrink-0 font-display text-sm font-semibold text-orange-600">
+                    {priceLabel(pkg.price, meta.currency, meta.pricePerPerson)}
+                  </span>
+                  <span
+                    className={cn(
+                      "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
+                      isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-ink-200",
+                    )}
+                  >
+                    {isSelected && <Check className="size-3" />}
+                  </span>
                 </button>
               );
             })}
