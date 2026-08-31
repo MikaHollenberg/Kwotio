@@ -396,15 +396,20 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                     </View>
                   )}
 
-                  {[c.pdfUrl, c.pdfUrl2].filter(Boolean).map((url, i, arr) => (
-                    <Link
-                      key={url}
-                      src={url}
-                      style={{ fontSize: 9.5, color: COLORS.brand, textDecoration: "underline", marginTop: i === 0 ? 8 : 2 }}
-                    >
-                      {arr.length > 1 ? `Bijlage ${i + 1}: bekijk PDF` : "Bijlage: bekijk PDF"}
-                    </Link>
-                  ))}
+                  {[
+                    { url: c.pdfUrl, label: c.pdfLabel },
+                    { url: c.pdfUrl2, label: c.pdfLabel2 },
+                  ]
+                    .filter((attachment) => attachment.url)
+                    .map(({ url, label }, i, arr) => (
+                      <Link
+                        key={url}
+                        src={url}
+                        style={{ fontSize: 9.5, color: COLORS.brand, textDecoration: "underline", marginTop: i === 0 ? 8 : 2 }}
+                      >
+                        {label ? `${label}: bekijk PDF` : arr.length > 1 ? `Bijlage ${i + 1}: bekijk PDF` : "Bijlage: bekijk PDF"}
+                      </Link>
+                    ))}
                 </View>
               );
             }

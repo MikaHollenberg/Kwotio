@@ -51,6 +51,8 @@ export function mergeContentEn(
         addons: c.addons.map((a) => ({ ...a, ...addons[a.id] })),
         pdfUrl: c.pdfUrl,
         pdfUrl2: c.pdfUrl2,
+        pdfLabel: c.pdfLabel,
+        pdfLabel2: c.pdfLabel2,
         maxSelections: c.maxSelections,
       };
     }

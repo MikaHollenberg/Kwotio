@@ -367,17 +367,23 @@ export function BlockPreview({
 
           {(c.pdfUrl || c.pdfUrl2) && (
             <div className="mt-6 flex flex-col gap-2">
-              {[c.pdfUrl, c.pdfUrl2].filter(Boolean).map((url) => (
-                <a
-                  key={url}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm font-medium text-teal-600 underline decoration-teal-200 hover:text-teal-700"
-                >
-                  <FileText className="size-4" /> {t("packages_pdf_attachment")}
-                </a>
-              ))}
+              {[
+                { url: c.pdfUrl, label: c.pdfLabel },
+                { url: c.pdfUrl2, label: c.pdfLabel2 },
+              ]
+                .filter((attachment) => attachment.url)
+                .map(({ url, label }) => (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-sm font-medium text-teal-600 underline decoration-teal-200 hover:text-teal-700"
+                  >
+                    <FileText className="size-4" />
+                    {label ? t("packages_pdf_attachment_named", { name: label }) : t("packages_pdf_attachment")}
+                  </a>
+                ))}
             </div>
           )}
         </div>

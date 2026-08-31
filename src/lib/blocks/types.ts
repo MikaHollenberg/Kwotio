@@ -41,9 +41,13 @@ export type PackagesBlockContent = {
   intro: string;
   packages: PackageDraft[];
   addons: PackageAddon[];
-  /** Tot twee PDF-bijlagen voor het hele blok (bijv. een menukaart), niet per pakket. */
+  /** Tot twee PDF-bijlagen voor het hele blok (bijv. een menukaart), niet per pakket.
+   * pdfLabel/pdfLabel2 zijn optionele namen ervoor (bijv. "Menukaart"), zodat de
+   * klant weet wat hij opent — leeg valt terug op een generieke "Download bijlage". */
   pdfUrl: string;
   pdfUrl2: string;
+  pdfLabel: string;
+  pdfLabel2: string;
   /** Hoeveel pakketten de klant tegelijk mag kiezen binnen dit blok. */
   maxSelections: 1 | 2;
 };
@@ -147,6 +151,8 @@ export function defaultContentFor(type: BlockType): Record<string, unknown> {
         addons: [],
         pdfUrl: "",
         pdfUrl2: "",
+        pdfLabel: "",
+        pdfLabel2: "",
         maxSelections: 1,
       } satisfies PackagesBlockContent;
     case "timeline":

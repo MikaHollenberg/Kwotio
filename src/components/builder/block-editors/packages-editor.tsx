@@ -54,23 +54,37 @@ export function PackagesBlockEditor({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3">
         <span className="text-xs font-semibold text-ink-400">
           Bijlagen (PDF, optioneel, max. 2) — bijv. een menukaart, zichtbaar en downloadbaar voor de
           klant bij dit hele blok
         </span>
-        <PdfUploadField
-          label="Bijlage 1"
-          organizationId={organizationId}
-          value={content.pdfUrl}
-          onChange={(url) => onChange({ ...content, pdfUrl: url })}
-        />
-        <PdfUploadField
-          label="Bijlage 2"
-          organizationId={organizationId}
-          value={content.pdfUrl2}
-          onChange={(url) => onChange({ ...content, pdfUrl2: url })}
-        />
+        <div className="flex flex-col gap-2">
+          <TextInput
+            value={content.pdfLabel}
+            onChange={(e) => onChange({ ...content, pdfLabel: e.target.value })}
+            placeholder="Naam voor de klant (optioneel), bijv. Menukaart"
+          />
+          <PdfUploadField
+            label="Bijlage 1"
+            organizationId={organizationId}
+            value={content.pdfUrl}
+            onChange={(url) => onChange({ ...content, pdfUrl: url })}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <TextInput
+            value={content.pdfLabel2}
+            onChange={(e) => onChange({ ...content, pdfLabel2: e.target.value })}
+            placeholder="Naam voor de klant (optioneel), bijv. Allergenenlijst"
+          />
+          <PdfUploadField
+            label="Bijlage 2"
+            organizationId={organizationId}
+            value={content.pdfUrl2}
+            onChange={(url) => onChange({ ...content, pdfUrl2: url })}
+          />
+        </div>
       </div>
 
       <div>
