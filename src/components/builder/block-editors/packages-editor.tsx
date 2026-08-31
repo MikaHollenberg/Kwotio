@@ -16,6 +16,11 @@ export function PackagesBlockEditor({
   onChange: (content: PackagesBlockContent) => void;
   organizationId: string;
 }) {
+  // Fallback voor blokken van vóór deze instelling bestond — templates slaan
+  // content 1:1 op zonder normalisatie (zie persistence.ts), dus content.
+  // maxSelections kan hier `undefined` zijn i.p.v. altijd 1 of 2.
+  const maxSelections = content.maxSelections ?? 1;
+
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-2 gap-3">
@@ -45,7 +50,7 @@ export function PackagesBlockEditor({
               onClick={() => onChange({ ...content, maxSelections: max })}
               className={cn(
                 "rounded-[calc(var(--radius-brand-sm)_-_2px)] px-3 py-1.5 text-sm font-medium transition-colors",
-                content.maxSelections === max ? "bg-teal-600 text-white" : "text-ink-400 hover:text-ink-500",
+                maxSelections === max ? "bg-teal-600 text-white" : "text-ink-400 hover:text-ink-500",
               )}
             >
               {max === 1 ? "1 pakket" : "2 pakketten"}
@@ -63,7 +68,7 @@ export function PackagesBlockEditor({
           <TextInput
             value={content.pdfLabel}
             onChange={(e) => onChange({ ...content, pdfLabel: e.target.value })}
-            placeholder="Naam voor de klant (optioneel), bijv. Menukaart"
+            placeholder="Naam voor de klant (optioneel)"
           />
           <PdfUploadField
             label="Bijlage 1"
@@ -76,7 +81,7 @@ export function PackagesBlockEditor({
           <TextInput
             value={content.pdfLabel2}
             onChange={(e) => onChange({ ...content, pdfLabel2: e.target.value })}
-            placeholder="Naam voor de klant (optioneel), bijv. Allergenenlijst"
+            placeholder="Naam voor de klant (optioneel)"
           />
           <PdfUploadField
             label="Bijlage 2"
