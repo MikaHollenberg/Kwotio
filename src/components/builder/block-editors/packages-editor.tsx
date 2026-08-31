@@ -35,14 +35,20 @@ export function PackagesBlockEditor({
 
       <div className="flex flex-col gap-2">
         <span className="text-xs font-semibold text-ink-400">
-          Bijlage (PDF, optioneel) — bijv. een menukaart, zichtbaar en downloadbaar voor de klant
-          bij dit hele blok
+          Bijlagen (PDF, optioneel, max. 2) — bijv. een menukaart, zichtbaar en downloadbaar voor de
+          klant bij dit hele blok
         </span>
         <PdfUploadField
-          label="Bijlage"
+          label="Bijlage 1"
           organizationId={organizationId}
           value={content.pdfUrl}
           onChange={(url) => onChange({ ...content, pdfUrl: url })}
+        />
+        <PdfUploadField
+          label="Bijlage 2"
+          organizationId={organizationId}
+          value={content.pdfUrl2}
+          onChange={(url) => onChange({ ...content, pdfUrl2: url })}
         />
       </div>
 

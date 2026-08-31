@@ -50,6 +50,7 @@ export function mergeContentEn(
         packages: c.packages.map((p) => ({ ...p, ...packages[p.id] })),
         addons: c.addons.map((a) => ({ ...a, ...addons[a.id] })),
         pdfUrl: c.pdfUrl,
+        pdfUrl2: c.pdfUrl2,
       };
     }
 
