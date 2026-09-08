@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Eye, Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Copy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { QuoteStatus } from "@/lib/types/database";
 import { OfferteEditLink } from "./offerte-edit-link";
-import { deleteQuote } from "./actions";
+import { deleteQuote, duplicateQuote } from "./actions";
 
 export function OfferteRowActions({
   quoteId,
@@ -22,6 +22,7 @@ export function OfferteRowActions({
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicatePending, startDuplicateTransition] = useTransition();
 
   function handleDelete() {
     startTransition(async () => {
@@ -54,6 +55,15 @@ export function OfferteRowActions({
       >
         <Pencil className="size-4" />
       </OfferteEditLink>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={duplicatePending}
+        title="Offerte dupliceren"
+        onClick={() => startDuplicateTransition(() => duplicateQuote(quoteId))}
+      >
+        <Copy className="size-4" />
+      </Button>
       <Button
         variant="ghost"
         size="sm"

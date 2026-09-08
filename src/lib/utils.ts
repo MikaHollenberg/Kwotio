@@ -19,3 +19,12 @@ export function formatDate(date: string | Date) {
     year: "numeric",
   }).format(new Date(date));
 }
+
+/** Bouwt een wa.me-link uit een (meestal Nederlands) telefoonnummer —
+ * wa.me vereist het internationale formaat zonder voorloopnul/plus/spaties. */
+export function toWhatsAppLink(phone: string, text?: string): string {
+  const digits = phone.replace(/[^0-9]/g, "");
+  const international = digits.startsWith("0") ? `31${digits.slice(1)}` : digits;
+  const query = text ? `?text=${encodeURIComponent(text)}` : "";
+  return `https://wa.me/${international}${query}`;
+}

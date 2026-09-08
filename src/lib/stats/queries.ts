@@ -317,6 +317,59 @@ export async function getPublicPageStatsThisMonth(supabase: Client, organization
 }
 
 // ---------------------------------------------------------------------------
+// Onboarding-checklist (dashboard-overzicht)
+// ---------------------------------------------------------------------------
+
+export type OnboardingStep = { id: string; label: string; done: boolean; href: string };
+
+export async function getOnboardingSteps(supabase: Client, organizationId: string): Promise<OnboardingStep[]> {
+  const [{ data: org }, { data: templates }, { data: sentQuote }] = await Promise.all([
+    supabase
+      .from("organizations")
+      .select("logo_horizontal_url, logo_square_url")
+      .eq("id", organizationId)
+      .single(),
+    supabase.from("templates").select("is_publicly_visible").eq("organization_id", organizationId),
+    supabase
+      .from("quotes")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .not("sent_at", "is", null)
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const templateRows = templates ?? [];
+
+  return [
+    {
+      id: "logo",
+      label: "Upload je logo",
+      done: Boolean(org?.logo_horizontal_url || org?.logo_square_url),
+      href: "/dashboard/instellingen",
+    },
+    {
+      id: "template",
+      label: "Maak je eerste template",
+      done: templateRows.length > 0,
+      href: "/dashboard/templates",
+    },
+    {
+      id: "public-template",
+      label: "Zet een template publiek zichtbaar",
+      done: templateRows.some((t) => t.is_publicly_visible),
+      href: "/dashboard/templates",
+    },
+    {
+      id: "quote-sent",
+      label: "Verstuur je eerste offerte",
+      done: Boolean(sentQuote),
+      href: "/dashboard/offertes",
+    },
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // Recente activiteit (dashboard-overzicht)
 // ---------------------------------------------------------------------------
 

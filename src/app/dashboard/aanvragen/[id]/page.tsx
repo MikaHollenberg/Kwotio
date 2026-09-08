@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import { REQUEST_STATUS_LABELS, REQUEST_STATUS_TONES } from "../status";
+import { REQUEST_STATUS_LABELS, REQUEST_STATUS_TONES, isStaleRequest, staleRequestDays } from "../status";
 import { RequestDetailActions } from "./request-detail-actions";
 
 export default async function AanvraagDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -36,6 +36,13 @@ export default async function AanvraagDetailPage({ params }: { params: Promise<{
           </div>
         </div>
       </div>
+
+      {isStaleRequest(request.status, request.created_at) && (
+        <div className="flex items-center gap-2 rounded-brand-sm border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
+          <AlertTriangle className="size-4 shrink-0" />
+          Deze aanvraag staat al {staleRequestDays(request.created_at)} dagen niet opgepakt. Overweeg de klant zo snel mogelijk te benaderen.
+        </div>
+      )}
 
       <Card>
         <CardHeader>
@@ -94,6 +101,7 @@ export default async function AanvraagDetailPage({ params }: { params: Promise<{
       <RequestDetailActions
         requestId={request.id}
         customerName={request.customer_name}
+        customerPhone={request.customer_phone}
         status={request.status}
         convertedQuoteId={request.converted_quote_id}
       />

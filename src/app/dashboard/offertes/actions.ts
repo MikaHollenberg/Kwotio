@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { loadTemplateBlocks, loadQuoteBlocks, saveQuoteBlocks } from "@/lib/blocks/persistence";
 import { calculateTotal } from "@/lib/blocks/pricing";
-import type { BlockDraft } from "@/lib/blocks/types";
+import { duplicateBlockDraft, type BlockDraft } from "@/lib/blocks/types";
 import type { PriceDisplayMode } from "@/lib/types/database";
 import { sendEmail } from "@/lib/email/client";
 import { quoteReceivedClientEmail } from "@/lib/email/templates/notifications";
@@ -82,6 +82,55 @@ export async function createQuote(input: {
   }
 
   redirect(`/dashboard/offertes/${quote.id}`);
+}
+
+/**
+ * Dupliceert een bestaande offerte (incl. pakketten/opties) voor een
+ * vergelijkbare nieuwe klant — zonder eerst een template te hoeven maken.
+ * Klantgegevens, status, verzenddatum en handtekening horen bij de
+ * ORIGINELE klant en worden bewust niet meegekopieerd; de rest (inhoud,
+ * prijzen, instellingen) wel. Alle blok-/pakket-/optie-id's worden vers
+ * gegenereerd (duplicateBlockDraft) zodat de kopie nooit dezelfde rijen
+ * deelt met het origineel.
+ */
+export async function duplicateQuote(quoteId: string) {
+  const { supabase, organizationId, userId } = await requireOrganization();
+
+  const { data: source, error } = await supabase
+    .from("quotes")
+    .select("title, template_id, language, currency, price_display, price_per_person, discount_amount, aantal_personen_actief")
+    .eq("id", quoteId)
+    .single();
+  if (error) throw error;
+
+  const sourceBlocks = await loadQuoteBlocks(supabase, quoteId);
+
+  const { data: newQuote, error: insertError } = await supabase
+    .from("quotes")
+    .insert({
+      organization_id: organizationId,
+      template_id: source.template_id,
+      title: `${source.title} (kopie)`,
+      language: source.language,
+      currency: source.currency,
+      price_display: source.price_display,
+      price_per_person: source.price_per_person,
+      discount_amount: source.discount_amount,
+      aantal_personen_actief: source.aantal_personen_actief,
+      created_by: userId,
+      handled_by_profile_id: userId,
+    })
+    .select("id")
+    .single();
+  if (insertError) throw insertError;
+
+  if (sourceBlocks.length > 0) {
+    await saveQuoteBlocks(supabase, newQuote.id, sourceBlocks.map(duplicateBlockDraft));
+    await recalculateTotals(supabase, newQuote.id);
+  }
+
+  revalidatePath("/dashboard/offertes");
+  redirect(`/dashboard/offertes/${newQuote.id}`);
 }
 
 export async function saveQuoteMeta(

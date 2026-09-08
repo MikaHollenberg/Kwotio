@@ -1,11 +1,18 @@
-import { FileText, TrendingUp, Clock, Trophy } from "lucide-react";
+import { FileText, TrendingUp, Clock, Trophy, Circle, CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
-import { getDashboardKpis, getPopularPackageThisMonth, getRecentActivity, getUpcomingEvents } from "@/lib/stats/queries";
+import {
+  getDashboardKpis,
+  getOnboardingSteps,
+  getPopularPackageThisMonth,
+  getRecentActivity,
+  getUpcomingEvents,
+} from "@/lib/stats/queries";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { EventsCalendar } from "@/components/dashboard/events-calendar";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 
 export default async function DashboardOverviewPage() {
   const supabase = await createClient();
@@ -19,12 +26,14 @@ export default async function DashboardOverviewPage() {
     .single();
   const organizationId = profile!.organization_id;
 
-  const [kpis, popularPackage, recentActivity, upcomingEvents] = await Promise.all([
+  const [kpis, popularPackage, recentActivity, upcomingEvents, onboardingSteps] = await Promise.all([
     getDashboardKpis(supabase, organizationId),
     getPopularPackageThisMonth(supabase, organizationId),
     getRecentActivity(supabase, organizationId),
     getUpcomingEvents(supabase, organizationId),
+    getOnboardingSteps(supabase, organizationId),
   ]);
+  const onboardingComplete = onboardingSteps.every((s) => s.done);
 
   const kpiCards = [
     { label: "Offertes deze maand", icon: FileText, value: String(kpis.quotesThisMonth) },
@@ -58,6 +67,32 @@ export default async function DashboardOverviewPage() {
           Nieuwe offerte
         </ButtonLink>
       </div>
+
+      {!onboardingComplete && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Aan de slag met Kwotio</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {onboardingSteps.map((step) => (
+              <Link
+                key={step.id}
+                href={step.href}
+                className="flex items-center gap-3 rounded-brand-sm px-2 py-1.5 hover:bg-sand-100"
+              >
+                {step.done ? (
+                  <CheckCircle2 className="size-5 shrink-0 text-teal-600" />
+                ) : (
+                  <Circle className="size-5 shrink-0 text-ink-300" />
+                )}
+                <span className={cn("text-sm font-medium", step.done ? "text-ink-400 line-through" : "text-ink-500")}>
+                  {step.label}
+                </span>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpiCards.map(({ label, icon: Icon, value }) => (

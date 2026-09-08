@@ -236,6 +236,20 @@ export function newBlockFromTemplate(template: BlockTemplateSummary, position: n
   };
 }
 
+/** Kopieert een bestaand blok (offerte dupliceren) met een vers blok-id en
+ * verse geneste id's (pakketten/opties/etc.) — zelfde reden als
+ * newBlockFromTemplate: twee offertes mogen nooit dezelfde pakket-/optie-id
+ * delen in de upsert-op-id-architectuur (zie persistence.ts). */
+export function duplicateBlockDraft(block: BlockDraft): BlockDraft {
+  return {
+    id: uid(),
+    type: block.type,
+    position: block.position,
+    content: regenerateContentIds(block.type, block.content),
+    isNew: true,
+  };
+}
+
 export function newPackage(): PackageDraft {
   return {
     id: uid(),

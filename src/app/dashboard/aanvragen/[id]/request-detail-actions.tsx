@@ -3,21 +3,24 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRightCircle, Ban, Trash2 } from "lucide-react";
+import { ArrowRightCircle, Ban, Trash2, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toWhatsAppLink } from "@/lib/utils";
 import { convertQuoteRequestToQuote, updateQuoteRequestStatus, deleteQuoteRequest } from "../actions";
 import type { QuoteRequestStatus } from "@/lib/types/database";
 
 export function RequestDetailActions({
   requestId,
   customerName,
+  customerPhone,
   status,
   convertedQuoteId,
 }: {
   requestId: string;
   customerName: string;
+  customerPhone: string | null;
   status: QuoteRequestStatus;
   convertedQuoteId: string | null;
 }) {
@@ -61,6 +64,18 @@ export function RequestDetailActions({
             <Ban className="size-4" />
             Markeer als afgehandeld/genegeerd
           </Button>
+        )}
+
+        {customerPhone && (
+          <a
+            href={toWhatsAppLink(customerPhone, `Hoi ${customerName}, bedankt voor je aanvraag bij ons!`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-brand-sm border border-ink-200 px-3 py-2 text-sm font-medium text-ink-500 hover:bg-teal-50 hover:text-teal-700"
+          >
+            <MessageCircle className="size-4" />
+            WhatsApp de klant
+          </a>
         )}
 
         <Button

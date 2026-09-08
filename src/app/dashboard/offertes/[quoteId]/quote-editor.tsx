@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Trash2, Smartphone, Monitor, Link2, Send, Unlink, Copy, Check, Languages } from "lucide-react";
+import { ArrowLeft, Trash2, Smartphone, Monitor, Link2, Send, Unlink, Copy, Check, Languages, MessageCircle } from "lucide-react";
 import type { Database, PriceDisplayMode } from "@/lib/types/database";
 import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
 import { newBlock, newBlockFromTemplate } from "@/lib/blocks/types";
@@ -30,7 +30,7 @@ import { CommentsPanel } from "./comments-panel";
 import { SignatureInfoCard } from "./signature-info-card";
 import { EngagementCard } from "./engagement-card";
 import type { QuoteEngagement } from "@/lib/stats/queries";
-import { cn } from "@/lib/utils";
+import { cn, toWhatsAppLink } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 type Quote = Database["public"]["Tables"]["quotes"]["Row"];
@@ -164,6 +164,10 @@ export function QuoteEditor({
 
   const shareUrl =
     typeof window !== "undefined" ? `${window.location.origin}/offerte/${quote.share_token}` : "";
+  const whatsappText = `Hoi${clientDisplayName ? ` ${clientDisplayName}` : ""}! Hier is jullie offerte: ${shareUrl}`;
+  // Zonder telefoonnummer (leeg pad na wa.me/) opent WhatsApp gewoon de
+  // contactkiezer van de gebruiker — met nummer gaat 'm direct naar de klant.
+  const whatsappHref = clientDisplayPhone ? toWhatsAppLink(clientDisplayPhone, whatsappText) : `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -283,6 +287,15 @@ export function QuoteEditor({
             {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
             {copied ? "Gekopieerd" : "Kopieer link"}
           </button>
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex shrink-0 items-center gap-1 rounded-brand-sm bg-white px-2.5 py-1 text-xs font-medium text-teal-700 shadow-sm hover:bg-teal-100"
+          >
+            <MessageCircle className="size-3.5" />
+            WhatsApp
+          </a>
         </div>
       )}
 

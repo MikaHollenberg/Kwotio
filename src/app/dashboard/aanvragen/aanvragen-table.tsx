@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Inbox, Search, ChevronUp, ChevronDown } from "lucide-react";
+import { Inbox, Search, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge, tones } from "@/components/ui/badge";
 import { formatDate, cn } from "@/lib/utils";
-import { REQUEST_STATUS_LABELS, REQUEST_STATUS_TONES } from "./status";
+import { REQUEST_STATUS_LABELS, REQUEST_STATUS_TONES, isStaleRequest, staleRequestDays } from "./status";
 import { AanvraagRowActions } from "./aanvraag-row-actions";
+import { NewRequestsCelebration } from "./new-requests-celebration";
 import type { QuoteRequestStatus } from "@/lib/types/database";
 
 const STATUS_ORDER = Object.keys(REQUEST_STATUS_LABELS) as QuoteRequestStatus[];
@@ -70,8 +71,11 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
     );
   }
 
+  const hasNewRequests = requests.some((r) => r.status === "nieuw");
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="relative flex flex-col gap-6">
+      <NewRequestsCelebration hasNewRequests={hasNewRequests} />
       <div>
         <p className="text-sm text-ink-400">Aanvragen via de publieke offertepagina</p>
         <h2 className="font-display text-2xl font-semibold text-ink-500">Offerte-aanvragen</h2>
@@ -121,7 +125,17 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
               <div key={r.id} className="flex flex-col gap-2 p-4">
                 <Link href={`/dashboard/aanvragen/${r.id}`} className="flex flex-col gap-2">
                   <div className="flex items-start justify-between gap-3">
-                    <span className="font-medium text-ink-500">{r.customer_name}</span>
+                    <span className="flex items-center gap-1.5 font-medium text-ink-500">
+                      {r.customer_name}
+                      {isStaleRequest(r.status, r.created_at) && (
+                        <span title={`Al ${staleRequestDays(r.created_at)} dagen niet opgepakt`}>
+                          <AlertTriangle
+                            className="size-3.5 shrink-0 text-orange-500"
+                            aria-label={`Al ${staleRequestDays(r.created_at)} dagen niet opgepakt`}
+                          />
+                        </span>
+                      )}
+                    </span>
                     <Badge tone={REQUEST_STATUS_TONES[r.status]}>{REQUEST_STATUS_LABELS[r.status]}</Badge>
                   </div>
                   <div className="flex items-center justify-between text-xs text-ink-400">
@@ -161,8 +175,19 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
                 {visibleRequests.map((r) => (
                   <tr key={r.id} className="border-b border-ink-50 last:border-0 hover:bg-sand-100">
                     <td className="px-5 py-3">
-                      <Link href={`/dashboard/aanvragen/${r.id}`} className="font-medium text-ink-500 hover:text-teal-700">
+                      <Link
+                        href={`/dashboard/aanvragen/${r.id}`}
+                        className="flex items-center gap-1.5 font-medium text-ink-500 hover:text-teal-700"
+                      >
                         {r.customer_name}
+                        {isStaleRequest(r.status, r.created_at) && (
+                          <span title={`Al ${staleRequestDays(r.created_at)} dagen niet opgepakt`}>
+                            <AlertTriangle
+                              className="size-3.5 shrink-0 text-orange-500"
+                              aria-label={`Al ${staleRequestDays(r.created_at)} dagen niet opgepakt`}
+                            />
+                          </span>
+                        )}
                       </Link>
                     </td>
                     <td className="px-5 py-3 text-ink-400">{r.customer_email ?? r.customer_phone ?? "—"}</td>
