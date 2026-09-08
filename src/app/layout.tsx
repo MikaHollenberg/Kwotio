@@ -12,7 +12,14 @@ const manrope = Manrope({
   subsets: ["latin"],
 });
 
+// Nodig voor absolute og:image-URL's (bv. de publieke organisatiepagina's
+// gegenereerde deel-preview) — social-media-crawlers vereisen een volledig
+// gekwalificeerde URL, geen relatief pad. Geen losse env-var: Vercel zet
+// VERCEL_URL vanzelf, lokaal valt dit terug op localhost.
+const siteUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Caribbean Bar Uitgeest — Offertes",
     template: "%s · Caribbean Bar Uitgeest",

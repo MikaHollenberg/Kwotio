@@ -15,6 +15,7 @@ import { PUBLIC_PRICE_DISCLAIMER, PRIVACYBELEID_URL } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 import type { PublicOrgPageData } from "./data";
 import { RequestFormModal } from "./request-form-modal";
+import { logTemplateOpened, logRequestFormOpened } from "./analytics";
 
 const META: QuoteMeta = {
   title: "",
@@ -56,8 +57,12 @@ export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: Pu
     const next = selectedId === id ? null : id;
     setSelectedId(next);
     const url = new URL(window.location.href);
-    if (next) url.searchParams.set("template", next);
-    else url.searchParams.delete("template");
+    if (next) {
+      url.searchParams.set("template", next);
+      void logTemplateOpened(orgSlug, next);
+    } else {
+      url.searchParams.delete("template");
+    }
     window.history.replaceState({}, "", url);
   }
 
@@ -115,10 +120,11 @@ export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: Pu
                     key={t.id}
                     type="button"
                     onClick={() => selectTemplate(t.id)}
+                    style={t.id === selectedId ? { backgroundColor: data.primaryColor, borderColor: data.primaryColor } : undefined}
                     className={cn(
                       "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 ease-brand",
                       t.id === selectedId
-                        ? "border-teal-500 bg-teal-500 text-white"
+                        ? "text-white"
                         : "border-ink-200 text-ink-400 hover:border-ink-300 hover:text-ink-500",
                     )}
                   >
@@ -156,7 +162,15 @@ export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: Pu
               )}
 
               <div className="sticky bottom-4 flex justify-center">
-                <Button size="lg" onClick={() => setFormOpen(true)} className="shadow-lg">
+                <Button
+                  size="lg"
+                  style={{ backgroundColor: data.primaryColor }}
+                  onClick={() => {
+                    setFormOpen(true);
+                    void logRequestFormOpened(orgSlug);
+                  }}
+                  className="shadow-lg hover:opacity-90 active:opacity-90"
+                >
                   Vraag offerte aan
                 </Button>
               </div>

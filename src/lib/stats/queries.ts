@@ -261,6 +261,62 @@ export async function getTemplatePerformance(supabase: Client, organizationId: s
 }
 
 // ---------------------------------------------------------------------------
+// Publieke organisatiepagina (/offertes/[slug]) — bezoeken, geopende
+// templates en geopende aanvraagformulieren deze maand, plus de conversie
+// naar daadwerkelijke aanvragen (quote_requests, elders al opgeslagen).
+// ---------------------------------------------------------------------------
+
+export type PublicPageStats = {
+  pageViewsThisMonth: number;
+  requestFormOpensThisMonth: number;
+  requestsThisMonth: number;
+  /** Aanvragen gedeeld door paginabezoeken deze maand — null zonder bezoeken. */
+  conversionRate: number | null;
+  mostViewedTemplate: { name: string; count: number } | null;
+};
+
+export async function getPublicPageStatsThisMonth(supabase: Client, organizationId: string): Promise<PublicPageStats> {
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+  const [{ data: events }, { count: requestsThisMonth }] = await Promise.all([
+    supabase
+      .from("public_page_events")
+      .select("type, template_id")
+      .eq("organization_id", organizationId)
+      .gte("created_at", startOfMonth),
+    supabase
+      .from("quote_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("organization_id", organizationId)
+      .gte("created_at", startOfMonth),
+  ]);
+  const rows = events ?? [];
+  const pageViewsThisMonth = rows.filter((e) => e.type === "page_view").length;
+  const requestFormOpensThisMonth = rows.filter((e) => e.type === "request_form_opened").length;
+
+  const templateOpenCounts = new Map<string, number>();
+  for (const e of rows) {
+    if (e.type !== "template_opened" || !e.template_id) continue;
+    templateOpenCounts.set(e.template_id, (templateOpenCounts.get(e.template_id) ?? 0) + 1);
+  }
+  let mostViewedTemplate: PublicPageStats["mostViewedTemplate"] = null;
+  if (templateOpenCounts.size > 0) {
+    const [templateId, count] = [...templateOpenCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+    const { data: template } = await supabase.from("templates").select("name").eq("id", templateId).maybeSingle();
+    mostViewedTemplate = { name: template?.name ?? "Onbekend template", count };
+  }
+
+  return {
+    pageViewsThisMonth,
+    requestFormOpensThisMonth,
+    requestsThisMonth: requestsThisMonth ?? 0,
+    conversionRate: pageViewsThisMonth > 0 ? (requestsThisMonth ?? 0) / pageViewsThisMonth : null,
+    mostViewedTemplate,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Recente activiteit (dashboard-overzicht)
 // ---------------------------------------------------------------------------
 

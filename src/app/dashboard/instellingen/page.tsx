@@ -4,6 +4,7 @@ import { EmailAutomationCard, type EmailRule } from "./email-automation-card";
 import { TeamCard, type TeamMember } from "./team-card";
 import { OrganizationSettingsCard } from "./organization-settings-card";
 import { HeadcountSettingsCard } from "./headcount-settings-card";
+import { DataExportCard } from "./data-export-card";
 
 export default async function InstellingenPage() {
   const supabase = await createClient();
@@ -110,6 +111,8 @@ export default async function InstellingenPage() {
       <EmailAutomationCard rules={emailRules} canEdit={canManageOrg} />
 
       {canManageOrg && <TeamCard members={members} currentUserId={user!.id} />}
+
+      {canManageOrg && <DataExportCard organizationId={profile!.organization_id} />}
     </div>
   );
 }

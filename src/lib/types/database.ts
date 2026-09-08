@@ -40,6 +40,7 @@ export type PriceDisplayMode = "incl_btw" | "excl_btw";
 export type OrgStatus = "proefperiode" | "actief" | "opgezegd";
 export type LogoPreference = "horizontaal" | "vierkant";
 export type QuoteRequestStatus = "nieuw" | "in_behandeling" | "omgezet" | "genegeerd";
+export type PublicPageEventType = "page_view" | "template_opened" | "request_form_opened";
 
 export interface Database {
   public: {
@@ -426,6 +427,21 @@ export interface Database {
           customer_phone: string;
         };
         Update: Partial<Database["public"]["Tables"]["quote_requests"]["Row"]>;
+        Relationships: [];
+      };
+      public_page_events: {
+        Row: {
+          id: string;
+          organization_id: string;
+          template_id: string | null;
+          type: PublicPageEventType;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["public_page_events"]["Row"]> & {
+          organization_id: string;
+          type: PublicPageEventType;
+        };
+        Update: Partial<Database["public"]["Tables"]["public_page_events"]["Row"]>;
         Relationships: [];
       };
     };

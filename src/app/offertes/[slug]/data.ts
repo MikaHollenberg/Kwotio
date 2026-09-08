@@ -20,8 +20,13 @@ export type PublicOrgPageData = {
   welcomeMessage: string | null;
   guestCountFieldActive: boolean;
   guestCountFieldLabel: string;
+  /** organizations.brand_theme.primaryColor — valt terug op Kwotio's eigen
+   * oranje als de organisatie nog geen eigen huisstijlkleur heeft ingesteld. */
+  primaryColor: string;
   templates: PublicOrgTemplate[];
 };
+
+const DEFAULT_PRIMARY_COLOR = "#CC7A3E";
 
 /**
  * Enige toegangspad voor de publieke organisatiepagina: alles wordt
@@ -42,7 +47,7 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
   const { data: organization, error: orgError } = await supabase
     .from("organizations")
     .select(
-      "id, brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, public_welcome_message, guest_count_field_active, guest_count_field_label, archived_at",
+      "id, brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, public_welcome_message, guest_count_field_active, guest_count_field_label, brand_theme, archived_at",
     )
     .eq("public_slug", slug)
     .maybeSingle();
@@ -77,6 +82,7 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     welcomeMessage: organization.public_welcome_message,
     guestCountFieldActive: organization.guest_count_field_active,
     guestCountFieldLabel: organization.guest_count_field_label || "Aantal personen",
+    primaryColor: (organization.brand_theme as { primaryColor?: string } | null)?.primaryColor || DEFAULT_PRIMARY_COLOR,
     templates,
   };
 }

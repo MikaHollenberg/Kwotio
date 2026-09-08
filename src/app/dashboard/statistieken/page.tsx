@@ -1,4 +1,4 @@
-import { FileDown, TrendingUp, TrendingDown, Clock3, Users, Trophy, CalendarDays } from "lucide-react";
+import { FileDown, TrendingUp, TrendingDown, Clock3, Users, Trophy, CalendarDays, Eye, MousePointerClick, Inbox, Percent } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
   getPipeline,
@@ -7,6 +7,7 @@ import {
   getExpectedGuestsThisMonth,
   getPopularPackageThisMonth,
   getBusiestDayThisMonth,
+  getPublicPageStatsThisMonth,
 } from "@/lib/stats/queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PipelineStatusChart } from "@/components/dashboard/pipeline-status-chart";
@@ -29,13 +30,14 @@ export default async function StatistiekenPage() {
     .single();
   const organizationId = profile!.organization_id;
 
-  const [pipeline, monthlySeries, templatePerformance, expectedGuests, popularPackage, busiestDay] = await Promise.all([
+  const [pipeline, monthlySeries, templatePerformance, expectedGuests, popularPackage, busiestDay, publicPageStats] = await Promise.all([
     getPipeline(supabase, organizationId),
     getMonthlySeries(supabase, organizationId),
     getTemplatePerformance(supabase, organizationId),
     getExpectedGuestsThisMonth(supabase, organizationId),
     getPopularPackageThisMonth(supabase, organizationId),
     getBusiestDayThisMonth(supabase, organizationId),
+    getPublicPageStatsThisMonth(supabase, organizationId),
   ]);
 
   const busiestDayLabel = busiestDay
@@ -77,6 +79,41 @@ export default async function StatistiekenPage() {
   const wonRevenue = pipeline.geaccepteerd.reduce((sum, q) => sum + q.total, 0);
   const lostDeclinedRevenue = pipeline.geweigerd.reduce((sum, q) => sum + q.total, 0);
   const lostExpiredRevenue = pipeline.verlopen.reduce((sum, q) => sum + q.total, 0);
+
+  const publicPageTiles = [
+    {
+      label: "Paginabezoeken deze maand",
+      icon: Eye,
+      value: String(publicPageStats.pageViewsThisMonth),
+      accent: "bg-blue-50 text-blue-600",
+    },
+    {
+      label: "Aanvraagformulier geopend",
+      icon: MousePointerClick,
+      value: String(publicPageStats.requestFormOpensThisMonth),
+      accent: "bg-yellow-50 text-yellow-700",
+    },
+    {
+      label: "Aanvragen ontvangen",
+      icon: Inbox,
+      value: String(publicPageStats.requestsThisMonth),
+      accent: "bg-emerald-50 text-emerald-600",
+    },
+    {
+      label: "Conversie (bezoek → aanvraag)",
+      icon: Percent,
+      value: publicPageStats.conversionRate != null ? `${Math.round(publicPageStats.conversionRate * 100)}%` : "—",
+      accent: "bg-orange-50 text-orange-600",
+    },
+    {
+      label: "Meest bekeken template",
+      icon: Trophy,
+      value: publicPageStats.mostViewedTemplate
+        ? `${publicPageStats.mostViewedTemplate.name} (${publicPageStats.mostViewedTemplate.count}×)`
+        : "Nog geen bezoeken",
+      accent: "bg-sand-200 text-ink-400",
+    },
+  ];
 
   const revenueTiles = [
     { label: "Omzet geaccepteerd", icon: TrendingUp, value: formatCurrency(wonRevenue), accent: "bg-emerald-50 text-emerald-600" },
@@ -161,6 +198,30 @@ export default async function StatistiekenPage() {
         </CardHeader>
         <CardContent>
           <TemplatePerformanceTable templates={templatePerformance} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>Publieke offertepagina</CardTitle>
+            <CardDescription>Bezoeken en aanvragen via jullie publieke pagina, deze maand</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {publicPageTiles.map(({ label, icon: Icon, value, accent }) => (
+              <div key={label} className="flex items-center gap-4">
+                <div className={`flex size-11 shrink-0 items-center justify-center rounded-brand-sm ${accent}`}>
+                  <Icon className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-ink-400">{label}</p>
+                  <p className="truncate font-display text-xl font-semibold text-ink-500">{value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -5,6 +5,7 @@ import { KWOTIO_FAVICON } from "@/lib/app-config";
 import { getPublicOrgPageData } from "./data";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { PublicOrgPageView } from "./public-org-page-view";
+import { logPageView } from "./analytics";
 
 export async function generateMetadata({
   params,
@@ -21,11 +22,17 @@ export async function generateMetadata({
   // ("%s · Caribbean Bar Uitgeest") — dit is de pagina van een ándere,
   // willekeurige organisatie, die mag nooit Caribbean Bar's merknaam
   // achter zijn eigen titel geplakt krijgen.
+  const title = `Offertes van ${data.organizationName}`;
+  const description = `Bekijk de beschikbare offertes van ${data.organizationName} en vraag direct een offerte aan.`;
   return {
-    title: { absolute: `Offertes van ${data.organizationName}` },
-    description: `Bekijk de beschikbare offertes van ${data.organizationName} en vraag direct een offerte aan.`,
+    title: { absolute: title },
+    description,
     robots: { index: true, follow: true },
     icons: { icon: KWOTIO_FAVICON },
+    // De og:image zelf komt automatisch van opengraph-image.tsx in deze map
+    // (Next.js file convention) — hier alleen titel/beschrijving/kaarttype.
+    openGraph: { title, description, type: "website" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -51,6 +58,12 @@ export default async function PublicOrganizationPage({
 
   const data = await getPublicOrgPageData(slug);
   if (!data) notFound();
+
+  // Bewust ge-await (niet fire-and-forget): op een serverless platform kan
+  // de functie na het versturen van de response afgebroken worden, waardoor
+  // een niet-afgewachte log-insert soms stil zou wegvallen. logPageView faalt
+  // zelf al stil bij een fout, dus dit blokkeert de weergave niet inhoudelijk.
+  await logPageView(data.organizationId);
 
   return <PublicOrgPageView orgSlug={slug} data={data} />;
 }
