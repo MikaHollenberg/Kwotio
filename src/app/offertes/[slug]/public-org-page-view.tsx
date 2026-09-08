@@ -11,7 +11,7 @@ import { LanguageProvider } from "@/lib/i18n/language-context";
 import { BlockPreview, type QuoteMeta } from "@/components/preview/quote-preview";
 import { defaultSelections } from "@/lib/blocks/pricing";
 import type { PackagesBlockContent } from "@/lib/blocks/types";
-import { PUBLIC_PRICE_DISCLAIMER } from "@/lib/legal";
+import { PUBLIC_PRICE_DISCLAIMER, PRIVACYBELEID_URL } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 import type { PublicOrgPageData } from "./data";
 import { RequestFormModal } from "./request-form-modal";
@@ -155,6 +155,20 @@ export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: Pu
             </>
           )}
         </div>
+
+        <footer className="px-6 py-6 text-center text-xs text-ink-300">
+          {data.termsUrl && (
+            <>
+              <a href={data.termsUrl} target="_blank" rel="noopener noreferrer" className="hover:text-ink-400 hover:underline">
+                Algemene voorwaarden van {data.organizationName}
+              </a>
+              {" · "}
+            </>
+          )}
+          <a href={PRIVACYBELEID_URL} target="_blank" rel="noopener noreferrer" className="hover:text-ink-400 hover:underline">
+            Privacybeleid
+          </a>
+        </footer>
       </div>
 
       {formOpen && (

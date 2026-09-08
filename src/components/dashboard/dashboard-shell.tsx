@@ -14,10 +14,10 @@ const TITLES: Record<string, string> = {
   "/dashboard/instellingen": "Instellingen",
 };
 
-function titleFor(pathname: string) {
+function titleFor(pathname: string, fallback: string) {
   if (TITLES[pathname]) return TITLES[pathname];
   const base = "/" + pathname.split("/").slice(1, 3).join("/");
-  return TITLES[base] ?? "Caribbean Bar Uitgeest";
+  return TITLES[base] ?? fallback;
 }
 
 export function DashboardShell({
@@ -42,7 +42,7 @@ export function DashboardShell({
   return (
     <>
       <Topbar
-        title={titleFor(pathname)}
+        title={titleFor(pathname, organizationName ?? "Kwotio")}
         fullName={fullName}
         email={email}
         showAdmin={showAdmin}

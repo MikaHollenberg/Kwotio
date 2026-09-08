@@ -173,11 +173,17 @@ export function BlockPreview({
             <h1 className="mt-1 font-display text-3xl font-semibold leading-tight sm:text-4xl">
               {meta.title || "Titel van de offerte"}
             </h1>
-            <p className="mt-2 text-sm text-white/80">
-              {meta.clientName || "Klantnaam"}
-              {meta.eventDate && ` · ${formatDate(meta.eventDate)}`}
-              {!meta.eventDate && c.eventDateLabel && ` · ${c.eventDateLabel}`}
-            </p>
+            {/* "Klantnaam"-placeholder is alleen zinvol in de bureau-builder
+                (nog geen echte klant bekend) — op een publieke, klantloze
+                weergave (readOnly) laten we deze regel weg i.p.v. letterlijk
+                "Klantnaam" te tonen aan een willekeurige bezoeker. */}
+            {(meta.clientName || meta.eventDate || c.eventDateLabel || !readOnly) && (
+              <p className="mt-2 text-sm text-white/80">
+                {meta.clientName || (readOnly ? "" : "Klantnaam")}
+                {meta.eventDate && ` · ${formatDate(meta.eventDate)}`}
+                {!meta.eventDate && c.eventDateLabel && ` · ${c.eventDateLabel}`}
+              </p>
+            )}
           </div>
         </div>
       );

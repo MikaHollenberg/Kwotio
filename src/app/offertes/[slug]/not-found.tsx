@@ -1,5 +1,12 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
+import { KWOTIO_FAVICON } from "@/lib/app-config";
+
+export const metadata: Metadata = {
+  title: { absolute: "Pagina niet gevonden" },
+  icons: { icon: KWOTIO_FAVICON },
+};
 
 export default function PublicOrgPageNotFound() {
   return (

@@ -290,8 +290,22 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                 {data.organizationBtw && `Btw ${data.organizationBtw}`}
               </Text>
             )}
-            {data.organizationEmail && <Text style={[styles.infoLine, { textAlign: "right" }]}>{data.organizationEmail}</Text>}
-            {data.organizationPhone && <Text style={[styles.infoLine, { textAlign: "right" }]}>{data.organizationPhone}</Text>}
+            {data.organizationEmail && (
+              <Link
+                src={`mailto:${data.organizationEmail}`}
+                style={[styles.infoLine, { textAlign: "right", color: COLORS.muted }]}
+              >
+                {data.organizationEmail}
+              </Link>
+            )}
+            {data.organizationPhone && (
+              <Link
+                src={`tel:${data.organizationPhone.replace(/[^0-9+]/g, "")}`}
+                style={[styles.infoLine, { textAlign: "right", color: COLORS.muted }]}
+              >
+                {data.organizationPhone}
+              </Link>
+            )}
             {data.handledByName && (
               <Text style={[styles.infoLine, { textAlign: "right", marginTop: 3 }]}>Behandeld door: {data.handledByName}</Text>
             )}

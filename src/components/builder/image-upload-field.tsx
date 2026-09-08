@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { compressImageFile } from "@/lib/image-compression";
 import { cn } from "@/lib/utils";
 
 async function uploadToQuoteMedia(file: File, organizationId: string) {
@@ -45,7 +46,8 @@ export function ImageUploadField({
     setUploading(true);
     setError(null);
     try {
-      const url = await uploadToQuoteMedia(file, organizationId);
+      const compressed = await compressImageFile(file);
+      const url = await uploadToQuoteMedia(compressed, organizationId);
       onChange(url);
     } catch {
       setError("Upload mislukt. Probeer het opnieuw.");

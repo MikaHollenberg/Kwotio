@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
+import { KWOTIO_FAVICON } from "@/lib/app-config";
 import { getPublicOrgPageData } from "./data";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { PublicOrgPageView } from "./public-org-page-view";
@@ -12,14 +13,19 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const data = await getPublicOrgPageData(slug);
-  if (!data) return { title: "Pagina niet gevonden", robots: { index: false, follow: false } };
+  if (!data) return { title: "Pagina niet gevonden", robots: { index: false, follow: false }, icons: { icon: KWOTIO_FAVICON } };
   // In tegenstelling tot de privé /offerte/[token]-pagina's mag deze pagina
   // juist wél gevonden/gedeeld worden — daarom hier expliciet index: true
-  // i.p.v. de noindex die de token-route gebruikt.
+  // i.p.v. de noindex die de token-route gebruikt. `title.absolute` (i.p.v.
+  // een kale string) negeert bewust het title-sjabloon uit het root-layout
+  // ("%s · Caribbean Bar Uitgeest") — dit is de pagina van een ándere,
+  // willekeurige organisatie, die mag nooit Caribbean Bar's merknaam
+  // achter zijn eigen titel geplakt krijgen.
   return {
-    title: `Offertes van ${data.organizationName}`,
+    title: { absolute: `Offertes van ${data.organizationName}` },
     description: `Bekijk de beschikbare offertes van ${data.organizationName} en vraag direct een offerte aan.`,
     robots: { index: true, follow: true },
+    icons: { icon: KWOTIO_FAVICON },
   };
 }
 

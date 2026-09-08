@@ -16,6 +16,7 @@ export type PublicOrgPageData = {
   organizationId: string;
   organizationName: string;
   logoUrl: string | null;
+  termsUrl: string | null;
   welcomeMessage: string | null;
   guestCountFieldActive: boolean;
   guestCountFieldLabel: string;
@@ -41,7 +42,7 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
   const { data: organization, error: orgError } = await supabase
     .from("organizations")
     .select(
-      "id, brand_name, logo_horizontal_url, logo_square_url, logo_preference, public_welcome_message, guest_count_field_active, guest_count_field_label, archived_at",
+      "id, brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, public_welcome_message, guest_count_field_active, guest_count_field_label, archived_at",
     )
     .eq("public_slug", slug)
     .maybeSingle();
@@ -72,6 +73,7 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     organizationId: organization.id,
     organizationName: organization.brand_name,
     logoUrl: resolvePreferredLogo(organization),
+    termsUrl: organization.terms_url,
     welcomeMessage: organization.public_welcome_message,
     guestCountFieldActive: organization.guest_count_field_active,
     guestCountFieldLabel: organization.guest_count_field_label || "Aantal personen",

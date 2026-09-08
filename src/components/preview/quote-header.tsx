@@ -61,8 +61,20 @@ export function QuoteHeaderSection({ data }: { data: QuoteHeaderData }) {
             {data.organizationBtw && `Btw ${data.organizationBtw}`}
           </p>
         )}
-        {data.organizationEmail && <p>{data.organizationEmail}</p>}
-        {data.organizationPhone && <p>{data.organizationPhone}</p>}
+        {data.organizationEmail && (
+          <p>
+            <a href={`mailto:${data.organizationEmail}`} className="hover:underline">
+              {data.organizationEmail}
+            </a>
+          </p>
+        )}
+        {data.organizationPhone && (
+          <p>
+            <a href={`tel:${data.organizationPhone.replace(/[^0-9+]/g, "")}`} className="hover:underline">
+              {data.organizationPhone}
+            </a>
+          </p>
+        )}
         {data.handledByName && <p className="mt-1">Behandeld door: {data.handledByName}</p>}
       </div>
     </div>

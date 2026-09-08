@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { uploadOrganizationLogo, updateOrganizationLogo } from "../actions";
+import { compressImageFile } from "@/lib/image-compression";
 
 export function OrganizationLogoUploader({
   organizationId,
@@ -26,8 +27,9 @@ export function OrganizationLogoUploader({
     setUploading(true);
     setError(null);
     try {
+      const compressed = await compressImageFile(file);
       const formData = new FormData();
-      formData.set("file", file);
+      formData.set("file", compressed);
       const url = await uploadOrganizationLogo(organizationId, field, formData);
       setLogoUrl(url);
     } catch {

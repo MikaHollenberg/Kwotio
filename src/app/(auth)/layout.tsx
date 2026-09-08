@@ -1,16 +1,7 @@
 import type { Metadata } from "next";
 import { KwotioLogo } from "@/components/brand/kwotio-logo";
 import { KwotioIconScatter } from "@/components/brand/kwotio-icon-scatter";
-import { APP_NAME } from "@/lib/app-config";
-
-const KWOTIO_FAVICON =
-  "data:image/svg+xml," +
-  "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'>" +
-  "<circle cx='38' cy='40' r='9' fill='%23B87F2A'/>" +
-  "<polygon points='30,47 46,47 26,66' fill='%23B87F2A'/>" +
-  "<circle cx='64' cy='40' r='9' fill='%23B87F2A'/>" +
-  "<polygon points='56,47 72,47 52,66' fill='%23B87F2A'/>" +
-  "</svg>";
+import { APP_NAME, KWOTIO_FAVICON } from "@/lib/app-config";
 
 // Eigen titel-sjabloon + favicon voor deze route-groep — overschrijft alleen
 // hier de site-brede metadata uit app/layout.tsx ("· Caribbean Bar Uitgeest",
