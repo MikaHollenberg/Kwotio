@@ -29,6 +29,8 @@ const dict = {
   packages_pdf_attachment: { nl: "Download bijlage (PDF)", en: "Download attachment (PDF)" },
   packages_pdf_attachment_named: { nl: "Download {name} (PDF)", en: "Download {name} (PDF)" },
   choose_up_to_packages: { nl: "Kies maximaal {count} pakketten", en: "Choose up to {count} packages" },
+  read_more: { nl: "Lees meer", en: "Read more" },
+  show_less: { nl: "Toon minder", en: "Show less" },
 
   accept_and_sign: { nl: "Akkoord & ondertekenen", en: "Approve & sign" },
   sign_coming_note: {

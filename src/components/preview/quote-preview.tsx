@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 import { Check, FileText, Star, Image as ImageIcon } from "lucide-react";
 import type { BlockDraft } from "@/lib/blocks/types";
 import type {
@@ -232,110 +233,248 @@ export function BlockPreview({
 
     case "packages": {
       const c = activeContent as PackagesBlockContent;
-      const maxSelections = c.maxSelections ?? 1;
-      const selectedIds = selections.packageIdByBlock[block.id] ?? [];
-      const atMax = selectedIds.length >= maxSelections;
+      return (
+        <PackagesBlockPreview
+          block={block}
+          content={c}
+          meta={meta}
+          selections={selections}
+          onSelectionsChange={onSelectionsChange}
+          readOnly={readOnly}
+        />
+      );
+    }
+
+    case "timeline": {
+      const c = activeContent as TimelineBlockContent;
       return (
         <div className="px-6 py-10">
           <SectionHeading>{c.heading}</SectionHeading>
-          {c.intro && <p className="mt-2 text-sm text-ink-400">{c.intro}</p>}
-          {!readOnly && maxSelections > 1 && (
-            <p className="mt-1 text-xs font-medium text-ink-400">
-              {t("choose_up_to_packages", { count: String(maxSelections) })}
-            </p>
-          )}
+          <div className="mt-5 flex flex-col gap-4">
+            {c.items.map((item) => (
+              <div key={item.id} className="flex gap-4">
+                <span className="w-14 shrink-0 font-display text-sm font-semibold text-teal-600">{item.time}</span>
+                <div className="flex-1 border-l border-ink-100 pb-4 pl-4">
+                  <p className="text-sm font-medium text-ink-500">{item.title}</p>
+                  {item.description && <p className="mt-0.5 text-sm text-ink-400">{item.description}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
 
-          {/* Mobiel: compacte rijenlijst (ongewijzigd). Desktop (sm+): grotere
-              fotokaarten in een grid — beide gedeeld dezelfde klik-/
-              selectielogica, alleen de opmaak verschilt per breakpoint. */}
-          <div className="mt-5 flex flex-col overflow-hidden rounded-brand-lg border border-ink-100 sm:hidden">
-            {c.packages.map((pkg, i) => {
-              const isSelected = selectedIds.includes(pkg.id);
-              const disabled = maxSelections > 1 && !isSelected && atMax;
-              const rowClassName = cn(
-                "flex items-center gap-3 px-3.5 py-3 text-left transition-colors duration-200 ease-brand",
-                i > 0 && "border-t border-ink-100",
-                isSelected ? "bg-orange-50" : !readOnly && "hover:bg-sand-100",
-                !readOnly && disabled && "opacity-40 hover:bg-transparent",
-              );
-              const rowContent = (
-                <>
-                  <div className="relative size-11 shrink-0 overflow-hidden rounded-brand-sm bg-sand-200">
-                    {pkg.photoUrl ? (
-                      <Image src={pkg.photoUrl} alt="" fill sizes="44px" className="object-cover" />
-                    ) : (
-                      <div className="flex size-full items-center justify-center text-ink-300">
-                        <ImageIcon className="size-4" />
-                      </div>
-                    )}
+    case "signature": {
+      // Zinloos zonder een echte quote erachter (publieke templatepreview).
+      if (readOnly) return null;
+      const c = activeContent as SignatureBlockContent;
+      return (
+        <div className="px-6 py-10">
+          <SectionHeading>{c.heading}</SectionHeading>
+          <p className="mt-2 text-sm text-ink-400">{c.intro}</p>
+          <div className="mt-5 rounded-brand-lg border-2 border-dashed border-ink-200 px-6 py-10 text-center text-sm text-ink-300">
+            {t("accept_and_sign")}
+          </div>
+        </div>
+      );
+    }
+  }
+}
+
+/** Los component (niet een inline switch-case) omdat dit blok, i.t.t. de
+ * andere bloktypes, eigen hooks nodig heeft (uitklap-status + meting van
+ * afgekapte omschrijvingen op mobiel) — hooks mogen niet voorwaardelijk in
+ * een switch-case binnen BlockPreview staan. */
+function PackagesBlockPreview({
+  block,
+  content: c,
+  meta,
+  selections,
+  onSelectionsChange,
+  readOnly,
+}: {
+  block: BlockDraft;
+  content: PackagesBlockContent;
+  meta: QuoteMeta;
+  selections: Selections;
+  onSelectionsChange: (s: Selections) => void;
+  readOnly: boolean;
+}) {
+  const { t } = useTranslation();
+  const maxSelections = c.maxSelections ?? 1;
+  const selectedIds = selections.packageIdByBlock[block.id] ?? [];
+  const atMax = selectedIds.length >= maxSelections;
+
+  // "Lees meer" op de mobiele rijenlijst: welke omschrijvingen zijn
+  // daadwerkelijk afgekapt (gemeten, niet geraden) en welke staan open.
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [truncatedIds, setTruncatedIds] = useState<Set<string>>(new Set());
+  const descRefs = useRef<Map<string, HTMLSpanElement>>(new Map());
+
+  useEffect(() => {
+    function measure() {
+      const next = new Set<string>();
+      descRefs.current.forEach((el, id) => {
+        if (el.scrollWidth > el.clientWidth + 1) next.add(id);
+      });
+      setTruncatedIds(next);
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [c.packages]);
+
+  function toggleExpanded(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function selectPackage(pkg: { id: string }, disabled: boolean, isSelected: boolean) {
+    if (disabled) return;
+    let next: string[];
+    if (maxSelections === 1) {
+      if (isSelected) return;
+      next = [pkg.id];
+    } else if (isSelected) {
+      next = selectedIds.filter((id) => id !== pkg.id);
+    } else {
+      next = [...selectedIds, pkg.id];
+    }
+    onSelectionsChange({
+      ...selections,
+      packageIdByBlock: { ...selections.packageIdByBlock, [block.id]: next },
+    });
+  }
+
+  return (
+    <div className="px-6 py-10">
+      <SectionHeading>{c.heading}</SectionHeading>
+      {c.intro && <p className="mt-2 text-sm text-ink-400">{c.intro}</p>}
+      {!readOnly && maxSelections > 1 && (
+        <p className="mt-1 text-xs font-medium text-ink-400">
+          {t("choose_up_to_packages", { count: String(maxSelections) })}
+        </p>
+      )}
+
+      {/* Mobiel: compacte rijenlijst (ongewijzigd). Desktop (sm+): grotere
+          fotokaarten in een grid — beide gedeeld dezelfde klik-/
+          selectielogica, alleen de opmaak verschilt per breakpoint. */}
+      <div className="mt-5 flex flex-col overflow-hidden rounded-brand-lg border border-ink-100 sm:hidden">
+        {c.packages.map((pkg, i) => {
+          const isSelected = selectedIds.includes(pkg.id);
+          const disabled = maxSelections > 1 && !isSelected && atMax;
+          const isExpanded = expandedIds.has(pkg.id);
+          const isTruncated = truncatedIds.has(pkg.id);
+          const rowClassName = cn(
+            "flex items-center gap-3 px-3.5 py-3 text-left transition-colors duration-200 ease-brand",
+            i > 0 && "border-t border-ink-100",
+            isSelected ? "bg-orange-50" : !readOnly && "hover:bg-sand-100",
+            !readOnly && disabled && "opacity-40 hover:bg-transparent",
+          );
+          const rowContent = (
+            <>
+              <div className="relative size-11 shrink-0 overflow-hidden rounded-brand-sm bg-sand-200">
+                {pkg.photoUrl ? (
+                  <Image src={pkg.photoUrl} alt="" fill sizes="44px" className="object-cover" />
+                ) : (
+                  <div className="flex size-full items-center justify-center text-ink-300">
+                    <ImageIcon className="size-4" />
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <span className="min-w-0 truncate font-display text-sm font-semibold text-ink-500">
-                        {pkg.name}
-                      </span>
-                      {pkg.isDefaultSelected && (
-                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-800">
-                          <Star className="size-2.5 fill-yellow-600 text-yellow-600" /> {t("most_chosen")}
-                        </span>
-                      )}
-                    </div>
-                    {pkg.description && <p className="truncate text-xs text-ink-400">{pkg.description}</p>}
-                  </div>
-                  <span className="shrink-0 font-display text-sm font-semibold text-orange-600">
-                    {priceLabel(pkg.price, meta.currency, meta.pricePerPerson)}
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <span className="min-w-0 truncate font-display text-sm font-semibold text-ink-500">
+                    {pkg.name}
                   </span>
-                  {!readOnly && (
-                    <span
-                      className={cn(
-                        "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
-                        isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-ink-200",
-                      )}
-                    >
-                      {isSelected && <Check className="size-3" />}
+                  {pkg.isDefaultSelected && (
+                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-800">
+                      <Star className="size-2.5 fill-yellow-600 text-yellow-600" /> {t("most_chosen")}
                     </span>
                   )}
-                </>
-              );
-
-              if (readOnly) {
-                return (
-                  <div key={pkg.id} className={rowClassName}>
-                    {rowContent}
+                </div>
+                {pkg.description && (
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      ref={(el) => {
+                        if (el) descRefs.current.set(pkg.id, el);
+                        else descRefs.current.delete(pkg.id);
+                      }}
+                      className={cn("text-xs text-ink-400", !isExpanded && "min-w-0 flex-1 truncate")}
+                    >
+                      {pkg.description}
+                    </span>
+                    {(isTruncated || isExpanded) && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleExpanded(pkg.id);
+                        }}
+                        className="shrink-0 text-xs font-semibold text-teal-600 hover:text-teal-700"
+                      >
+                        {isExpanded ? t("show_less") : t("read_more")}
+                      </button>
+                    )}
                   </div>
-                );
-              }
-
-              return (
-                <button
-                  key={pkg.id}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => {
-                    if (disabled) return;
-                    let next: string[];
-                    if (maxSelections === 1) {
-                      if (isSelected) return;
-                      next = [pkg.id];
-                    } else if (isSelected) {
-                      next = selectedIds.filter((id) => id !== pkg.id);
-                    } else {
-                      next = [...selectedIds, pkg.id];
-                    }
-                    onSelectionsChange({
-                      ...selections,
-                      packageIdByBlock: { ...selections.packageIdByBlock, [block.id]: next },
-                    });
-                  }}
-                  className={rowClassName}
+                )}
+              </div>
+              <span className="shrink-0 font-display text-sm font-semibold text-orange-600">
+                {priceLabel(pkg.price, meta.currency, meta.pricePerPerson)}
+              </span>
+              {!readOnly && (
+                <span
+                  className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
+                    isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-ink-200",
+                  )}
                 >
-                  {rowContent}
-                </button>
-              );
-            })}
-          </div>
+                  {isSelected && <Check className="size-3" />}
+                </span>
+              )}
+            </>
+          );
 
-          <div className="mt-5 hidden gap-3.5 sm:grid sm:grid-cols-3">
+          if (readOnly) {
+            return (
+              <div key={pkg.id} className={rowClassName}>
+                {rowContent}
+              </div>
+            );
+          }
+
+          // Geen <button> hier: het "Lees meer"-knopje in rowContent is zelf
+          // ook een <button> en een button-in-button is ongeldige HTML. Een
+          // div met role="button" geeft dezelfde klik-/toetsenbordbediening
+          // zonder die nesting.
+          return (
+            <div
+              key={pkg.id}
+              role="button"
+              tabIndex={disabled ? -1 : 0}
+              aria-disabled={disabled}
+              aria-pressed={isSelected}
+              onClick={() => selectPackage(pkg, disabled, isSelected)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  selectPackage(pkg, disabled, isSelected);
+                }
+              }}
+              className={cn(rowClassName, "cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-teal-500/40")}
+            >
+              {rowContent}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 hidden gap-3.5 sm:grid sm:grid-cols-3">
             {c.packages.map((pkg) => {
               const isSelected = selectedIds.includes(pkg.id);
               const disabled = maxSelections > 1 && !isSelected && atMax;
@@ -501,41 +640,4 @@ export function BlockPreview({
           )}
         </div>
       );
-    }
-
-    case "timeline": {
-      const c = activeContent as TimelineBlockContent;
-      return (
-        <div className="px-6 py-10">
-          <SectionHeading>{c.heading}</SectionHeading>
-          <div className="mt-5 flex flex-col gap-4">
-            {c.items.map((item) => (
-              <div key={item.id} className="flex gap-4">
-                <span className="w-14 shrink-0 font-display text-sm font-semibold text-teal-600">{item.time}</span>
-                <div className="flex-1 border-l border-ink-100 pb-4 pl-4">
-                  <p className="text-sm font-medium text-ink-500">{item.title}</p>
-                  {item.description && <p className="mt-0.5 text-sm text-ink-400">{item.description}</p>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    case "signature": {
-      // Zinloos zonder een echte quote erachter (publieke templatepreview).
-      if (readOnly) return null;
-      const c = activeContent as SignatureBlockContent;
-      return (
-        <div className="px-6 py-10">
-          <SectionHeading>{c.heading}</SectionHeading>
-          <p className="mt-2 text-sm text-ink-400">{c.intro}</p>
-          <div className="mt-5 rounded-brand-lg border-2 border-dashed border-ink-200 px-6 py-10 text-center text-sm text-ink-300">
-            {t("accept_and_sign")}
-          </div>
-        </div>
-      );
-    }
-  }
 }
