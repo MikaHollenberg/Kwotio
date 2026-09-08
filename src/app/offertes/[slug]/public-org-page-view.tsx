@@ -33,6 +33,14 @@ export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: Pu
   const [formOpen, setFormOpen] = useState(false);
 
   useEffect(() => {
+    // Mobiele browsers onthouden soms de laatst gescrollde positie voor deze
+    // link (scroll restoration) en openen de pagina daardoor niet bovenaan —
+    // forceer altijd een schone start bovenaan.
+    if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+  }, []);
+
+  useEffect(() => {
     // Eenmalige sync vanaf de URL bij het laden (deelbare ?template=-link) —
     // bewust in een effect i.p.v. een lazy useState-initializer, want de
     // server rendert zonder window en zou anders een hydration-mismatch geven.
