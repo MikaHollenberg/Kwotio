@@ -41,6 +41,7 @@ export function TemplateEditor({
   const [name, setName] = useState(template.name);
   const [eventType, setEventType] = useState(template.event_type);
   const [isActive, setIsActive] = useState(template.is_active);
+  const [isPubliclyVisible, setIsPubliclyVisible] = useState(template.is_publicly_visible);
   const [blocks, setBlocks] = useState<BlockDraft[]>(initialBlocks);
   const [blockTemplates, setBlockTemplates] = useState<BlockTemplateSummary[]>(initialBlockTemplates);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
@@ -50,13 +51,14 @@ export function TemplateEditor({
   const [archivePending, startArchiveTransition] = useTransition();
   const isArchived = !!template.archived_at;
 
-  const status = useAutosave({ name, eventType, isActive, blocks }, async (value) => {
+  const status = useAutosave({ name, eventType, isActive, isPubliclyVisible, blocks }, async (value) => {
     await Promise.all([
       updateTemplateMeta(template.id, {
         name: value.name,
         eventType: value.eventType,
         language: template.language,
         isActive: value.isActive,
+        isPubliclyVisible: value.isPubliclyVisible,
       }),
       saveTemplateBlocksAction(template.id, value.blocks),
     ]);
@@ -99,6 +101,18 @@ export function TemplateEditor({
               className="size-4 accent-teal-600"
             />
             Actief
+          </label>
+          <label
+            className="flex items-center gap-1.5 text-sm text-ink-400"
+            title="Zichtbaar op de publieke offertepagina (/offertes/...), zodat bezoekers zonder in te loggen dit template kunnen bekijken en een offerte kunnen aanvragen."
+          >
+            <input
+              type="checkbox"
+              checked={isPubliclyVisible}
+              onChange={(e) => setIsPubliclyVisible(e.target.checked)}
+              className="size-4 accent-teal-600"
+            />
+            Publiek zichtbaar
           </label>
           {isArchived ? (
             <Button

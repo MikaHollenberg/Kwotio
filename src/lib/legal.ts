@@ -2,6 +2,16 @@
 export const PRIVACYBELEID_URL = "/privacybeleid";
 
 /**
+ * Permanent zichtbare disclaimer op de publieke organisatiepagina
+ * (/offertes/[slug]) boven elke alleen-lezen templateweergave — de getoonde
+ * prijzen zijn de echte template-prijzen (geen "vanaf"-bedragen), dus deze
+ * tekst draagt de nuance dat de uiteindelijke offerte kan afwijken. Eén
+ * centrale plek zodat Mika de bewoording later kan verfijnen.
+ */
+export const PUBLIC_PRICE_DISCLAIMER =
+  "Deze pagina toont een indicatie van de prijs op basis van standaardopties. De daadwerkelijke offerte kan afwijken, bijvoorbeeld door maatwerk of extra wensen.";
+
+/**
  * Centrale bron voor de voorwaarden-zin die overal getoond wordt waar naar
  * de algemene voorwaarden van een organisatie wordt verwezen (offerte-PDF,
  * ondertekeningscertificaat, e-mails aan klanten). Elke organisatie heeft

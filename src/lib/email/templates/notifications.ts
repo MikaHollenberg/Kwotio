@@ -66,6 +66,26 @@ export function quoteDeclinedAgencyEmail(input: {
   });
 }
 
+export function quoteRequestReceivedEmail(input: {
+  organizationName: string;
+  customerName: string;
+  templateName: string | null;
+  dashboardUrl: string;
+}) {
+  return emailShell({
+    organizationName: input.organizationName,
+    preheader: `${input.customerName} heeft een offerte aangevraagd via je publieke pagina.`,
+    bodyHtml: `
+      <h1 style="font-size:20px;margin:0 0 12px;">Nieuwe offerte-aanvraag 📥</h1>
+      <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
+        <strong>${input.customerName}</strong> heeft via jullie publieke offertepagina een offerte
+        aangevraagd${input.templateName ? ` voor <strong>${input.templateName}</strong>` : ""}.
+      </p>
+      ${emailButton("Bekijk aanvraag", input.dashboardUrl)}
+    `,
+  });
+}
+
 export function newCommentAgencyEmail(input: {
   organizationName: string;
   quoteTitle: string;

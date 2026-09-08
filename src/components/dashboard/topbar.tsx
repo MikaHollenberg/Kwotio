@@ -11,11 +11,13 @@ export function Topbar({
   fullName,
   email,
   showAdmin = false,
+  newRequestCount = 0,
 }: {
   title: string;
   fullName: string | null;
   email: string;
   showAdmin?: boolean;
+  newRequestCount?: number;
 }) {
   const router = useRouter();
 
@@ -36,7 +38,7 @@ export function Topbar({
   return (
     <header className="flex items-center justify-between gap-4 border-b border-ink-200/40 bg-sand-100/80 px-6 py-4 backdrop-blur-sm lg:px-8">
       <div className="flex items-center gap-3">
-        <MobileNav showAdmin={showAdmin} />
+        <MobileNav showAdmin={showAdmin} newRequestCount={newRequestCount} />
         <h1 className="font-display text-xl font-semibold text-ink-500">
           {title}
         </h1>

@@ -21,13 +21,22 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
-  const { data: organization } = profile
-    ? await supabase
-        .from("organizations")
-        .select("logo_horizontal_url, brand_name, terms_url")
-        .eq("id", profile.organization_id)
-        .single()
-    : { data: null };
+  const [{ data: organization }, { count: newRequestCount }] = await Promise.all([
+    profile
+      ? supabase
+          .from("organizations")
+          .select("logo_horizontal_url, brand_name, terms_url")
+          .eq("id", profile.organization_id)
+          .single()
+      : Promise.resolve({ data: null }),
+    profile
+      ? supabase
+          .from("quote_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", profile.organization_id)
+          .eq("status", "nieuw")
+      : Promise.resolve({ count: 0 }),
+  ]);
 
   return (
     <div className="flex min-h-screen bg-sand-100">
@@ -35,6 +44,7 @@ export default async function DashboardLayout({
         showAdmin={profile?.is_super_admin ?? false}
         logoUrl={organization?.logo_horizontal_url}
         organizationName={organization?.brand_name}
+        newRequestCount={newRequestCount ?? 0}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <DashboardShell
@@ -43,6 +53,7 @@ export default async function DashboardLayout({
           showAdmin={profile?.is_super_admin ?? false}
           organizationName={organization?.brand_name ?? null}
           termsUrl={organization?.terms_url ?? null}
+          newRequestCount={newRequestCount ?? 0}
         >
           {children}
         </DashboardShell>

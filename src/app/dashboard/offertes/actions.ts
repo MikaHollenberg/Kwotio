@@ -137,7 +137,7 @@ export async function saveQuoteBlocksAction(quoteId: string, blocks: BlockDraft[
   revalidatePath(`/dashboard/offertes/${quoteId}`);
 }
 
-async function recalculateTotals(
+export async function recalculateTotals(
   supabase: Awaited<ReturnType<typeof createClient>>,
   quoteId: string,
 ) {

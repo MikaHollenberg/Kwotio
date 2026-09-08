@@ -135,11 +135,15 @@ export function BlockPreview({
   meta,
   selections,
   onSelectionsChange,
+  readOnly = false,
 }: {
   block: BlockDraft;
   meta: QuoteMeta;
   selections: Selections;
   onSelectionsChange: (s: Selections) => void;
+  /** Publieke templatepreview (/offertes/[slug]): niets is aanklikbaar en er
+   * is geen echte quote/handtekening achter deze weergave. */
+  readOnly?: boolean;
 }) {
   const { t, lang } = useTranslation();
   const activeContent = lang === "en" && block.contentEn ? block.contentEn : block.content;
@@ -229,49 +233,27 @@ export function BlockPreview({
         <div className="px-6 py-10">
           <SectionHeading>{c.heading}</SectionHeading>
           {c.intro && <p className="mt-2 text-sm text-ink-400">{c.intro}</p>}
-          {maxSelections > 1 && (
+          {!readOnly && maxSelections > 1 && (
             <p className="mt-1 text-xs font-medium text-ink-400">
               {t("choose_up_to_packages", { count: String(maxSelections) })}
             </p>
           )}
 
-          <div className="mt-5 flex flex-col overflow-hidden rounded-brand-lg border border-ink-100">
+          {/* Mobiel: compacte rijenlijst (ongewijzigd). Desktop (sm+): grotere
+              fotokaarten in een grid — beide gedeeld dezelfde klik-/
+              selectielogica, alleen de opmaak verschilt per breakpoint. */}
+          <div className="mt-5 flex flex-col overflow-hidden rounded-brand-lg border border-ink-100 sm:hidden">
             {c.packages.map((pkg, i) => {
               const isSelected = selectedIds.includes(pkg.id);
-              // Bij maxSelections 1 blijft dit gewoon radiobutton-gedrag: een
-              // ander pakket klikken vervangt de keuze altijd, ongeacht "atMax"
-              // (dat is bij 1 immers al waar zodra het standaardpakket
-              // voorgeselecteerd staat). Alleen bij 2+ keuzes dimmen/blokkeren
-              // we andere kaarten zodra het maximum bereikt is.
               const disabled = maxSelections > 1 && !isSelected && atMax;
-              return (
-                <button
-                  key={pkg.id}
-                  type="button"
-                  disabled={disabled}
-                  onClick={() => {
-                    if (disabled) return;
-                    let next: string[];
-                    if (maxSelections === 1) {
-                      if (isSelected) return;
-                      next = [pkg.id];
-                    } else if (isSelected) {
-                      next = selectedIds.filter((id) => id !== pkg.id);
-                    } else {
-                      next = [...selectedIds, pkg.id];
-                    }
-                    onSelectionsChange({
-                      ...selections,
-                      packageIdByBlock: { ...selections.packageIdByBlock, [block.id]: next },
-                    });
-                  }}
-                  className={cn(
-                    "flex items-center gap-3 px-3.5 py-3 text-left transition-colors duration-200 ease-brand",
-                    i > 0 && "border-t border-ink-100",
-                    isSelected ? "bg-orange-50" : "hover:bg-sand-100",
-                    disabled && "opacity-40 hover:bg-transparent",
-                  )}
-                >
+              const rowClassName = cn(
+                "flex items-center gap-3 px-3.5 py-3 text-left transition-colors duration-200 ease-brand",
+                i > 0 && "border-t border-ink-100",
+                isSelected ? "bg-orange-50" : !readOnly && "hover:bg-sand-100",
+                !readOnly && disabled && "opacity-40 hover:bg-transparent",
+              );
+              const rowContent = (
+                <>
                   <div className="relative size-11 shrink-0 overflow-hidden rounded-brand-sm bg-sand-200">
                     {pkg.photoUrl ? (
                       <Image src={pkg.photoUrl} alt="" fill sizes="44px" className="object-cover" />
@@ -297,14 +279,126 @@ export function BlockPreview({
                   <span className="shrink-0 font-display text-sm font-semibold text-orange-600">
                     {priceLabel(pkg.price, meta.currency, meta.pricePerPerson)}
                   </span>
-                  <span
-                    className={cn(
-                      "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
-                      isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-ink-200",
+                  {!readOnly && (
+                    <span
+                      className={cn(
+                        "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
+                        isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-ink-200",
+                      )}
+                    >
+                      {isSelected && <Check className="size-3" />}
+                    </span>
+                  )}
+                </>
+              );
+
+              if (readOnly) {
+                return (
+                  <div key={pkg.id} className={rowClassName}>
+                    {rowContent}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={pkg.id}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    if (disabled) return;
+                    let next: string[];
+                    if (maxSelections === 1) {
+                      if (isSelected) return;
+                      next = [pkg.id];
+                    } else if (isSelected) {
+                      next = selectedIds.filter((id) => id !== pkg.id);
+                    } else {
+                      next = [...selectedIds, pkg.id];
+                    }
+                    onSelectionsChange({
+                      ...selections,
+                      packageIdByBlock: { ...selections.packageIdByBlock, [block.id]: next },
+                    });
+                  }}
+                  className={rowClassName}
+                >
+                  {rowContent}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-5 hidden gap-3.5 sm:grid sm:grid-cols-3">
+            {c.packages.map((pkg) => {
+              const isSelected = selectedIds.includes(pkg.id);
+              const disabled = maxSelections > 1 && !isSelected && atMax;
+              const cardClassName = cn(
+                "flex flex-col overflow-hidden rounded-brand-lg border text-left transition-colors duration-200 ease-brand",
+                isSelected ? "border-2 border-orange-500" : "border-ink-100",
+                !readOnly && !isSelected && "hover:border-ink-200",
+                !readOnly && disabled && "opacity-40 hover:border-ink-100",
+              );
+              const cardContent = (
+                <>
+                  <div className="relative aspect-square shrink-0 bg-sand-200">
+                    {pkg.photoUrl ? (
+                      <Image src={pkg.photoUrl} alt="" fill sizes="(min-width: 640px) 33vw, 100vw" className="object-cover" />
+                    ) : (
+                      <div className="flex size-full items-center justify-center text-ink-300">
+                        <ImageIcon className="size-6" />
+                      </div>
                     )}
-                  >
-                    {isSelected && <Check className="size-3" />}
-                  </span>
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1 px-3 py-3">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-display text-sm font-semibold text-ink-500">{pkg.name}</span>
+                      {pkg.isDefaultSelected && (
+                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-800">
+                          <Star className="size-2.5 fill-yellow-600 text-yellow-600" /> {t("most_chosen")}
+                        </span>
+                      )}
+                    </div>
+                    {pkg.description && <p className="text-xs text-ink-400">{pkg.description}</p>}
+                    <span className="mt-1 font-display text-sm font-semibold text-orange-600">
+                      {priceLabel(pkg.price, meta.currency, meta.pricePerPerson)}
+                    </span>
+                  </div>
+                </>
+              );
+
+              if (readOnly) {
+                return (
+                  <div key={pkg.id} className={cardClassName}>
+                    {cardContent}
+                  </div>
+                );
+              }
+
+              return (
+                <button
+                  key={pkg.id}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    if (disabled) return;
+                    let next: string[];
+                    if (maxSelections === 1) {
+                      if (isSelected) return;
+                      next = [pkg.id];
+                    } else if (isSelected) {
+                      next = selectedIds.filter((id) => id !== pkg.id);
+                    } else {
+                      next = [...selectedIds, pkg.id];
+                    }
+                    onSelectionsChange({
+                      ...selections,
+                      packageIdByBlock: { ...selections.packageIdByBlock, [block.id]: next },
+                    });
+                  }}
+                  className={cardClassName}
+                >
+                  {cardContent}
                 </button>
               );
             })}
@@ -326,16 +420,20 @@ export function BlockPreview({
                       <input
                         type="checkbox"
                         checked={checked}
-                        onChange={(e) =>
-                          onSelectionsChange({
-                            ...selections,
-                            addonQuantities: {
-                              ...selections.addonQuantities,
-                              [addon.id]: e.target.checked ? (addon.quantityEditable ? addon.defaultQuantity || 1 : 1) : 0,
-                            },
-                          })
+                        disabled={readOnly}
+                        onChange={
+                          readOnly
+                            ? undefined
+                            : (e) =>
+                                onSelectionsChange({
+                                  ...selections,
+                                  addonQuantities: {
+                                    ...selections.addonQuantities,
+                                    [addon.id]: e.target.checked ? (addon.quantityEditable ? addon.defaultQuantity || 1 : 1) : 0,
+                                  },
+                                })
                         }
-                        className="size-4 accent-teal-600"
+                        className="size-4 accent-teal-600 disabled:opacity-100"
                       />
                       <div>
                         <p className="text-sm font-medium text-ink-500">{addon.name}</p>
@@ -348,14 +446,19 @@ export function BlockPreview({
                           type="number"
                           min={1}
                           value={qty}
-                          onChange={(e) => {
-                            const next = Math.max(1, Math.trunc(Number(e.target.value)) || 1);
-                            onSelectionsChange({
-                              ...selections,
-                              addonQuantities: { ...selections.addonQuantities, [addon.id]: next },
-                            });
-                          }}
-                          className="w-16 rounded-brand-sm border border-ink-200 px-2 py-1 text-right text-sm text-ink-500 outline-none focus:border-teal-400"
+                          disabled={readOnly}
+                          onChange={
+                            readOnly
+                              ? undefined
+                              : (e) => {
+                                  const next = Math.max(1, Math.trunc(Number(e.target.value)) || 1);
+                                  onSelectionsChange({
+                                    ...selections,
+                                    addonQuantities: { ...selections.addonQuantities, [addon.id]: next },
+                                  });
+                                }
+                          }
+                          className="w-16 rounded-brand-sm border border-ink-200 px-2 py-1 text-right text-sm text-ink-500 outline-none focus:border-teal-400 disabled:opacity-100"
                         />
                       )}
                       <span className="text-sm font-medium text-ink-500 whitespace-nowrap">
@@ -415,6 +518,8 @@ export function BlockPreview({
     }
 
     case "signature": {
+      // Zinloos zonder een echte quote erachter (publieke templatepreview).
+      if (readOnly) return null;
       const c = activeContent as SignatureBlockContent;
       return (
         <div className="px-6 py-10">

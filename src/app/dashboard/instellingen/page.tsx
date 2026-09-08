@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { EmailAutomationCard, type EmailRule } from "./email-automation-card";
 import { TeamCard, type TeamMember } from "./team-card";
@@ -6,6 +7,8 @@ import { HeadcountSettingsCard } from "./headcount-settings-card";
 
 export default async function InstellingenPage() {
   const supabase = await createClient();
+  const h = await headers();
+  const publicPageOrigin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -71,6 +74,11 @@ export default async function InstellingenPage() {
         initialLogoSquareUrl={organization?.logo_square_url ?? null}
         initialLogoPreference={organization?.logo_preference ?? "horizontaal"}
         initialTermsUrl={organization?.terms_url ?? null}
+        initialPublicSlug={organization?.public_slug ?? ""}
+        initialWelcomeMessage={organization?.public_welcome_message ?? ""}
+        initialGuestCountActive={organization?.guest_count_field_active ?? false}
+        initialGuestCountLabel={organization?.guest_count_field_label ?? ""}
+        publicPageOrigin={publicPageOrigin}
         initial={{
           name: organization?.name ?? "",
           brandName: organization?.brand_name ?? "",

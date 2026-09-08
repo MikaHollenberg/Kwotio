@@ -8,6 +8,7 @@ const TITLES: Record<string, string> = {
   "/dashboard": "Overzicht",
   "/dashboard/offertes": "Offertes",
   "/dashboard/klanten": "Klanten",
+  "/dashboard/aanvragen": "Offerte-aanvragen",
   "/dashboard/templates": "Templates",
   "/dashboard/statistieken": "Statistieken",
   "/dashboard/instellingen": "Instellingen",
@@ -26,6 +27,7 @@ export function DashboardShell({
   showAdmin = false,
   organizationName,
   termsUrl,
+  newRequestCount = 0,
 }: {
   children: React.ReactNode;
   fullName: string | null;
@@ -33,12 +35,19 @@ export function DashboardShell({
   showAdmin?: boolean;
   organizationName?: string | null;
   termsUrl?: string | null;
+  newRequestCount?: number;
 }) {
   const pathname = usePathname();
 
   return (
     <>
-      <Topbar title={titleFor(pathname)} fullName={fullName} email={email} showAdmin={showAdmin} />
+      <Topbar
+        title={titleFor(pathname)}
+        fullName={fullName}
+        email={email}
+        showAdmin={showAdmin}
+        newRequestCount={newRequestCount}
+      />
       <main className="min-w-0 flex-1 px-6 py-8 lg:px-8">{children}</main>
       <footer className="px-6 py-4 text-center text-xs text-ink-300 lg:px-8">
         {termsUrl && (

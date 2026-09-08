@@ -8,7 +8,13 @@ import { Menu, X, ShieldCheck } from "lucide-react";
 import { NAV_ITEMS } from "./sidebar";
 import { cn } from "@/lib/utils";
 
-export function MobileNav({ showAdmin = false }: { showAdmin?: boolean }) {
+export function MobileNav({
+  showAdmin = false,
+  newRequestCount = 0,
+}: {
+  showAdmin?: boolean;
+  newRequestCount?: number;
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -53,7 +59,17 @@ export function MobileNav({ showAdmin = false }: { showAdmin?: boolean }) {
                       )}
                     >
                       <Icon className="size-4.5" strokeWidth={2} />
-                      {label}
+                      <span className="flex-1">{label}</span>
+                      {href === "/dashboard/aanvragen" && newRequestCount > 0 && (
+                        <span
+                          className={cn(
+                            "flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                            isActive ? "bg-white/20 text-white" : "bg-orange-500 text-white",
+                          )}
+                        >
+                          {newRequestCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}

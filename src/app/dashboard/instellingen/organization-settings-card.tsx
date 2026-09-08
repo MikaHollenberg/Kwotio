@@ -13,6 +13,9 @@ import {
   updateOrganizationLogo,
   updateLogoPreference,
   updateOrganizationTerms,
+  updatePublicSlug,
+  updatePublicWelcomeMessage,
+  updateGuestCountFieldSettings,
   type OrganizationSettingsFields,
 } from "./actions";
 
@@ -27,6 +30,11 @@ export function OrganizationSettingsCard({
   initialLogoSquareUrl,
   initialLogoPreference,
   initialTermsUrl,
+  initialPublicSlug,
+  initialWelcomeMessage,
+  initialGuestCountActive,
+  initialGuestCountLabel,
+  publicPageOrigin,
   canEdit,
 }: {
   organizationId: string;
@@ -35,6 +43,12 @@ export function OrganizationSettingsCard({
   initialLogoSquareUrl: string | null;
   initialLogoPreference: LogoPreference;
   initialTermsUrl: string | null;
+  initialPublicSlug: string;
+  initialWelcomeMessage: string;
+  initialGuestCountActive: boolean;
+  initialGuestCountLabel: string;
+  /** Origin (bijv. https://kwotio.vercel.app) voor de volledige publieke link. */
+  publicPageOrigin: string;
   canEdit: boolean;
 }) {
   const [fields, setFields] = useState(initial);
@@ -42,9 +56,28 @@ export function OrganizationSettingsCard({
   const [logoSquareUrl, setLogoSquareUrl] = useState(initialLogoSquareUrl);
   const [logoPreference, setLogoPreference] = useState(initialLogoPreference);
   const [termsUrl, setTermsUrl] = useState(initialTermsUrl);
+  const [publicSlug, setPublicSlug] = useState(initialPublicSlug);
+  const [slugSaved, setSlugSaved] = useState(false);
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [slugPending, startSlugTransition] = useTransition();
+  const [welcomeMessage, setWelcomeMessage] = useState(initialWelcomeMessage);
+  const [welcomeSaved, setWelcomeSaved] = useState(false);
+  const [welcomePending, startWelcomeTransition] = useTransition();
+  const [guestCountActive, setGuestCountActive] = useState(initialGuestCountActive);
+  const [guestCountLabel, setGuestCountLabel] = useState(initialGuestCountLabel);
+  const [guestCountSaved, setGuestCountSaved] = useState(false);
+  const [guestCountPending, startGuestCountTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function saveGuestCount(next: { active: boolean; label: string }) {
+    setGuestCountSaved(false);
+    startGuestCountTransition(async () => {
+      await updateGuestCountFieldSettings(next);
+      setGuestCountSaved(true);
+    });
+  }
 
   function set<K extends keyof OrganizationSettingsFields>(key: K, value: OrganizationSettingsFields[K]) {
     setSaved(false);
@@ -99,6 +132,10 @@ export function OrganizationSettingsCard({
                   "Nog geen algemene voorwaarden geüpload"
                 )}
               </dd>
+            </div>
+            <div>
+              <dt className="text-ink-400">Publieke offertepagina</dt>
+              <dd className="font-medium text-ink-500">{publicPageOrigin}/offertes/{publicSlug}</dd>
             </div>
           </dl>
         </CardContent>
@@ -192,6 +229,107 @@ export function OrganizationSettingsCard({
               void updateOrganizationTerms(url);
             }}
           />
+        </div>
+
+        <div className="flex flex-col gap-4 border-t border-ink-100 pt-4">
+          <div>
+            <span className="text-xs font-semibold text-ink-400">Publieke offertepagina</span>
+            <p className="mt-1 text-xs text-ink-400">
+              De link waarop een klant zonder in te loggen jullie publiek zichtbaar gemaakte
+              templates kan bekijken en een offerte kan aanvragen (per template aan te zetten in
+              de templateredacteur).
+            </p>
+          </div>
+          <div className="flex flex-wrap items-end gap-3">
+            <label className={labelClass}>
+              Link
+              <div className="flex items-center gap-1 text-sm">
+                <span className="whitespace-nowrap text-ink-300">{publicPageOrigin}/offertes/</span>
+                <input
+                  value={publicSlug}
+                  onChange={(e) => {
+                    setPublicSlug(e.target.value);
+                    setSlugSaved(false);
+                  }}
+                  className={cn(inputClass, "w-40")}
+                />
+              </div>
+            </label>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={slugPending}
+              onClick={() => {
+                setSlugError(null);
+                setSlugSaved(false);
+                startSlugTransition(async () => {
+                  try {
+                    await updatePublicSlug(publicSlug);
+                    setSlugSaved(true);
+                  } catch (err) {
+                    setSlugError(err instanceof Error ? err.message : "Opslaan mislukt.");
+                  }
+                });
+              }}
+            >
+              {slugPending ? "Bezig…" : "Link opslaan"}
+            </Button>
+            {slugSaved && !slugPending && <span className="text-sm text-emerald-600">Opgeslagen.</span>}
+          </div>
+          {slugError && <p className="text-sm text-red-600">{slugError}</p>}
+
+          <label className={labelClass}>
+            Welkomsttekst — bovenaan de publieke pagina, boven de disclaimer. Leeg laten toont geen
+            welkomsttekst.
+            <textarea
+              rows={5}
+              value={welcomeMessage}
+              onChange={(e) => {
+                setWelcomeMessage(e.target.value);
+                setWelcomeSaved(false);
+              }}
+              onBlur={() => {
+                setWelcomeSaved(false);
+                startWelcomeTransition(async () => {
+                  await updatePublicWelcomeMessage(welcomeMessage);
+                  setWelcomeSaved(true);
+                });
+              }}
+              placeholder={`Welkom op de offertepagina van ${fields.brandName || "uw organisatie"}! ...`}
+              className="w-full rounded-brand-sm border border-ink-200 bg-white px-3 py-2 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+            />
+          </label>
+          {welcomePending && <p className="text-xs text-ink-400">Bezig met opslaan…</p>}
+          {welcomeSaved && !welcomePending && <p className="text-xs text-emerald-600">Opgeslagen.</p>}
+
+          <label className="flex items-center gap-2.5">
+            <input
+              type="checkbox"
+              checked={guestCountActive}
+              onChange={(e) => {
+                const next = e.target.checked;
+                setGuestCountActive(next);
+                saveGuestCount({ active: next, label: guestCountLabel });
+              }}
+              className="size-4 accent-teal-600"
+            />
+            <span className="text-sm font-medium text-ink-500">
+              Aantal-personen-veld tonen in het aanvraagformulier
+            </span>
+          </label>
+          <label className={labelClass}>
+            Label voor dit veld (bijv. &quot;Aantal personen&quot;, &quot;Aantal gasten&quot;, &quot;Groepsgrootte&quot;)
+            <input
+              value={guestCountLabel}
+              disabled={!guestCountActive}
+              onChange={(e) => setGuestCountLabel(e.target.value)}
+              onBlur={() => saveGuestCount({ active: guestCountActive, label: guestCountLabel })}
+              placeholder="Aantal personen"
+              className={cn(inputClass, "disabled:opacity-60")}
+            />
+          </label>
+          {guestCountSaved && !guestCountPending && <span className="text-sm text-emerald-600">Opgeslagen.</span>}
         </div>
 
         <form

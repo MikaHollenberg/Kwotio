@@ -4,6 +4,7 @@ import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireSuperAdmin } from "@/lib/admin/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { generateUniqueOrganizationSlug, slugify, SLUG_PATTERN } from "@/lib/organization/slug";
 import type { UserRole, OrgStatus } from "@/lib/types/database";
 
 function generateTempPassword() {
@@ -52,9 +53,10 @@ export async function createOrganization(
   await requireSuperAdmin();
   const admin = createAdminClient();
 
+  const publicSlug = await generateUniqueOrganizationSlug(admin, fields.brandName || fields.name);
   const { data: org, error: orgError } = await admin
     .from("organizations")
-    .insert(toRow(fields))
+    .insert({ ...toRow(fields), public_slug: publicSlug })
     .select("id")
     .single();
   if (orgError) throw orgError;
@@ -82,6 +84,27 @@ export async function updateOrganization(organizationId: string, fields: Organiz
   if (error) throw error;
   revalidatePath(`/admin/organisaties/${organizationId}`);
   revalidatePath("/admin/organisaties");
+}
+
+/**
+ * Slug voor de publieke organisatiepagina (/offertes/[slug]) — door een
+ * (super)beheerder achteraf aanpasbaar. Postgres' unieke index vangt een
+ * botsing af (foutcode 23505), we zetten die om naar een vriendelijke
+ * melding i.p.v. de aanroeper een generieke serverfout te laten tonen.
+ */
+export async function updateOrganizationPublicSlug(organizationId: string, slug: string) {
+  await requireSuperAdmin();
+  const normalized = slugify(slug);
+  if (!normalized || !SLUG_PATTERN.test(normalized)) {
+    throw new Error("Ongeldige link — gebruik alleen kleine letters, cijfers en streepjes.");
+  }
+  const admin = createAdminClient();
+  const { error } = await admin.from("organizations").update({ public_slug: normalized }).eq("id", organizationId);
+  if (error) {
+    if (error.code === "23505") throw new Error("Deze link is al in gebruik door een andere organisatie.");
+    throw error;
+  }
+  revalidatePath(`/admin/organisaties/${organizationId}`);
 }
 
 export async function updateOrganizationLogo(organizationId: string, field: "horizontal" | "square", logoUrl: string) {

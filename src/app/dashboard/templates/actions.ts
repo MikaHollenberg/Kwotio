@@ -43,7 +43,7 @@ export async function createTemplate(input: { name: string; eventType: string })
 
 export async function updateTemplateMeta(
   templateId: string,
-  input: { name: string; eventType: string; language: string; isActive: boolean },
+  input: { name: string; eventType: string; language: string; isActive: boolean; isPubliclyVisible: boolean },
 ) {
   const { supabase } = await requireOrganizationId();
 
@@ -54,6 +54,7 @@ export async function updateTemplateMeta(
       event_type: input.eventType,
       language: input.language,
       is_active: input.isActive,
+      is_publicly_visible: input.isPubliclyVisible,
     })
     .eq("id", templateId);
   if (error) throw error;

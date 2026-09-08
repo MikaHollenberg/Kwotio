@@ -6,6 +6,7 @@ import { getOrganizationDetail, getOrganizationMembers } from "@/lib/admin/queri
 import { OrganizationEditForm } from "./organization-edit-form";
 import { OrganizationLogoUploader } from "./organization-logo-uploader";
 import { OrganizationLogoPreference } from "./organization-logo-preference";
+import { OrganizationPublicPageCard } from "./organization-public-page-card";
 import { OrganizationMembersCard } from "./organization-members-card";
 import { OrganizationDangerZone } from "./organization-danger-zone";
 
@@ -62,6 +63,8 @@ export default async function AdminOrganizationDetailPage({ params }: { params: 
           <OrganizationLogoPreference organizationId={organization.id} initialPreference={organization.logoPreference} />
         </CardContent>
       </Card>
+
+      <OrganizationPublicPageCard organizationId={organization.id} initialSlug={organization.publicSlug} />
 
       <OrganizationEditForm
         organizationId={organization.id}

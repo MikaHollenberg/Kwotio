@@ -39,6 +39,7 @@ export type SignatureMethod = "canvas" | "typed";
 export type PriceDisplayMode = "incl_btw" | "excl_btw";
 export type OrgStatus = "proefperiode" | "actief" | "opgezegd";
 export type LogoPreference = "horizontaal" | "vierkant";
+export type QuoteRequestStatus = "nieuw" | "in_behandeling" | "omgezet" | "genegeerd";
 
 export interface Database {
   public: {
@@ -58,6 +59,10 @@ export interface Database {
           terms_url: string | null;
           aantal_personen_actief: boolean;
           aantal_personen_kanttekening: string | null;
+          public_slug: string;
+          public_welcome_message: string | null;
+          guest_count_field_active: boolean;
+          guest_count_field_label: string | null;
           brand_theme: Record<string, unknown>;
           status: OrgStatus;
           plan: string | null;
@@ -148,6 +153,7 @@ export interface Database {
           thumbnail_url: string | null;
           language: string;
           is_active: boolean;
+          is_publicly_visible: boolean;
           archived_at: string | null;
           created_by: string | null;
           created_at: string;
@@ -394,6 +400,32 @@ export interface Database {
           identifier: string;
         };
         Update: Partial<Database["public"]["Tables"]["rate_limit_hits"]["Row"]>;
+        Relationships: [];
+      };
+      quote_requests: {
+        Row: {
+          id: string;
+          organization_id: string;
+          template_id: string | null;
+          customer_name: string;
+          customer_email: string;
+          customer_phone: string;
+          customer_company: string | null;
+          guest_count: number | null;
+          desired_date: string | null;
+          notes: string | null;
+          status: QuoteRequestStatus;
+          converted_quote_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["quote_requests"]["Row"]> & {
+          organization_id: string;
+          customer_name: string;
+          customer_email: string;
+          customer_phone: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["quote_requests"]["Row"]>;
         Relationships: [];
       };
     };

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { slugify, SLUG_PATTERN } from "@/lib/organization/slug";
 import type { UserRole, EmailTriggerType, LogoPreference } from "@/lib/types/database";
 
 async function requireOwnerOrAdmin() {
@@ -83,6 +84,48 @@ export async function updateOrganizationTerms(termsUrl: string) {
   const { error } = await supabase
     .from("organizations")
     .update({ terms_url: termsUrl || null })
+    .eq("id", organizationId);
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}
+
+/**
+ * Slug voor de publieke organisatiepagina (/offertes/[slug]) — door een
+ * eigenaar/admin zelf aan te passen. Zelfde vriendelijke-conflictmelding-
+ * patroon als de super-admin-variant in admin/organisaties/actions.ts.
+ */
+export async function updatePublicSlug(slug: string) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const normalized = slugify(slug);
+  if (!normalized || !SLUG_PATTERN.test(normalized)) {
+    throw new Error("Ongeldige link — gebruik alleen kleine letters, cijfers en streepjes.");
+  }
+  const { error } = await supabase.from("organizations").update({ public_slug: normalized }).eq("id", organizationId);
+  if (error) {
+    if (error.code === "23505") throw new Error("Deze link is al in gebruik door een andere organisatie.");
+    throw error;
+  }
+  revalidatePath("/dashboard/instellingen");
+}
+
+export async function updatePublicWelcomeMessage(message: string) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const { error } = await supabase
+    .from("organizations")
+    .update({ public_welcome_message: message.trim() || null })
+    .eq("id", organizationId);
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}
+
+export async function updateGuestCountFieldSettings(fields: { active: boolean; label: string }) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const { error } = await supabase
+    .from("organizations")
+    .update({
+      guest_count_field_active: fields.active,
+      guest_count_field_label: fields.label || null,
+    })
     .eq("id", organizationId);
   if (error) throw error;
   revalidatePath("/dashboard/instellingen");

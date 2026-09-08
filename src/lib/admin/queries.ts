@@ -64,6 +64,7 @@ export type OrganizationDetail = OrganizationListRow & {
   logoSquareUrl: string | null;
   logoPreference: LogoPreference;
   brandTheme: Record<string, unknown>;
+  publicSlug: string;
 };
 
 export async function getOrganizationDetail(organizationId: string): Promise<OrganizationDetail | null> {
@@ -97,6 +98,7 @@ export async function getOrganizationDetail(organizationId: string): Promise<Org
     logoSquareUrl: org.logo_square_url,
     logoPreference: org.logo_preference,
     brandTheme: org.brand_theme,
+    publicSlug: org.public_slug,
   };
 }
 
