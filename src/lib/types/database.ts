@@ -33,8 +33,9 @@ export type ActivityEventType =
   | "reminder_sent"
   | "downloaded_pdf"
   | "event_reminder_sent"
-  | "declined";
-export type EmailTriggerType = "days_after_sent_no_reaction" | "days_before_event";
+  | "declined"
+  | "review_request_sent";
+export type EmailTriggerType = "days_after_sent_no_reaction" | "days_before_event" | "days_after_event";
 export type SignatureMethod = "canvas" | "typed";
 export type PriceDisplayMode = "incl_btw" | "excl_btw";
 export type OrgStatus = "proefperiode" | "actief" | "opgezegd";
@@ -58,6 +59,7 @@ export interface Database {
           logo_square_url: string | null;
           logo_preference: LogoPreference;
           terms_url: string | null;
+          review_url: string | null;
           aantal_personen_actief: boolean;
           aantal_personen_kanttekening: string | null;
           public_slug: string;

@@ -13,6 +13,7 @@ const ACTIVITY_CONFIG: Record<ActivityEventType, { label: string; icon: React.Co
   downloaded_pdf: { label: "PDF gedownload", icon: ScrollText },
   event_reminder_sent: { label: "evenement-herinnering verzonden", icon: Send },
   declined: { label: "afgewezen", icon: ThumbsDown },
+  review_request_sent: { label: "review-aanvraag verzonden", icon: Send },
 };
 
 function timeAgo(iso: string) {

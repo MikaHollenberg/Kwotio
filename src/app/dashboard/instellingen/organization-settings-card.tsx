@@ -13,6 +13,7 @@ import {
   updateOrganizationLogo,
   updateLogoPreference,
   updateOrganizationTerms,
+  updateReviewUrl,
   updatePublicSlug,
   updatePublicWelcomeMessage,
   updateGuestCountFieldSettings,
@@ -30,6 +31,7 @@ export function OrganizationSettingsCard({
   initialLogoSquareUrl,
   initialLogoPreference,
   initialTermsUrl,
+  initialReviewUrl,
   initialPublicSlug,
   initialWelcomeMessage,
   initialGuestCountActive,
@@ -43,6 +45,7 @@ export function OrganizationSettingsCard({
   initialLogoSquareUrl: string | null;
   initialLogoPreference: LogoPreference;
   initialTermsUrl: string | null;
+  initialReviewUrl: string | null;
   initialPublicSlug: string;
   initialWelcomeMessage: string;
   initialGuestCountActive: boolean;
@@ -56,6 +59,9 @@ export function OrganizationSettingsCard({
   const [logoSquareUrl, setLogoSquareUrl] = useState(initialLogoSquareUrl);
   const [logoPreference, setLogoPreference] = useState(initialLogoPreference);
   const [termsUrl, setTermsUrl] = useState(initialTermsUrl);
+  const [reviewUrl, setReviewUrl] = useState(initialReviewUrl ?? "");
+  const [reviewUrlSaved, setReviewUrlSaved] = useState(false);
+  const [reviewUrlPending, startReviewUrlTransition] = useTransition();
   const [publicSlug, setPublicSlug] = useState(initialPublicSlug);
   const [slugSaved, setSlugSaved] = useState(false);
   const [slugError, setSlugError] = useState<string | null>(null);
@@ -231,6 +237,41 @@ export function OrganizationSettingsCard({
           />
         </div>
 
+        <div className="flex flex-col gap-2 border-t border-ink-100 pt-4">
+          <span className="text-xs font-semibold text-ink-400">
+            Review-link (optioneel) — bijv. je Google- of Facebook-reviewpagina. Wordt gebruikt in
+            de automatische review-aanvraag-e-mail (Instellingen → E-mailautomatisering,
+            &quot;dagen na evenementdatum&quot;).
+          </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="url"
+              value={reviewUrl}
+              placeholder="https://g.page/r/.../review"
+              onChange={(e) => {
+                setReviewUrl(e.target.value);
+                setReviewUrlSaved(false);
+              }}
+              className={cn(inputClass, "w-full max-w-md")}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={reviewUrlPending}
+              onClick={() => {
+                startReviewUrlTransition(async () => {
+                  await updateReviewUrl(reviewUrl);
+                  setReviewUrlSaved(true);
+                });
+              }}
+            >
+              {reviewUrlPending ? "Bezig…" : "Opslaan"}
+            </Button>
+            {reviewUrlSaved && !reviewUrlPending && <span className="text-sm text-emerald-600">Opgeslagen.</span>}
+          </div>
+        </div>
+
         <div className="flex flex-col gap-4 border-t border-ink-100 pt-4">
           <div>
             <span className="text-xs font-semibold text-ink-400">Publieke offertepagina</span>
@@ -276,6 +317,14 @@ export function OrganizationSettingsCard({
               {slugPending ? "Bezig…" : "Link opslaan"}
             </Button>
             {slugSaved && !slugPending && <span className="text-sm text-emerald-600">Opgeslagen.</span>}
+            {publicSlug && (
+              <a
+                href={`/api/public-page-qr?slug=${encodeURIComponent(publicSlug)}`}
+                className="inline-flex h-9 items-center rounded-brand-sm border border-ink-200 px-3 text-sm font-medium text-ink-500 hover:bg-sand-100"
+              >
+                QR-code downloaden
+              </a>
+            )}
           </div>
           {slugError && <p className="text-sm text-red-600">{slugError}</p>}
 

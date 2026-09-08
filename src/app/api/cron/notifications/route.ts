@@ -1,7 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
-import { reminderClientEmail, eventReminderClientEmail, expiringSoonAgencyEmail } from "@/lib/email/templates/notifications";
+import {
+  reminderClientEmail,
+  eventReminderClientEmail,
+  reviewRequestClientEmail,
+  expiringSoonAgencyEmail,
+} from "@/lib/email/templates/notifications";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
 import { renderEmailTemplate } from "@/lib/email/template-vars";
 import { formatDate } from "@/lib/utils";
@@ -29,9 +34,9 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
   const now = new Date();
-  const results = { remindersSent: 0, eventRemindersSent: 0, expiringSoonNotified: 0, markedExpired: 0 };
+  const results = { remindersSent: 0, eventRemindersSent: 0, reviewRequestsSent: 0, expiringSoonNotified: 0, markedExpired: 0 };
 
-  const { data: organizations } = await supabase.from("organizations").select("id, brand_name, terms_url");
+  const { data: organizations } = await supabase.from("organizations").select("id, brand_name, terms_url, review_url");
   const orgById = new Map((organizations ?? []).map((o) => [o.id, o]));
   const origin = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
 
@@ -151,6 +156,62 @@ export async function GET(request: NextRequest) {
         await supabase
           .from("activity_events")
           .insert({ quote_id: quote.id, type: "event_reminder_sent", metadata: { ruleId: rule.id } });
+      }
+    }
+
+    if (rule.trigger_type === "days_after_event") {
+      const targetDate = new Date(now);
+      targetDate.setDate(targetDate.getDate() - rule.trigger_days);
+      const targetDateKey = targetDate.toISOString().slice(0, 10);
+
+      const { data: pastEventQuotes } = await supabase
+        .from("quotes")
+        .select("id, title, client_id, share_token, event_date")
+        .eq("organization_id", rule.organization_id)
+        .eq("event_date", targetDateKey)
+        .eq("status", "geaccepteerd");
+
+      for (const quote of pastEventQuotes ?? []) {
+        const { count: alreadySent } = await supabase
+          .from("activity_events")
+          .select("id", { count: "exact", head: true })
+          .eq("quote_id", quote.id)
+          .eq("type", "review_request_sent")
+          .contains("metadata", { ruleId: rule.id });
+        if ((alreadySent ?? 0) > 0) continue;
+
+        if (quote.client_id) {
+          const { data: client } = await supabase
+            .from("clients")
+            .select("name, email")
+            .eq("id", quote.client_id)
+            .maybeSingle();
+          if (client?.email) {
+            const vars = {
+              klantnaam: client.name,
+              offertetitel: quote.title,
+              evenementdatum: quote.event_date ? formatDate(quote.event_date) : "",
+              link: `${origin}/offerte/${quote.share_token}`,
+            };
+            await sendEmail({
+              to: client.email,
+              subject: renderEmailTemplate(rule.subject, vars),
+              html: reviewRequestClientEmail({
+                organizationName: org.brand_name,
+                quoteTitle: quote.title,
+                bodyText: renderEmailTemplate(rule.body, vars),
+                reviewUrl: org.review_url,
+                termsUrl: org.terms_url,
+                privacyUrl: `${origin}${PRIVACYBELEID_URL}`,
+              }),
+            });
+            results.reviewRequestsSent += 1;
+          }
+        }
+
+        await supabase
+          .from("activity_events")
+          .insert({ quote_id: quote.id, type: "review_request_sent", metadata: { ruleId: rule.id } });
       }
     }
   }

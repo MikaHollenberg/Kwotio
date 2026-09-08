@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Topbar } from "@/components/dashboard/topbar";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
@@ -38,11 +39,34 @@ export function DashboardShell({
   newRequestCount?: number;
 }) {
   const pathname = usePathname();
+  const pageTitle = titleFor(pathname, organizationName ?? "Kwotio");
+
+  // Badge in de titel van het browsertabblad ("(2) Offertes") zodra er
+  // nieuwe, nog niet opgepakte aanvragen zijn -- zo valt het ook op als het
+  // tabblad niet actief is, zonder dat je steeds hoeft te controleren. Next
+  // zet de <title>-tag na hydratie soms terug naar de statische metadata-
+  // waarde, dus een eenmalige document.title-toewijzing wordt anders
+  // meteen weer overschreven -- een MutationObserver op de title-tag dwingt
+  // de badge steeds opnieuw af zodra iets anders 'm probeert te wijzigen.
+  useEffect(() => {
+    const badgedTitle = newRequestCount > 0 ? `(${newRequestCount}) ${pageTitle}` : pageTitle;
+
+    function applyBadge() {
+      if (document.title !== badgedTitle) document.title = badgedTitle;
+    }
+    applyBadge();
+
+    const titleEl = document.querySelector("title");
+    if (!titleEl) return;
+    const observer = new MutationObserver(applyBadge);
+    observer.observe(titleEl, { childList: true, characterData: true, subtree: true });
+    return () => observer.disconnect();
+  }, [pageTitle, newRequestCount]);
 
   return (
     <>
       <Topbar
-        title={titleFor(pathname, organizationName ?? "Kwotio")}
+        title={pageTitle}
         fullName={fullName}
         email={email}
         showAdmin={showAdmin}

@@ -75,6 +75,7 @@ export default async function InstellingenPage() {
         initialLogoSquareUrl={organization?.logo_square_url ?? null}
         initialLogoPreference={organization?.logo_preference ?? "horizontaal"}
         initialTermsUrl={organization?.terms_url ?? null}
+        initialReviewUrl={organization?.review_url ?? null}
         initialPublicSlug={organization?.public_slug ?? ""}
         initialWelcomeMessage={organization?.public_welcome_message ?? ""}
         initialGuestCountActive={organization?.guest_count_field_active ?? false}

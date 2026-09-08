@@ -156,6 +156,29 @@ export function eventReminderClientEmail(input: {
   });
 }
 
+export function reviewRequestClientEmail(input: {
+  organizationName: string;
+  quoteTitle: string;
+  bodyText: string;
+  reviewUrl: string | null;
+  termsUrl: string | null;
+  privacyUrl: string;
+}) {
+  return emailShell({
+    organizationName: input.organizationName,
+    preheader: `Bedankt namens ${input.organizationName}!`,
+    bodyHtml: `
+      <h1 style="font-size:20px;margin:0 0 12px;">Bedankt! 🌟</h1>
+      <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
+        ${textToSafeHtml(input.bodyText)}
+      </p>
+      ${input.reviewUrl ? emailButton("Laat een review achter", input.reviewUrl) : ""}
+    `,
+    termsUrl: input.termsUrl,
+    privacyUrl: input.privacyUrl,
+  });
+}
+
 export function expiringSoonAgencyEmail(input: {
   organizationName: string;
   quoteTitle: string;

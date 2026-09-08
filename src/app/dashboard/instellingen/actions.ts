@@ -89,6 +89,16 @@ export async function updateOrganizationTerms(termsUrl: string) {
   revalidatePath("/dashboard/instellingen");
 }
 
+export async function updateReviewUrl(reviewUrl: string) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const { error } = await supabase
+    .from("organizations")
+    .update({ review_url: reviewUrl || null })
+    .eq("id", organizationId);
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}
+
 /**
  * Slug voor de publieke organisatiepagina (/offertes/[slug]) — door een
  * eigenaar/admin zelf aan te passen. Zelfde vriendelijke-conflictmelding-
