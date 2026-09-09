@@ -34,8 +34,13 @@ export type ActivityEventType =
   | "downloaded_pdf"
   | "event_reminder_sent"
   | "declined"
-  | "review_request_sent";
-export type EmailTriggerType = "days_after_sent_no_reaction" | "days_before_event" | "days_after_event";
+  | "review_request_sent"
+  | "rebooking_reminder_sent";
+export type EmailTriggerType =
+  | "days_after_sent_no_reaction"
+  | "days_before_event"
+  | "days_after_event"
+  | "days_before_event_anniversary";
 export type SignatureMethod = "canvas" | "typed";
 export type PriceDisplayMode = "incl_btw" | "excl_btw";
 export type OrgStatus = "proefperiode" | "actief" | "opgezegd";

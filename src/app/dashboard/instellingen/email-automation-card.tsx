@@ -24,6 +24,7 @@ const TRIGGER_LABELS: Record<EmailTriggerType, string> = {
   days_after_sent_no_reaction: "Dagen na verzenden zonder reactie",
   days_before_event: "Dagen voor evenementdatum",
   days_after_event: "Dagen na evenementdatum (bijv. voor een review-aanvraag)",
+  days_before_event_anniversary: "Dagen voor de jaardatum van een verleden evenement (terugboek-herinnering)",
 };
 
 const inputClass =
@@ -195,7 +196,9 @@ export function EmailAutomationCard({ rules, canEdit }: { rules: EmailRule[]; ca
             <code className="rounded bg-sand-200 px-1 py-0.5 text-xs">{"{{link}}"}</code> — bij de
             eerste twee triggermomenten staat er altijd een knop naar de offerte onder de mail; bij
             &quot;dagen na evenementdatum&quot; is dat in plaats daarvan een knop naar je
-            review-link hieronder (alleen als je die hebt ingevuld).
+            review-link hieronder (alleen als je die hebt ingevuld); bij &quot;dagen voor de
+            jaardatum&quot; is dat een knop naar je publieke offertepagina, zodat de klant meteen
+            opnieuw een offerte kan aanvragen.
           </CardDescription>
         </div>
       </CardHeader>

@@ -2,11 +2,17 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Inbox, Search, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
+import { Inbox, Search, ChevronUp, ChevronDown, AlertTriangle, Copy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge, tones } from "@/components/ui/badge";
 import { formatDate, cn } from "@/lib/utils";
-import { REQUEST_STATUS_LABELS, REQUEST_STATUS_TONES, isStaleRequest, staleRequestDays } from "./status";
+import {
+  REQUEST_STATUS_LABELS,
+  REQUEST_STATUS_TONES,
+  isStaleRequest,
+  staleRequestDays,
+  findDuplicateRequestIds,
+} from "./status";
 import { AanvraagRowActions } from "./aanvraag-row-actions";
 import { NewRequestsCelebration } from "./new-requests-celebration";
 import type { QuoteRequestStatus } from "@/lib/types/database";
@@ -27,6 +33,7 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<Set<QuoteRequestStatus>>(new Set());
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const duplicateIds = useMemo(() => findDuplicateRequestIds(requests), [requests]);
 
   function toggleStatus(status: QuoteRequestStatus) {
     setStatusFilter((prev) => {
@@ -135,6 +142,14 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
                           />
                         </span>
                       )}
+                      {duplicateIds.has(r.id) && (
+                        <span title="Mogelijk dubbele aanvraag (zelfde e-mailadres, kort na elkaar)">
+                          <Copy
+                            className="size-3.5 shrink-0 text-indigo-500"
+                            aria-label="Mogelijk dubbele aanvraag (zelfde e-mailadres, kort na elkaar)"
+                          />
+                        </span>
+                      )}
                     </span>
                     <Badge tone={REQUEST_STATUS_TONES[r.status]}>{REQUEST_STATUS_LABELS[r.status]}</Badge>
                   </div>
@@ -185,6 +200,14 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
                             <AlertTriangle
                               className="size-3.5 shrink-0 text-orange-500"
                               aria-label={`Al ${staleRequestDays(r.created_at)} dagen niet opgepakt`}
+                            />
+                          </span>
+                        )}
+                        {duplicateIds.has(r.id) && (
+                          <span title="Mogelijk dubbele aanvraag (zelfde e-mailadres, kort na elkaar)">
+                            <Copy
+                              className="size-3.5 shrink-0 text-indigo-500"
+                              aria-label="Mogelijk dubbele aanvraag (zelfde e-mailadres, kort na elkaar)"
                             />
                           </span>
                         )}

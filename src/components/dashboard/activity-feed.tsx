@@ -14,6 +14,7 @@ const ACTIVITY_CONFIG: Record<ActivityEventType, { label: string; icon: React.Co
   event_reminder_sent: { label: "evenement-herinnering verzonden", icon: Send },
   declined: { label: "afgewezen", icon: ThumbsDown },
   review_request_sent: { label: "review-aanvraag verzonden", icon: Send },
+  rebooking_reminder_sent: { label: "terugboek-herinnering verzonden", icon: Send },
 };
 
 function timeAgo(iso: string) {

@@ -1,11 +1,17 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, AlertTriangle } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Copy, Repeat } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import { REQUEST_STATUS_LABELS, REQUEST_STATUS_TONES, isStaleRequest, staleRequestDays } from "../status";
+import {
+  REQUEST_STATUS_LABELS,
+  REQUEST_STATUS_TONES,
+  isStaleRequest,
+  staleRequestDays,
+  DUPLICATE_REQUEST_WINDOW_HOURS,
+} from "../status";
 import { RequestDetailActions } from "./request-detail-actions";
 
 export default async function AanvraagDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -15,9 +21,40 @@ export default async function AanvraagDetailPage({ params }: { params: Promise<{
   const { data: request } = await supabase.from("quote_requests").select("*").eq("id", id).maybeSingle();
   if (!request) notFound();
 
-  const { data: template } = request.template_id
-    ? await supabase.from("templates").select("id, name").eq("id", request.template_id).maybeSingle()
-    : { data: null };
+  const [{ data: template }, { data: sameEmailRequests }, { count: pastQuoteCount }, { count: acceptedQuoteCount }] =
+    await Promise.all([
+      request.template_id
+        ? supabase.from("templates").select("id, name").eq("id", request.template_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      request.customer_email
+        ? supabase
+            .from("quote_requests")
+            .select("id, created_at")
+            .eq("customer_email", request.customer_email)
+            .neq("id", request.id)
+        : Promise.resolve({ data: null }),
+      request.customer_email
+        ? supabase
+            .from("quotes")
+            .select("id", { count: "exact", head: true })
+            .eq("client_display_email", request.customer_email)
+        : Promise.resolve({ count: 0 }),
+      request.customer_email
+        ? supabase
+            .from("quotes")
+            .select("id", { count: "exact", head: true })
+            .eq("client_display_email", request.customer_email)
+            .eq("status", "geaccepteerd")
+        : Promise.resolve({ count: 0 }),
+    ]);
+
+  const duplicateMatch = (sameEmailRequests ?? []).find(
+    (other) =>
+      Math.abs(new Date(other.created_at).getTime() - new Date(request.created_at).getTime()) / 3_600_000 <=
+      DUPLICATE_REQUEST_WINDOW_HOURS,
+  );
+  const priorRequestCount = sameEmailRequests?.length ?? 0;
+  const isRecurringCustomer = priorRequestCount > 0 || (pastQuoteCount ?? 0) > 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -41,6 +78,33 @@ export default async function AanvraagDetailPage({ params }: { params: Promise<{
         <div className="flex items-center gap-2 rounded-brand-sm border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-700">
           <AlertTriangle className="size-4 shrink-0" />
           Deze aanvraag staat al {staleRequestDays(request.created_at)} dagen niet opgepakt. Overweeg de klant zo snel mogelijk te benaderen.
+        </div>
+      )}
+
+      {duplicateMatch && (
+        <div className="flex items-center gap-2 rounded-brand-sm border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
+          <Copy className="size-4 shrink-0" />
+          <span className="flex-1">
+            Dit e-mailadres heeft ook op {formatDate(duplicateMatch.created_at)} een aanvraag ingediend — mogelijk een
+            dubbele indiening.
+          </span>
+          <Link href={`/dashboard/aanvragen/${duplicateMatch.id}`} className="shrink-0 font-medium underline">
+            Bekijk die aanvraag →
+          </Link>
+        </div>
+      )}
+
+      {isRecurringCustomer && (
+        <div className="flex items-center gap-2 rounded-brand-sm border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
+          <Repeat className="size-4 shrink-0" />
+          Terugkerende klant: dit is aanvraag nr. {priorRequestCount + 1} van dit e-mailadres
+          {(pastQuoteCount ?? 0) > 0 && (
+            <>
+              , met {pastQuoteCount} eerdere offerte{pastQuoteCount === 1 ? "" : "s"}
+              {(acceptedQuoteCount ?? 0) > 0 && ` (${acceptedQuoteCount} geaccepteerd)`}
+            </>
+          )}
+          .
         </div>
       )}
 

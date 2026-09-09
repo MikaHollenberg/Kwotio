@@ -179,6 +179,29 @@ export function reviewRequestClientEmail(input: {
   });
 }
 
+export function rebookingReminderClientEmail(input: {
+  organizationName: string;
+  quoteTitle: string;
+  bodyText: string;
+  publicPageUrl: string;
+  termsUrl: string | null;
+  privacyUrl: string;
+}) {
+  return emailShell({
+    organizationName: input.organizationName,
+    preheader: `Alweer bijna een jaar geleden -- tijd voor een nieuw feestje?`,
+    bodyHtml: `
+      <h1 style="font-size:20px;margin:0 0 12px;">Tijd voor een nieuw feestje? 🎈</h1>
+      <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
+        ${textToSafeHtml(input.bodyText)}
+      </p>
+      ${emailButton("Vraag een nieuwe offerte aan", input.publicPageUrl)}
+    `,
+    termsUrl: input.termsUrl,
+    privacyUrl: input.privacyUrl,
+  });
+}
+
 export function expiringSoonAgencyEmail(input: {
   organizationName: string;
   quoteTitle: string;

@@ -5,6 +5,7 @@ import {
   reminderClientEmail,
   eventReminderClientEmail,
   reviewRequestClientEmail,
+  rebookingReminderClientEmail,
   expiringSoonAgencyEmail,
 } from "@/lib/email/templates/notifications";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
@@ -34,9 +35,18 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient();
   const now = new Date();
-  const results = { remindersSent: 0, eventRemindersSent: 0, reviewRequestsSent: 0, expiringSoonNotified: 0, markedExpired: 0 };
+  const results = {
+    remindersSent: 0,
+    eventRemindersSent: 0,
+    reviewRequestsSent: 0,
+    rebookingRemindersSent: 0,
+    expiringSoonNotified: 0,
+    markedExpired: 0,
+  };
 
-  const { data: organizations } = await supabase.from("organizations").select("id, brand_name, terms_url, review_url");
+  const { data: organizations } = await supabase
+    .from("organizations")
+    .select("id, brand_name, terms_url, review_url, public_slug");
   const orgById = new Map((organizations ?? []).map((o) => [o.id, o]));
   const origin = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
 
@@ -212,6 +222,68 @@ export async function GET(request: NextRequest) {
         await supabase
           .from("activity_events")
           .insert({ quote_id: quote.id, type: "review_request_sent", metadata: { ruleId: rule.id } });
+      }
+    }
+
+    if (rule.trigger_type === "days_before_event_anniversary") {
+      const targetDate = new Date(now);
+      targetDate.setDate(targetDate.getDate() + rule.trigger_days);
+      const targetMonth = targetDate.getMonth();
+      const targetDay = targetDate.getDate();
+      const todayKey = now.toISOString().slice(0, 10);
+
+      const { data: pastAcceptedQuotes } = await supabase
+        .from("quotes")
+        .select("id, title, client_id, share_token, event_date")
+        .eq("organization_id", rule.organization_id)
+        .eq("status", "geaccepteerd")
+        .not("event_date", "is", null)
+        .lt("event_date", todayKey);
+
+      for (const quote of pastAcceptedQuotes ?? []) {
+        const eventDate = new Date(quote.event_date as string);
+        if (eventDate.getMonth() !== targetMonth || eventDate.getDate() !== targetDay) continue;
+
+        const { count: alreadySent } = await supabase
+          .from("activity_events")
+          .select("id", { count: "exact", head: true })
+          .eq("quote_id", quote.id)
+          .eq("type", "rebooking_reminder_sent")
+          .contains("metadata", { ruleId: rule.id });
+        if ((alreadySent ?? 0) > 0) continue;
+
+        if (quote.client_id) {
+          const { data: client } = await supabase
+            .from("clients")
+            .select("name, email")
+            .eq("id", quote.client_id)
+            .maybeSingle();
+          if (client?.email) {
+            const vars = {
+              klantnaam: client.name,
+              offertetitel: quote.title,
+              evenementdatum: formatDate(quote.event_date as string),
+              link: `${origin}/offertes/${org.public_slug}`,
+            };
+            await sendEmail({
+              to: client.email,
+              subject: renderEmailTemplate(rule.subject, vars),
+              html: rebookingReminderClientEmail({
+                organizationName: org.brand_name,
+                quoteTitle: quote.title,
+                bodyText: renderEmailTemplate(rule.body, vars),
+                publicPageUrl: vars.link,
+                termsUrl: org.terms_url,
+                privacyUrl: `${origin}${PRIVACYBELEID_URL}`,
+              }),
+            });
+            results.rebookingRemindersSent += 1;
+          }
+        }
+
+        await supabase
+          .from("activity_events")
+          .insert({ quote_id: quote.id, type: "rebooking_reminder_sent", metadata: { ruleId: rule.id } });
       }
     }
   }
