@@ -120,6 +120,7 @@ export interface Database {
           role: UserRole;
           avatar_url: string | null;
           is_super_admin: boolean;
+          onboarding_tour_seen_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -449,6 +450,21 @@ export interface Database {
           type: PublicPageEventType;
         };
         Update: Partial<Database["public"]["Tables"]["public_page_events"]["Row"]>;
+        Relationships: [];
+      };
+      closed_dates: {
+        Row: {
+          id: string;
+          organization_id: string;
+          date: string;
+          reason: string | null;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["closed_dates"]["Row"]> & {
+          organization_id: string;
+          date: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["closed_dates"]["Row"]>;
         Relationships: [];
       };
     };

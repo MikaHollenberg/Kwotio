@@ -234,6 +234,7 @@ export function QuoteEditor({
             variant="secondary"
             size="sm"
             disabled={sending}
+            data-faq-id="quote-send-button"
             onClick={() =>
               startSendTransition(async () => {
                 await sendQuote(quote.id);
@@ -272,7 +273,10 @@ export function QuoteEditor({
       )}
 
       {status !== "concept" && (
-        <div className="flex items-center gap-2 rounded-brand-sm border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
+        <div
+          data-faq-id="quote-share-bar"
+          className="flex items-center gap-2 rounded-brand-sm border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800"
+        >
           <Link2 className="size-4 shrink-0" />
           <span className="flex-1 truncate">{shareUrl}</span>
           <button
@@ -303,11 +307,13 @@ export function QuoteEditor({
         <SignatureInfoCard signature={signature} shareToken={quote.share_token} aantalPersonen={quote.aantal_personen} />
       )}
 
-      <EngagementCard engagement={engagement} blocks={blocks} />
+      <div data-faq-id="quote-engagement-card">
+        <EngagementCard engagement={engagement} blocks={blocks} />
+      </div>
 
       <CommentsPanel quoteId={quote.id} comments={initialComments} blocks={blocks} />
 
-      <Card>
+      <Card data-faq-id="quote-header-card">
         <CardHeader>
           <div>
             <CardTitle>Kop van de offerte</CardTitle>
@@ -446,21 +452,25 @@ export function QuoteEditor({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">
         <div className="flex flex-col gap-3">
-          <BlockList
-            blocks={blocks}
-            onChange={setBlocks}
-            organizationId={organizationId}
-            onTemplateSaved={(template) => setBlockTemplates([...blockTemplates, template])}
-          />
-          <AddBlockMenu
-            blockTemplates={blockTemplates}
-            onAdd={(type, template) =>
-              setBlocks([...blocks, template ? newBlockFromTemplate(template, blocks.length) : newBlock(type, blocks.length)])
-            }
-          />
+          <div data-faq-id="quote-block-list">
+            <BlockList
+              blocks={blocks}
+              onChange={setBlocks}
+              organizationId={organizationId}
+              onTemplateSaved={(template) => setBlockTemplates([...blockTemplates, template])}
+            />
+          </div>
+          <div data-faq-id="quote-add-block-button">
+            <AddBlockMenu
+              blockTemplates={blockTemplates}
+              onAdd={(type, template) =>
+                setBlocks([...blocks, template ? newBlockFromTemplate(template, blocks.length) : newBlock(type, blocks.length)])
+              }
+            />
+          </div>
         </div>
 
-        <div className="xl:sticky xl:top-6 xl:self-start">
+        <div className="xl:sticky xl:top-6 xl:self-start" data-faq-id="quote-preview-panel">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-ink-500">Live preview</p>
             <div className="flex gap-1 rounded-brand-sm bg-sand-200 p-1">

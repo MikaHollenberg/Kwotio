@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { FileDown, TrendingUp, TrendingDown, Clock3, Users, Trophy, CalendarDays, Eye, MousePointerClick, Inbox, Percent } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -25,9 +26,10 @@ export default async function StatistiekenPage() {
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("organization_id")
+    .select("organization_id, role")
     .eq("id", user!.id)
     .single();
+  if (profile?.role !== "owner" && profile?.role !== "admin") redirect("/dashboard");
   const organizationId = profile!.organization_id;
 
   const [pipeline, monthlySeries, templatePerformance, expectedGuests, popularPackage, busiestDay, publicPageStats] = await Promise.all([

@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { loadTemplateBlocks, loadQuoteBlocks, saveQuoteBlocks } from "@/lib/blocks/persistence";
 import { calculateTotal } from "@/lib/blocks/pricing";
-import { duplicateBlockDraft, type BlockDraft } from "@/lib/blocks/types";
+import { duplicateBlockDraft, newBlock, type BlockDraft } from "@/lib/blocks/types";
 import type { PriceDisplayMode } from "@/lib/types/database";
 import { sendEmail } from "@/lib/email/client";
 import { quoteReceivedClientEmail } from "@/lib/email/templates/notifications";
@@ -82,6 +82,41 @@ export async function createQuote(input: {
   }
 
   redirect(`/dashboard/offertes/${quote.id}`);
+}
+
+/**
+ * Maakt een tijdelijke, duidelijk gelabelde voorbeeldofferte (met een tekst-
+ * en een pakketten-blok) aan voor de "laat zien hoe je een offerte maakt"-
+ * stappenplan op de FAQ-pagina -- geeft alleen het id terug, geen redirect
+ * (de FAQ-rondleiding navigeert zelf, stap voor stap). Wordt weer verwijderd
+ * zodra die rondleiding sluit/afrondt (zie FaqWalkthroughProvider), via de
+ * bestaande `deleteQuote`.
+ */
+export async function createDemoQuoteForFaq(options?: { sent?: boolean }): Promise<string> {
+  const { supabase, organizationId, userId } = await requireOrganization();
+
+  const { data: quote, error } = await supabase
+    .from("quotes")
+    .insert({
+      organization_id: organizationId,
+      title: "Voorbeeldofferte (rondleiding)",
+      created_by: userId,
+      handled_by_profile_id: userId,
+      price_display: "excl_btw",
+      price_per_person: false,
+      // Zonder dit blijft de offerte een concept, en toont de editor de
+      // deelbalk (link/WhatsApp) pas -- nodig voor het "offerte versturen"-
+      // stappenplan om die balk daadwerkelijk te kunnen spotlighten.
+      ...(options?.sent ? { status: "verzonden" as const, sent_at: new Date().toISOString() } : {}),
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  const demoBlocks: BlockDraft[] = [newBlock("text", 0), newBlock("packages", 1)];
+  await saveQuoteBlocks(supabase, quote.id, demoBlocks);
+
+  return quote.id;
 }
 
 /**

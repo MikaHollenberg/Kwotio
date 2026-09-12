@@ -7,8 +7,15 @@ import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"];
 
-function toDateKey(d: Date) {
-  return d.toISOString().slice(0, 10);
+/** Lokale (niet-UTC) datumsleutel -- toISOString() zou bij een positieve
+ * UTC-offset (bijv. Nederlandse tijd) de datum een dag terug kunnen
+ * schuiven voor een lokaal-middernacht Date, wat de vergelijking met
+ * eventsByDate (platte "YYYY-MM-DD"-strings uit de database) zou breken. */
+function toDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function EventsCalendar({ events }: { events: CalendarEvent[] }) {

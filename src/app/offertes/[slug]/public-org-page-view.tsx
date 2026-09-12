@@ -200,6 +200,7 @@ export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: Pu
           initialTemplateId={selectedTemplate?.id ?? null}
           guestCountFieldActive={data.guestCountFieldActive}
           guestCountFieldLabel={data.guestCountFieldLabel}
+          closedDates={data.closedDates}
           onClose={() => setFormOpen(false)}
         />
       )}

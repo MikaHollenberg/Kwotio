@@ -92,7 +92,7 @@ export function OrganizationSettingsCard({
 
   if (!canEdit) {
     return (
-      <Card>
+      <Card data-faq-id="settings-organisatie">
         <CardHeader>
           <div>
             <CardTitle>Organisatie</CardTitle>
@@ -150,7 +150,7 @@ export function OrganizationSettingsCard({
   }
 
   return (
-    <Card>
+    <Card data-faq-id="settings-organisatie">
       <CardHeader>
         <div>
           <CardTitle>Organisatie</CardTitle>
@@ -159,7 +159,7 @@ export function OrganizationSettingsCard({
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <div className="flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2" data-faq-id="settings-logo-upload">
             <div className="flex flex-col gap-2">
               <span className="text-xs font-semibold text-ink-400">Horizontaal logo (menubalk, langwerpig)</span>
               <ImageUploadField
@@ -272,7 +272,7 @@ export function OrganizationSettingsCard({
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 border-t border-ink-100 pt-4">
+        <div className="flex flex-col gap-4 border-t border-ink-100 pt-4" data-faq-id="settings-public-link">
           <div>
             <span className="text-xs font-semibold text-ink-400">Publieke offertepagina</span>
             <p className="mt-1 text-xs text-ink-400">

@@ -17,9 +17,10 @@ export default async function DashboardLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("full_name, email, is_super_admin, organization_id")
+    .select("full_name, email, role, is_super_admin, organization_id, onboarding_tour_seen_at")
     .eq("id", user.id)
     .single();
+  const canManageOrg = profile?.role === "owner" || profile?.role === "admin";
 
   const [{ data: organization }, { count: newRequestCount }] = await Promise.all([
     profile
@@ -42,6 +43,7 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen bg-sand-100">
       <Sidebar
         showAdmin={profile?.is_super_admin ?? false}
+        canManageOrg={canManageOrg}
         logoUrl={organization?.logo_horizontal_url}
         organizationName={organization?.brand_name}
         newRequestCount={newRequestCount ?? 0}
@@ -51,9 +53,11 @@ export default async function DashboardLayout({
           fullName={profile?.full_name ?? null}
           email={profile?.email ?? user.email ?? ""}
           showAdmin={profile?.is_super_admin ?? false}
+          canManageOrg={canManageOrg}
           organizationName={organization?.brand_name ?? null}
           termsUrl={organization?.terms_url ?? null}
           newRequestCount={newRequestCount ?? 0}
+          tourSeen={Boolean(profile?.onboarding_tour_seen_at)}
         >
           {children}
         </DashboardShell>

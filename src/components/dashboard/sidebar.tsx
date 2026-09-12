@@ -11,6 +11,7 @@ import {
   BarChart3,
   Settings,
   ShieldCheck,
+  HelpCircle,
 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
@@ -22,17 +23,21 @@ export const NAV_ITEMS = [
   { href: "/dashboard/klanten", label: "Klanten", icon: Users },
   { href: "/dashboard/aanvragen", label: "Offerte-aanvragen", icon: Inbox },
   { href: "/dashboard/templates", label: "Templates", icon: LayoutTemplate },
-  { href: "/dashboard/statistieken", label: "Statistieken", icon: BarChart3 },
-  { href: "/dashboard/instellingen", label: "Instellingen", icon: Settings },
+  { href: "/dashboard/statistieken", label: "Statistieken", icon: BarChart3, adminOnly: true },
+  { href: "/dashboard/instellingen", label: "Instellingen", icon: Settings, adminOnly: true },
 ];
 
 export function Sidebar({
   showAdmin = false,
+  canManageOrg = false,
   logoUrl,
   organizationName,
   newRequestCount = 0,
 }: {
   showAdmin?: boolean;
+  /** Rol is owner/admin — bepaalt of Statistieken/Instellingen in de
+   * navigatie getoond worden (teamlid/alleen-lezen mogen daar niet komen). */
+  canManageOrg?: boolean;
   /** Horizontaal logo van de organisatie (organizations.logo_horizontal_url).
    * Altijd het horizontale logo hier, ongeacht de logo_preference van de
    * organisatie — die voorkeur geldt elders (offertepagina, PDF). Zonder
@@ -45,6 +50,7 @@ export function Sidebar({
   newRequestCount?: number;
 }) {
   const pathname = usePathname();
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || canManageOrg);
 
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-ink-200/40 bg-white/60 px-4 py-6 lg:flex">
@@ -53,7 +59,7 @@ export function Sidebar({
       </Link>
 
       <nav className="flex flex-1 flex-col gap-1">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+        {visibleNavItems.map(({ href, label, icon: Icon }) => {
           const isActive =
             href === "/dashboard"
               ? pathname === href
@@ -63,6 +69,7 @@ export function Sidebar({
             <Link
               key={href}
               href={href}
+              data-tour-id={href}
               className={cn(
                 "flex items-center gap-3 rounded-brand-sm px-3 py-2.5 text-sm font-medium text-ink-400 transition-colors duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500",
                 isActive && "bg-blue-500 text-white hover:bg-blue-500 hover:text-white",
@@ -84,6 +91,17 @@ export function Sidebar({
           );
         })}
       </nav>
+
+      <Link
+        href="/dashboard/faq"
+        className={cn(
+          "mb-3 flex items-center gap-3 rounded-brand-sm px-3 py-2.5 text-sm font-medium text-ink-400 transition-colors duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500",
+          pathname.startsWith("/dashboard/faq") && "bg-blue-500 text-white hover:bg-blue-500 hover:text-white",
+        )}
+      >
+        <HelpCircle className="size-4.5" strokeWidth={2} />
+        Help &amp; FAQ
+      </Link>
 
       {showAdmin && (
         <Link

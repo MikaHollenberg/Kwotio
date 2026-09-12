@@ -183,7 +183,7 @@ export function EmailAutomationCard({ rules, canEdit }: { rules: EmailRule[]; ca
   const selectedRule = rules.find((r) => r.id === selectedId) ?? null;
 
   return (
-    <Card>
+    <Card data-faq-id="settings-email-automatisering">
       <CardHeader>
         <div>
           <CardTitle>E-mailautomatisering</CardTitle>
@@ -203,7 +203,7 @@ export function EmailAutomationCard({ rules, canEdit }: { rules: EmailRule[]; ca
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-5">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" data-faq-id="settings-new-email-rule-button">
           <select
             value={selectedId ?? ""}
             onChange={(e) => setSelectedId(e.target.value)}
@@ -245,12 +245,14 @@ export function EmailAutomationCard({ rules, canEdit }: { rules: EmailRule[]; ca
         </div>
 
         {selectedRule && (
-          <RuleEditor
-            key={selectedRule.id}
-            rule={selectedRule}
-            canEdit={canEdit}
-            onDeleted={() => setSelectedId(rules.find((r) => r.id !== selectedRule.id)?.id ?? null)}
-          />
+          <div data-faq-id="settings-email-rule-editor">
+            <RuleEditor
+              key={selectedRule.id}
+              rule={selectedRule}
+              canEdit={canEdit}
+              onDeleted={() => setSelectedId(rules.find((r) => r.id !== selectedRule.id)?.id ?? null)}
+            />
+          </div>
         )}
       </CardContent>
     </Card>

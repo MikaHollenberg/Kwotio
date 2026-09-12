@@ -85,6 +85,17 @@ export async function submitQuoteRequest(input: SubmitQuoteRequestInput): Promis
   const parsedGuestCount = Math.trunc(Number(input.guestCount));
   const guestCount = input.guestCount.trim() && Number.isFinite(parsedGuestCount) ? Math.max(0, parsedGuestCount) : null;
 
+  const desiredDate = input.desiredDate || null;
+  if (desiredDate) {
+    const { data: closedDate } = await supabase
+      .from("closed_dates")
+      .select("id")
+      .eq("organization_id", organization.id)
+      .eq("date", desiredDate)
+      .maybeSingle();
+    if (closedDate) return { ok: false, error: "Op deze datum zijn we gesloten. Kies een andere datum." };
+  }
+
   const { error } = await supabase.from("quote_requests").insert({
     organization_id: organization.id,
     template_id: template.id,
@@ -93,7 +104,7 @@ export async function submitQuoteRequest(input: SubmitQuoteRequestInput): Promis
     customer_phone: phone,
     customer_company: input.customerCompany.trim() || null,
     guest_count: guestCount,
-    desired_date: input.desiredDate || null,
+    desired_date: desiredDate,
     notes: input.notes.trim() || null,
   });
   if (error) return { ok: false, error: "Aanvraag versturen is mislukt. Probeer het opnieuw." };

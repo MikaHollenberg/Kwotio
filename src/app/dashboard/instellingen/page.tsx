@@ -1,9 +1,11 @@
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EmailAutomationCard, type EmailRule } from "./email-automation-card";
 import { TeamCard, type TeamMember } from "./team-card";
 import { OrganizationSettingsCard } from "./organization-settings-card";
 import { HeadcountSettingsCard } from "./headcount-settings-card";
+import { ClosedDatesCard } from "./closed-dates-card";
 import { DataExportCard } from "./data-export-card";
 
 export default async function InstellingenPage() {
@@ -19,6 +21,7 @@ export default async function InstellingenPage() {
     .select("organization_id, role")
     .eq("id", user!.id)
     .single();
+  if (profile?.role !== "owner" && profile?.role !== "admin") redirect("/dashboard");
 
   const { data: organization } = profile
     ? await supabase
@@ -60,6 +63,13 @@ export default async function InstellingenPage() {
     body: r.body,
     enabled: r.enabled,
   }));
+
+  const { data: closedDateRows } = profile
+    ? await supabase
+        .from("closed_dates")
+        .select("id, date, reason")
+        .eq("organization_id", profile.organization_id)
+    : { data: null };
 
   const canManageOrg = profile?.role === "owner" || profile?.role === "admin";
 
@@ -108,6 +118,8 @@ export default async function InstellingenPage() {
         initialKanttekening={organization?.aantal_personen_kanttekening ?? ""}
         canEdit={canManageOrg}
       />
+
+      <ClosedDatesCard closedDates={closedDateRows ?? []} canEdit={canManageOrg} />
 
       <EmailAutomationCard rules={emailRules} canEdit={canManageOrg} />
 

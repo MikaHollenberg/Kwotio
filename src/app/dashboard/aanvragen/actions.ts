@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { loadTemplateBlocks, saveQuoteBlocks } from "@/lib/blocks/persistence";
 import { recalculateTotals } from "@/app/dashboard/offertes/actions";
 import type { QuoteRequestStatus } from "@/lib/types/database";
@@ -30,6 +31,37 @@ export async function updateQuoteRequestStatus(requestId: string, status: QuoteR
   if (error) throw error;
   revalidatePath("/dashboard/aanvragen");
   revalidatePath(`/dashboard/aanvragen/${requestId}`);
+}
+
+/**
+ * Maakt een tijdelijke, duidelijk gelabelde voorbeeldaanvraag aan voor het
+ * FAQ-stappenplan "hoe zet ik een aanvraag om in een offerte" -- alleen het
+ * id. Wordt weer verwijderd zodra die rondleiding sluit/afrondt (zie
+ * FaqWalkthroughProvider), via de bestaande `deleteQuoteRequest`.
+ */
+export async function createDemoRequestForFaq(): Promise<string> {
+  const { organizationId } = await requireOrganization();
+  // quote_requests heeft bewust geen insert-policy voor gewone ingelogde
+  // gebruikers (alleen de publieke service-role-flow mag rijen aanmaken,
+  // zie HANDOVER.md) -- deze interne demo-aanvraag gaat daarom via de
+  // service-role client, met organizationId server-side afgeleid (nooit
+  // vertrouwd vanuit de client).
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("quote_requests")
+    .insert({
+      organization_id: organizationId,
+      customer_name: "Voorbeeldklant (rondleiding)",
+      customer_email: "voorbeeld@rondleiding.kwotio.app",
+      customer_phone: "0600000000",
+      status: "nieuw",
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  return data.id;
 }
 
 /** Geen redirect — aanroeper (lijst-rij of detailscherm) bepaalt zelf de

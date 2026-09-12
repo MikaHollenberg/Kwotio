@@ -4,19 +4,22 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ShieldCheck } from "lucide-react";
+import { Menu, X, ShieldCheck, HelpCircle } from "lucide-react";
 import { NAV_ITEMS } from "./sidebar";
 import { cn } from "@/lib/utils";
 
 export function MobileNav({
   showAdmin = false,
+  canManageOrg = false,
   newRequestCount = 0,
 }: {
   showAdmin?: boolean;
+  canManageOrg?: boolean;
   newRequestCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || canManageOrg);
 
   return (
     <>
@@ -46,7 +49,7 @@ export function MobileNav({
               </div>
 
               <nav className="flex flex-1 flex-col gap-1">
-                {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+                {visibleNavItems.map(({ href, label, icon: Icon }) => {
                   const isActive = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
                   return (
                     <Link
@@ -74,6 +77,15 @@ export function MobileNav({
                   );
                 })}
               </nav>
+
+              <Link
+                href="/dashboard/faq"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 rounded-brand-sm px-3 py-2.5 text-sm font-medium text-ink-400 transition-colors duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500"
+              >
+                <HelpCircle className="size-4.5" strokeWidth={2} />
+                Help &amp; FAQ
+              </Link>
 
               {showAdmin && (
                 <Link

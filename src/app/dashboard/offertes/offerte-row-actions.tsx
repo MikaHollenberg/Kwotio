@@ -60,6 +60,7 @@ export function OfferteRowActions({
         size="sm"
         disabled={duplicatePending}
         title="Offerte dupliceren"
+        data-faq-id={`duplicate-quote-button-${quoteId}`}
         onClick={() => startDuplicateTransition(() => duplicateQuote(quoteId))}
       >
         <Copy className="size-4" />

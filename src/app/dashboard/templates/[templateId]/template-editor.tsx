@@ -105,6 +105,7 @@ export function TemplateEditor({
           <label
             className="flex items-center gap-1.5 text-sm text-ink-400"
             title="Zichtbaar op de publieke offertepagina (/offertes/...), zodat bezoekers zonder in te loggen dit template kunnen bekijken en een offerte kunnen aanvragen."
+            data-faq-id="template-public-toggle"
           >
             <input
               type="checkbox"
@@ -180,21 +181,25 @@ export function TemplateEditor({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">
         <div className="flex flex-col gap-3">
-          <BlockList
-            blocks={blocks}
-            onChange={setBlocks}
-            organizationId={organizationId}
-            onTemplateSaved={(template) => setBlockTemplates([...blockTemplates, template])}
-          />
-          <AddBlockMenu
-            blockTemplates={blockTemplates}
-            onAdd={(type, template) =>
-              setBlocks([...blocks, template ? newBlockFromTemplate(template, blocks.length) : newBlock(type, blocks.length)])
-            }
-          />
+          <div data-faq-id="template-block-list">
+            <BlockList
+              blocks={blocks}
+              onChange={setBlocks}
+              organizationId={organizationId}
+              onTemplateSaved={(template) => setBlockTemplates([...blockTemplates, template])}
+            />
+          </div>
+          <div data-faq-id="template-add-block-button">
+            <AddBlockMenu
+              blockTemplates={blockTemplates}
+              onAdd={(type, template) =>
+                setBlocks([...blocks, template ? newBlockFromTemplate(template, blocks.length) : newBlock(type, blocks.length)])
+              }
+            />
+          </div>
         </div>
 
-        <div className="xl:sticky xl:top-6 xl:self-start">
+        <div className="xl:sticky xl:top-6 xl:self-start" data-faq-id="template-preview-panel">
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold text-ink-500">Live preview</p>
             <div className="flex gap-1 rounded-brand-sm bg-sand-200 p-1">

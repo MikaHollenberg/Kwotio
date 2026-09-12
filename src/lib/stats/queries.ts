@@ -320,13 +320,13 @@ export async function getPublicPageStatsThisMonth(supabase: Client, organization
 // Onboarding-checklist (dashboard-overzicht)
 // ---------------------------------------------------------------------------
 
-export type OnboardingStep = { id: string; label: string; done: boolean; href: string };
+export type OnboardingStep = { id: string; label: string; description: string; done: boolean; href: string };
 
 export async function getOnboardingSteps(supabase: Client, organizationId: string): Promise<OnboardingStep[]> {
   const [{ data: org }, { data: templates }, { data: sentQuote }] = await Promise.all([
     supabase
       .from("organizations")
-      .select("logo_horizontal_url, logo_square_url")
+      .select("logo_horizontal_url, logo_square_url, contact_email, contact_phone, address")
       .eq("id", organizationId)
       .single(),
     supabase.from("templates").select("is_publicly_visible").eq("organization_id", organizationId),
@@ -340,29 +340,43 @@ export async function getOnboardingSteps(supabase: Client, organizationId: strin
   ]);
 
   const templateRows = templates ?? [];
+  const address = (org?.address as { street?: string; postalCode?: string; city?: string } | null) ?? {};
+
+  const missingCompanyInfo: string[] = [];
+  if (!(org?.logo_horizontal_url || org?.logo_square_url)) missingCompanyInfo.push("logo");
+  if (!org?.contact_email) missingCompanyInfo.push("contact e-mail");
+  if (!org?.contact_phone) missingCompanyInfo.push("telefoonnummer");
+  if (!(address.street && address.postalCode && address.city)) missingCompanyInfo.push("adres");
 
   return [
     {
-      id: "logo",
-      label: "Upload je logo",
-      done: Boolean(org?.logo_horizontal_url || org?.logo_square_url),
+      id: "company-info",
+      label: "Vul je bedrijfsgegevens aan",
+      description:
+        missingCompanyInfo.length === 0
+          ? "Logo, contactgegevens en adres zijn compleet."
+          : `Nog nodig: ${missingCompanyInfo.join(", ")}.`,
+      done: missingCompanyInfo.length === 0,
       href: "/dashboard/instellingen",
     },
     {
       id: "template",
       label: "Maak je eerste template",
+      description: "Bouw een offerte-template op die je steeds opnieuw kan gebruiken.",
       done: templateRows.length > 0,
       href: "/dashboard/templates",
     },
     {
       id: "public-template",
       label: "Zet een template publiek zichtbaar",
+      description: "Zo kunnen klanten 'm bekijken en aanvragen op je publieke offertepagina.",
       done: templateRows.some((t) => t.is_publicly_visible),
       href: "/dashboard/templates",
     },
     {
       id: "quote-sent",
       label: "Verstuur je eerste offerte",
+      description: "Stel een offerte op en verstuur 'm naar een klant.",
       done: Boolean(sentQuote),
       href: "/dashboard/offertes",
     },

@@ -158,7 +158,7 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
             <p className="text-sm text-ink-400">Alle offertes</p>
             <h2 className="font-display text-2xl font-semibold text-ink-500">Offertes</h2>
           </div>
-          <ButtonLink href="/dashboard/offertes/nieuw">
+          <ButtonLink href="/dashboard/offertes/nieuw" data-faq-id="new-quote-button">
             <Plus className="size-4" /> Nieuwe offerte
           </ButtonLink>
         </div>
@@ -184,7 +184,7 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
         </div>
         <div className="flex items-center gap-2">
           <ExportCsvButton rows={exportRows} filename="offertes.csv" />
-          <ButtonLink href="/dashboard/offertes/nieuw">
+          <ButtonLink href="/dashboard/offertes/nieuw" data-faq-id="new-quote-button">
             <Plus className="size-4" /> Nieuwe offerte
           </ButtonLink>
         </div>

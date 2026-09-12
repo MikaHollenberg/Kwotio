@@ -235,3 +235,22 @@ export async function removeMember(memberId: string) {
 
   revalidatePath("/dashboard/instellingen");
 }
+
+export async function addClosedDate(date: string, reason: string) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const { error } = await supabase
+    .from("closed_dates")
+    .insert({ organization_id: organizationId, date, reason: reason.trim() || null });
+  if (error) {
+    if (error.code === "23505") throw new Error("Deze datum staat al in de lijst.");
+    throw error;
+  }
+  revalidatePath("/dashboard/instellingen");
+}
+
+export async function deleteClosedDate(id: string) {
+  const { supabase } = await requireOwnerOrAdmin();
+  const { error } = await supabase.from("closed_dates").delete().eq("id", id);
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}

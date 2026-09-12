@@ -26,7 +26,7 @@ export default async function TemplatesPage() {
           <ButtonLink href="/dashboard/templates/archief" variant="outline">
             <Archive className="size-4" /> Gearchiveerde templates
           </ButtonLink>
-          <ButtonLink href="/dashboard/templates/nieuw">
+          <ButtonLink href="/dashboard/templates/nieuw" data-faq-id="new-template-button">
             <Plus className="size-4" /> Nieuw template
           </ButtonLink>
         </div>

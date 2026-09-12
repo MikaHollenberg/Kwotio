@@ -71,22 +71,30 @@ export default async function DashboardOverviewPage() {
       {!onboardingComplete && (
         <Card>
           <CardHeader>
-            <CardTitle>Aan de slag met Kwotio</CardTitle>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle>Aan de slag met Kwotio</CardTitle>
+              <span className="text-xs font-semibold text-ink-400">
+                {onboardingSteps.filter((s) => s.done).length}/{onboardingSteps.length} stappen klaar
+              </span>
+            </div>
           </CardHeader>
-          <CardContent className="flex flex-col gap-2">
+          <CardContent className="flex flex-col gap-1">
             {onboardingSteps.map((step) => (
               <Link
                 key={step.id}
                 href={step.href}
-                className="flex items-center gap-3 rounded-brand-sm px-2 py-1.5 hover:bg-sand-100"
+                className="flex items-start gap-3 rounded-brand-sm px-2 py-2 hover:bg-sand-100"
               >
                 {step.done ? (
-                  <CheckCircle2 className="size-5 shrink-0 text-teal-600" />
+                  <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-teal-600" />
                 ) : (
-                  <Circle className="size-5 shrink-0 text-ink-300" />
+                  <Circle className="mt-0.5 size-5 shrink-0 text-ink-300" />
                 )}
-                <span className={cn("text-sm font-medium", step.done ? "text-ink-400 line-through" : "text-ink-500")}>
-                  {step.label}
+                <span className="flex flex-col">
+                  <span className={cn("text-sm font-medium", step.done ? "text-ink-400 line-through" : "text-ink-500")}>
+                    {step.label}
+                  </span>
+                  <span className="text-xs text-ink-400">{step.description}</span>
                 </span>
               </Link>
             ))}

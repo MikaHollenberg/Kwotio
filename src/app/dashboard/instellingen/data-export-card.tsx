@@ -62,7 +62,7 @@ export async function DataExportCard({ organizationId }: { organizationId: strin
   }));
 
   return (
-    <Card>
+    <Card data-faq-id="settings-data-exporteren">
       <CardHeader>
         <div>
           <CardTitle>Data exporteren</CardTitle>

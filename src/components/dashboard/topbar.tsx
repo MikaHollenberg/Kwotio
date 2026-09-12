@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut } from "lucide-react";
+import { LogOut, Compass } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,17 @@ export function Topbar({
   fullName,
   email,
   showAdmin = false,
+  canManageOrg = false,
   newRequestCount = 0,
+  onStartTour,
 }: {
   title: string;
   fullName: string | null;
   email: string;
   showAdmin?: boolean;
+  canManageOrg?: boolean;
   newRequestCount?: number;
+  onStartTour?: () => void;
 }) {
   const router = useRouter();
 
@@ -38,13 +42,25 @@ export function Topbar({
   return (
     <header className="flex items-center justify-between gap-4 border-b border-ink-200/40 bg-sand-100/80 px-6 py-4 backdrop-blur-sm lg:px-8">
       <div className="flex items-center gap-3">
-        <MobileNav showAdmin={showAdmin} newRequestCount={newRequestCount} />
+        <MobileNav showAdmin={showAdmin} canManageOrg={canManageOrg} newRequestCount={newRequestCount} />
         <h1 className="font-display text-xl font-semibold text-ink-500">
           {title}
         </h1>
       </div>
 
       <div className="flex items-center gap-3">
+        {onStartTour && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onStartTour}
+            title="Rondleiding starten"
+            data-faq-id="restart-tour-button"
+          >
+            <Compass className="size-4" />
+            <span className="hidden sm:inline">Rondleiding</span>
+          </Button>
+        )}
         <div className="hidden text-right text-sm sm:block">
           <div className="font-medium text-ink-500">{fullName ?? email}</div>
           <div className="text-ink-400">{email}</div>

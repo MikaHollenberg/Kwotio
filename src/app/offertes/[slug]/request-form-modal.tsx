@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { submitQuoteRequest } from "./actions";
+import { ClosedDatePicker } from "./closed-date-picker";
 
 const inputClass =
   "h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20";
@@ -16,6 +17,7 @@ export function RequestFormModal({
   initialTemplateId,
   guestCountFieldActive,
   guestCountFieldLabel,
+  closedDates,
   onClose,
 }: {
   orgSlug: string;
@@ -25,6 +27,7 @@ export function RequestFormModal({
   initialTemplateId: string | null;
   guestCountFieldActive: boolean;
   guestCountFieldLabel: string;
+  closedDates: string[];
   onClose: () => void;
 }) {
   const formStartedAt = useRef(0);
@@ -56,6 +59,10 @@ export function RequestFormModal({
     }
     if (!email.trim() || !phone.trim()) {
       setError("Vul zowel een e-mailadres als telefoonnummer in.");
+      return;
+    }
+    if (desiredDate && closedDates.includes(desiredDate)) {
+      setError("Op deze datum zijn we gesloten. Kies een andere datum.");
       return;
     }
     startTransition(async () => {
@@ -171,12 +178,7 @@ export function RequestFormModal({
               <div className="grid grid-cols-2 gap-3">
                 <label className={labelClass}>
                   Gewenste datum (optioneel)
-                  <input
-                    type="date"
-                    value={desiredDate}
-                    onChange={(e) => setDesiredDate(e.target.value)}
-                    className={inputClass}
-                  />
+                  <ClosedDatePicker value={desiredDate} onChange={setDesiredDate} closedDates={closedDates} />
                 </label>
                 {guestCountFieldActive && (
                   <label className={labelClass}>

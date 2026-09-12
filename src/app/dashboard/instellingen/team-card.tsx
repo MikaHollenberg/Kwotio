@@ -23,12 +23,14 @@ export function TeamCard({ members, currentUserId }: { members: TeamMember[]; cu
   const [removeTarget, setRemoveTarget] = useState<TeamMember | null>(null);
 
   return (
-    <Card>
+    <Card data-faq-id="settings-team">
       <CardHeader>
         <div>
           <CardTitle>Team & rechten</CardTitle>
           <CardDescription>
-            Eigenaar/admin kunnen alles; teamlid kan offertes maken en versturen; alleen-lezen kan alleen bekijken.
+            Eigenaar/admin kunnen alles, inclusief Instellingen en Statistieken. Teamlid werkt met offertes, klanten,
+            aanvragen en templates, maar heeft geen toegang tot Instellingen of Statistieken. Alleen-lezen kan overal
+            alleen kijken.
           </CardDescription>
         </div>
       </CardHeader>
@@ -73,6 +75,7 @@ export function TeamCard({ members, currentUserId }: { members: TeamMember[]; cu
 
         <form
           className="flex flex-wrap items-end gap-2 border-t border-ink-100 pt-4"
+          data-faq-id="settings-invite-form"
           onSubmit={(e) => {
             e.preventDefault();
             setError(null);

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { saveTemplateBlocks } from "@/lib/blocks/persistence";
-import type { BlockDraft } from "@/lib/blocks/types";
+import { newBlock, type BlockDraft } from "@/lib/blocks/types";
 
 async function requireOrganizationId() {
   const supabase = await createClient();
@@ -39,6 +39,34 @@ export async function createTemplate(input: { name: string; eventType: string })
   if (error) throw error;
 
   redirect(`/dashboard/templates/${data.id}`);
+}
+
+/**
+ * Maakt een tijdelijk, duidelijk gelabeld voorbeeldtemplate aan voor de
+ * FAQ-stappenplannen ("hoe maak ik een template" / "publiek zichtbaar") --
+ * alleen het id, geen redirect. Wordt weer verwijderd zodra die rondleiding
+ * sluit/afrondt (zie FaqWalkthroughProvider), via de bestaande
+ * `deleteTemplateFromList`.
+ */
+export async function createDemoTemplateForFaq(): Promise<string> {
+  const { supabase, organizationId, userId } = await requireOrganizationId();
+
+  const { data, error } = await supabase
+    .from("templates")
+    .insert({
+      organization_id: organizationId,
+      name: "Voorbeeldtemplate (rondleiding)",
+      event_type: "Voorbeeld",
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  const demoBlocks: BlockDraft[] = [newBlock("text", 0), newBlock("packages", 1)];
+  await saveTemplateBlocks(supabase, data.id, demoBlocks);
+
+  return data.id;
 }
 
 export async function updateTemplateMeta(

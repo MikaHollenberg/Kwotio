@@ -24,6 +24,11 @@ export type PublicOrgPageData = {
    * oranje als de organisatie nog geen eigen huisstijlkleur heeft ingesteld. */
   primaryColor: string;
   templates: PublicOrgTemplate[];
+  /** ISO-datums (YYYY-MM-DD) waarop de organisatie gesloten is -- de klant
+   * kan deze niet kiezen als gewenste datum. Alleen toekomstige datums,
+   * begrensd op 2 jaar vooruit (een organisatie zet dit doorgaans maar een
+   * beperkt aantal maanden vooruit). */
+  closedDates: string[];
 };
 
 const DEFAULT_PRIMARY_COLOR = "#CC7A3E";
@@ -74,6 +79,16 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     })),
   );
 
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const twoYearsOut = new Date();
+  twoYearsOut.setFullYear(twoYearsOut.getFullYear() + 2);
+  const { data: closedDateRows } = await supabase
+    .from("closed_dates")
+    .select("date")
+    .eq("organization_id", organization.id)
+    .gte("date", todayKey)
+    .lte("date", twoYearsOut.toISOString().slice(0, 10));
+
   return {
     organizationId: organization.id,
     organizationName: organization.brand_name,
@@ -84,5 +99,6 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     guestCountFieldLabel: organization.guest_count_field_label || "Aantal personen",
     primaryColor: (organization.brand_theme as { primaryColor?: string } | null)?.primaryColor || DEFAULT_PRIMARY_COLOR,
     templates,
+    closedDates: (closedDateRows ?? []).map((r) => r.date),
   };
 }

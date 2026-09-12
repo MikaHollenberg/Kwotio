@@ -92,7 +92,7 @@ export function NieuweOfferteForm({ templates }: { templates: TemplateOption[] }
 
   return (
     <div className="mx-auto max-w-xl">
-      <Card>
+      <Card data-faq-id="new-quote-form">
         <CardHeader>
           <div>
             <CardTitle>Nieuwe offerte</CardTitle>

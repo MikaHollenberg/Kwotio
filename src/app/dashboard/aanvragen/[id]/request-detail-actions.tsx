@@ -48,6 +48,7 @@ export function RequestDetailActions({
         ) : (
           <Button
             disabled={convertPending || ignored}
+            data-faq-id="convert-request-button"
             onClick={() => startConvertTransition(() => convertQuoteRequestToQuote(requestId))}
           >
             <ArrowRightCircle className="size-4" />
