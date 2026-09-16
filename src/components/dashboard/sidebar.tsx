@@ -25,11 +25,11 @@ export const NAV_ITEMS = [
   { href: "/dashboard", label: "Overzicht", icon: LayoutDashboard },
   { href: "/dashboard/offertes", label: "Offertes", icon: FileText },
   { href: "/dashboard/facturen", label: "Facturen", icon: Receipt },
-  { href: "/dashboard/administratie", label: "Administratie", icon: Landmark, adminOnly: true },
   { href: "/dashboard/klanten", label: "Klanten", icon: Users },
   { href: "/dashboard/aanvragen", label: "Offerte-aanvragen", icon: Inbox },
   { href: "/dashboard/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/dashboard/statistieken", label: "Statistieken", icon: BarChart3, adminOnly: true },
+  { href: "/dashboard/administratie", label: "Administratie", icon: Landmark, adminOnly: true },
   { href: "/dashboard/instellingen", label: "Instellingen", icon: Settings, adminOnly: true },
 ];
 
