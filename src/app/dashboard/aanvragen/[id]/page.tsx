@@ -21,39 +21,58 @@ export default async function AanvraagDetailPage({ params }: { params: Promise<{
   const { data: request } = await supabase.from("quote_requests").select("*").eq("id", id).maybeSingle();
   if (!request) notFound();
 
-  const [{ data: template }, { data: sameEmailRequests }, { count: pastQuoteCount }, { count: acceptedQuoteCount }] =
-    await Promise.all([
-      request.template_id
-        ? supabase.from("templates").select("id, name").eq("id", request.template_id).maybeSingle()
-        : Promise.resolve({ data: null }),
-      request.customer_email
-        ? supabase
-            .from("quote_requests")
-            .select("id, created_at")
-            .eq("customer_email", request.customer_email)
-            .neq("id", request.id)
-        : Promise.resolve({ data: null }),
-      request.customer_email
-        ? supabase
-            .from("quotes")
-            .select("id", { count: "exact", head: true })
-            .eq("client_display_email", request.customer_email)
-        : Promise.resolve({ count: 0 }),
-      request.customer_email
-        ? supabase
-            .from("quotes")
-            .select("id", { count: "exact", head: true })
-            .eq("client_display_email", request.customer_email)
-            .eq("status", "geaccepteerd")
-        : Promise.resolve({ count: 0 }),
-    ]);
+  const [
+    { data: template },
+    { data: sameEmailRequests },
+    { data: samePhoneRequests },
+    { count: pastQuoteCount },
+    { count: acceptedQuoteCount },
+  ] = await Promise.all([
+    request.template_id
+      ? supabase.from("templates").select("id, name").eq("id", request.template_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    request.customer_email
+      ? supabase
+          .from("quote_requests")
+          .select("id, created_at")
+          .eq("customer_email", request.customer_email)
+          .neq("id", request.id)
+      : Promise.resolve({ data: null }),
+    request.customer_phone
+      ? supabase
+          .from("quote_requests")
+          .select("id, created_at")
+          .eq("customer_phone", request.customer_phone)
+          .neq("id", request.id)
+      : Promise.resolve({ data: null }),
+    request.customer_email
+      ? supabase
+          .from("quotes")
+          .select("id", { count: "exact", head: true })
+          .eq("client_display_email", request.customer_email)
+      : Promise.resolve({ count: 0 }),
+    request.customer_email
+      ? supabase
+          .from("quotes")
+          .select("id", { count: "exact", head: true })
+          .eq("client_display_email", request.customer_email)
+          .eq("status", "geaccepteerd")
+      : Promise.resolve({ count: 0 }),
+  ]);
 
-  const duplicateMatch = (sameEmailRequests ?? []).find(
+  // Zelfde klant herkend via e-mail óf telefoonnummer -- een aanvraag kan
+  // via het ene of het andere veld al bekend zijn, dus beide bronnen
+  // samenvoegen (op id) i.p.v. alleen op e-mailadres te matchen.
+  const priorRequestsById = new Map(
+    [...(sameEmailRequests ?? []), ...(samePhoneRequests ?? [])].map((r) => [r.id, r]),
+  );
+  const priorRequests = [...priorRequestsById.values()];
+  const duplicateMatch = priorRequests.find(
     (other) =>
       Math.abs(new Date(other.created_at).getTime() - new Date(request.created_at).getTime()) / 3_600_000 <=
       DUPLICATE_REQUEST_WINDOW_HOURS,
   );
-  const priorRequestCount = sameEmailRequests?.length ?? 0;
+  const priorRequestCount = priorRequests.length;
   const isRecurringCustomer = priorRequestCount > 0 || (pastQuoteCount ?? 0) > 0;
 
   return (
@@ -85,8 +104,8 @@ export default async function AanvraagDetailPage({ params }: { params: Promise<{
         <div className="flex items-center gap-2 rounded-brand-sm border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-700">
           <Copy className="size-4 shrink-0" />
           <span className="flex-1">
-            Dit e-mailadres heeft ook op {formatDate(duplicateMatch.created_at)} een aanvraag ingediend — mogelijk een
-            dubbele indiening.
+            Deze klant (zelfde e-mailadres of telefoonnummer) heeft ook op {formatDate(duplicateMatch.created_at)} een
+            aanvraag ingediend — mogelijk een dubbele indiening.
           </span>
           <Link href={`/dashboard/aanvragen/${duplicateMatch.id}`} className="shrink-0 font-medium underline">
             Bekijk die aanvraag →
@@ -97,7 +116,7 @@ export default async function AanvraagDetailPage({ params }: { params: Promise<{
       {isRecurringCustomer && (
         <div className="flex items-center gap-2 rounded-brand-sm border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-800">
           <Repeat className="size-4 shrink-0" />
-          Terugkerende klant: dit is aanvraag nr. {priorRequestCount + 1} van dit e-mailadres
+          Terugkerende klant: dit is aanvraag nr. {priorRequestCount + 1} van dit e-mailadres/telefoonnummer
           {(pastQuoteCount ?? 0) > 0 && (
             <>
               , met {pastQuoteCount} eerdere offerte{pastQuoteCount === 1 ? "" : "s"}

@@ -68,6 +68,8 @@ export function OrganizationSettingsCard({
   const [slugPending, startSlugTransition] = useTransition();
   const [welcomeMessage, setWelcomeMessage] = useState(initialWelcomeMessage);
   const [welcomeSaved, setWelcomeSaved] = useState(false);
+  const [embedCopied, setEmbedCopied] = useState(false);
+  const [embedFallback, setEmbedFallback] = useState<string | null>(null);
   const [welcomePending, startWelcomeTransition] = useTransition();
   const [guestCountActive, setGuestCountActive] = useState(initialGuestCountActive);
   const [guestCountLabel, setGuestCountLabel] = useState(initialGuestCountLabel);
@@ -325,7 +327,54 @@ export function OrganizationSettingsCard({
                 QR-code downloaden
               </a>
             )}
+            {publicSlug && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const snippet = [
+                    `<iframe`,
+                    `  id="kwotio-widget"`,
+                    `  src="${publicPageOrigin}/embed/${publicSlug}"`,
+                    `  style="width:100%;border:0;"`,
+                    `  loading="lazy"`,
+                    `></iframe>`,
+                    `<script src="${publicPageOrigin}/embed.js" async></script>`,
+                  ].join("\n");
+                  // navigator.clipboard.writeText kan geweigerd worden door de
+                  // browser (bv. geen HTTPS, restrictieve instellingen) --
+                  // zonder fallback deed de knop dan stilzwijgend niets.
+                  navigator.clipboard
+                    .writeText(snippet)
+                    .then(() => {
+                      setEmbedCopied(true);
+                      setTimeout(() => setEmbedCopied(false), 2000);
+                    })
+                    .catch(() => setEmbedFallback(snippet));
+                }}
+              >
+                {embedCopied ? "Gekopieerd!" : "Embed-code kopiëren"}
+              </Button>
+            )}
           </div>
+          <p className="text-xs text-ink-400">
+            De embed-code plak je op je eigen website — het aanvraagformulier verschijnt dan direct
+            daar, zonder dat een bezoeker naar deze Kwotio-link hoeft door te klikken.
+          </p>
+          {embedFallback && (
+            <label className={labelClass}>
+              Automatisch kopiëren lukte niet — selecteer en kopieer dit handmatig (Cmd/Ctrl+C):
+              <textarea
+                readOnly
+                autoFocus
+                value={embedFallback}
+                onFocus={(e) => e.currentTarget.select()}
+                rows={7}
+                className={cn(inputClass, "font-mono text-xs")}
+              />
+            </label>
+          )}
           {slugError && <p className="text-sm text-red-600">{slugError}</p>}
 
           <label className={labelClass}>
@@ -470,7 +519,8 @@ export function OrganizationSettingsCard({
 
           <div className="border-t border-ink-100 pt-4">
             <p className="mb-3 text-xs font-semibold text-ink-400">
-              Huisstijlkleuren — nog niet toegepast op offertes/PDF&apos;s, alleen opgeslagen als voorbereiding.
+              Huisstijlkleuren — de primaire kleur wordt gebruikt op de offertepagina en in de offerte-PDF die de
+              klant ziet (knoppen, voortgangsbalk, links). De secundaire kleur is nog niet in gebruik.
             </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className={labelClass}>

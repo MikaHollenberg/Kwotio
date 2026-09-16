@@ -1,13 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Plus, FileText, Search, ChevronUp, ChevronDown } from "lucide-react";
-import { ButtonLink } from "@/components/ui/button";
+import { useMemo, useState, useTransition } from "react";
+import { Plus, FileText, Search, ChevronUp, ChevronDown, Trash2, X } from "lucide-react";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { QuoteStatusBadge, STATUS_LABELS, STATUS_TONES, tones } from "@/components/ui/badge";
 import { ExportCsvButton } from "@/components/dashboard/export-csv-button";
 import { OfferteRowActions } from "./offerte-row-actions";
 import { OfferteEditLink } from "./offerte-edit-link";
+import { deleteQuotes } from "./actions";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { calculateActualQuoteValue } from "@/lib/blocks/pricing";
 import type { QuoteStatus } from "@/lib/types/database";
@@ -27,6 +29,7 @@ type QuoteRow = {
   price_per_person: boolean;
   aantal_personen: number | null;
   share_token: string;
+  decline_reason: string | null;
   clientName: string | null;
 };
 
@@ -102,6 +105,26 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
   const [statusFilter, setStatusFilter] = useState<Set<QuoteStatus>>(new Set());
   const [sortColumn, setSortColumn] = useState<SortColumn>("updated_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeletePending, startBulkDeleteTransition] = useTransition();
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function handleBulkDelete() {
+    startBulkDeleteTransition(async () => {
+      await deleteQuotes([...selectedIds]);
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+    });
+  }
 
   function toggleStatus(status: QuoteStatus) {
     setStatusFilter((prev) => {
@@ -134,21 +157,38 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
     });
   }, [quotes, search, statusFilter, sortColumn, sortDirection]);
 
-  const exportRows = visibleQuotes.map((q) => ({
-    Titel: q.title,
-    Klant: q.clientName ?? "",
-    Status: STATUS_LABELS[q.status],
-    Eventdatum: q.event_date ? formatDate(q.event_date) : "",
-    Bedrag: calculateActualQuoteValue({
-      total: Number(q.total),
-      pricePerPerson: q.price_per_person,
-      aantalPersonen: q.aantal_personen,
-    }),
-    "Prijs p.p.": q.price_per_person ? Number(q.total) : "",
-    Valuta: q.currency,
-    Aangemaakt: formatDate(q.created_at),
-    "Laatst gewijzigd": formatDate(q.updated_at),
-  }));
+  function toCsvRow(q: QuoteRow) {
+    return {
+      Titel: q.title,
+      Klant: q.clientName ?? "",
+      Status: STATUS_LABELS[q.status],
+      Eventdatum: q.event_date ? formatDate(q.event_date) : "",
+      Bedrag: calculateActualQuoteValue({
+        total: Number(q.total),
+        pricePerPerson: q.price_per_person,
+        aantalPersonen: q.aantal_personen,
+      }),
+      "Prijs p.p.": q.price_per_person ? Number(q.total) : "",
+      Valuta: q.currency,
+      Aangemaakt: formatDate(q.created_at),
+      "Laatst gewijzigd": formatDate(q.updated_at),
+    };
+  }
+
+  const exportRows = visibleQuotes.map(toCsvRow);
+  const selectedQuotes = visibleQuotes.filter((q) => selectedIds.has(q.id));
+  const allVisibleSelected = visibleQuotes.length > 0 && visibleQuotes.every((q) => selectedIds.has(q.id));
+
+  function toggleSelectAllVisible() {
+    setSelectedIds((prev) => {
+      if (allVisibleSelected) {
+        const next = new Set(prev);
+        visibleQuotes.forEach((q) => next.delete(q.id));
+        return next;
+      }
+      return new Set([...prev, ...visibleQuotes.map((q) => q.id)]);
+    });
+  }
 
   if (quotes.length === 0) {
     return (
@@ -220,6 +260,21 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
         </div>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-brand-sm border border-teal-200 bg-teal-50 px-4 py-2.5">
+          <p className="text-sm font-medium text-teal-800">{selectedIds.size} geselecteerd</p>
+          <div className="ml-auto flex items-center gap-2">
+            <ExportCsvButton rows={selectedQuotes.map(toCsvRow)} filename="offertes-selectie.csv" label="Exporteer selectie" />
+            <Button variant="outline" size="sm" onClick={() => setBulkDeleteOpen(true)} className="text-red-600 hover:bg-red-50">
+              <Trash2 className="size-4" /> Verwijderen
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} title="Selectie wissen">
+              <X className="size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {visibleQuotes.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <FileText className="size-8 text-ink-300" />
@@ -231,14 +286,23 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
             {visibleQuotes.map((q) => (
               <div key={q.id} className="flex flex-col gap-2 p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <OfferteEditLink
-                    quoteId={q.id}
-                    status={q.status}
-                    className="font-medium text-ink-500 hover:text-teal-700"
-                  >
-                    {q.title}
-                  </OfferteEditLink>
-                  <QuoteStatusBadge status={q.status} />
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(q.id)}
+                      onChange={() => toggleSelected(q.id)}
+                      className="mt-1 size-4 accent-teal-600"
+                      aria-label={`Selecteer ${q.title}`}
+                    />
+                    <OfferteEditLink
+                      quoteId={q.id}
+                      status={q.status}
+                      className="font-medium text-ink-500 hover:text-teal-700"
+                    >
+                      {q.title}
+                    </OfferteEditLink>
+                  </div>
+                  <QuoteStatusBadge status={q.status} title={q.decline_reason ?? undefined} />
                 </div>
                 <div className="flex items-center justify-between text-xs text-ink-400">
                   <span>{q.clientName ?? "—"}</span>
@@ -266,6 +330,15 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-ink-100 text-left text-xs font-semibold uppercase tracking-wide text-ink-400">
+                  <th className="px-5 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleSelectAllVisible}
+                      className="size-4 accent-teal-600"
+                      aria-label="Selecteer alle zichtbare offertes"
+                    />
+                  </th>
                   <th className="px-5 py-3">Offerte</th>
                   <th className="px-5 py-3">Klant</th>
                   <th className="px-5 py-3">Status</th>
@@ -292,6 +365,15 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
                 {visibleQuotes.map((q) => (
                   <tr key={q.id} className="border-b border-ink-50 last:border-0 hover:bg-sand-100">
                     <td className="px-5 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(q.id)}
+                        onChange={() => toggleSelected(q.id)}
+                        className="size-4 accent-teal-600"
+                        aria-label={`Selecteer ${q.title}`}
+                      />
+                    </td>
+                    <td className="px-5 py-3">
                       <OfferteEditLink
                         quoteId={q.id}
                         status={q.status}
@@ -302,7 +384,7 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
                     </td>
                     <td className="px-5 py-3 text-ink-400">{q.clientName ?? "—"}</td>
                     <td className="px-5 py-3">
-                      <QuoteStatusBadge status={q.status} />
+                      <QuoteStatusBadge status={q.status} title={q.decline_reason ?? undefined} />
                     </td>
                     <td className="px-5 py-3 text-ink-400">{q.event_date ? formatDate(q.event_date) : "—"}</td>
                     <td className="px-5 py-3 text-right">
@@ -326,6 +408,17 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
           </div>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Offertes verwijderen"
+        description={`Weet je zeker dat je deze ${selectedIds.size} offerte(s) wilt verwijderen? Dit kan niet ongedaan gemaakt worden.`}
+        confirmLabel="Verwijderen"
+        danger
+        pending={bulkDeletePending}
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkDeleteOpen(false)}
+      />
     </div>
   );
 }

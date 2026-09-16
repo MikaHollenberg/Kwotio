@@ -21,11 +21,11 @@ import { Button } from "@/components/ui/button";
 import { SignModal } from "@/components/signature/sign-modal";
 import { SuccessCelebration } from "@/components/signature/success-celebration";
 import { RequestChangesModal } from "@/components/preview/request-changes-modal";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DeclineQuoteModal } from "@/components/preview/decline-quote-modal";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
 import { LanguageProvider, useTranslation } from "@/lib/i18n/language-context";
 import type { Lang } from "@/lib/i18n/translations";
-import { trackView, trackSectionView, updateSelection, submitComment, declineQuote } from "./actions";
+import { trackView, trackSectionView, updateSelection, submitComment } from "./actions";
 
 export function PublicQuoteView(props: {
   token: string;
@@ -37,6 +37,7 @@ export function PublicQuoteView(props: {
   isExpired: boolean;
   initialLang: Lang;
   logoUrl?: string | null;
+  accentColor: string;
   organizationName: string;
   termsUrl: string | null;
   headcountRequired: boolean;
@@ -79,6 +80,7 @@ function PublicQuoteViewInner({
   commentsByBlock,
   isExpired,
   logoUrl,
+  accentColor,
   organizationName,
   termsUrl,
   headcountRequired,
@@ -93,6 +95,7 @@ function PublicQuoteViewInner({
   commentsByBlock: Record<string, CommentItem[]>;
   isExpired: boolean;
   logoUrl?: string | null;
+  accentColor: string;
   organizationName: string;
   termsUrl: string | null;
   headcountRequired: boolean;
@@ -112,7 +115,6 @@ function PublicQuoteViewInner({
   const [showSignModal, setShowSignModal] = useState(false);
   const [showRequestChanges, setShowRequestChanges] = useState(false);
   const [declineConfirmOpen, setDeclineConfirmOpen] = useState(false);
-  const [declinePending, setDeclinePending] = useState(false);
   const [celebration, setCelebration] = useState<{ signerName: string } | null>(null);
   const skipFirstSave = useRef(true);
   const isSigned = currentStatus === "geaccepteerd";
@@ -157,7 +159,7 @@ function PublicQuoteViewInner({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <StatusBar status={currentStatus} />
+            <StatusBar status={currentStatus} accentColor={accentColor} />
             <div className="hidden sm:block">
               <LanguageToggle />
             </div>
@@ -197,6 +199,7 @@ function PublicQuoteViewInner({
               onCommentAdded={(comment) =>
                 setComments((prev) => ({ ...prev, [block.id]: [...(prev[block.id] ?? []), comment] }))
               }
+              accentColor={accentColor}
             />
           ))}
         </div>
@@ -209,7 +212,8 @@ function PublicQuoteViewInner({
                 href={termsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-teal-600 underline hover:text-teal-700"
+                style={{ color: accentColor }}
+                className="font-medium underline hover:opacity-80"
               >
                 {t("terms_link")}
               </a>{" "}
@@ -221,7 +225,8 @@ function PublicQuoteViewInner({
             href={PRIVACYBELEID_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-teal-600 underline hover:text-teal-700"
+            style={{ color: accentColor }}
+            className="font-medium underline hover:opacity-80"
           >
             {t("privacy_link")}
           </a>
@@ -252,7 +257,8 @@ function PublicQuoteViewInner({
               {isSigned ? (
                 <a
                   href={certificateHref}
-                  className="flex items-center gap-2 rounded-brand-sm bg-teal-50 px-4 py-2.5 text-sm font-semibold text-teal-700 hover:bg-teal-100"
+                  style={{ backgroundColor: `${accentColor}1a`, color: accentColor }}
+                  className="flex items-center gap-2 rounded-brand-sm px-4 py-2.5 text-sm font-semibold hover:opacity-80"
                 >
                   <Download className="size-4" /> {t("download_certificate")}
                 </a>
@@ -282,7 +288,13 @@ function PublicQuoteViewInner({
                     <MessageSquareText className="size-4" />
                     <span className="hidden sm:inline">{t("request_changes")}</span>
                   </Button>
-                  <Button onClick={() => setShowSignModal(true)}>{t("accept_and_sign")}</Button>
+                  <Button
+                    onClick={() => setShowSignModal(true)}
+                    style={{ backgroundColor: accentColor }}
+                    className="hover:opacity-90 active:opacity-90"
+                  >
+                    {t("accept_and_sign")}
+                  </Button>
                 </>
               )}
             </div>
@@ -290,25 +302,21 @@ function PublicQuoteViewInner({
         </div>
       )}
 
-      <RequestChangesModal open={showRequestChanges} onClose={() => setShowRequestChanges(false)} token={token} />
+      <RequestChangesModal
+        open={showRequestChanges}
+        onClose={() => setShowRequestChanges(false)}
+        token={token}
+        accentColor={accentColor}
+      />
 
-      <ConfirmDialog
+      <DeclineQuoteModal
         open={declineConfirmOpen}
-        title={t("decline_confirm_title")}
-        description={t("decline_confirm_description")}
-        confirmLabel={t("decline_confirm_button")}
-        cancelLabel={t("close")}
-        danger
-        pending={declinePending}
-        onConfirm={() => {
-          setDeclinePending(true);
-          void declineQuote(token).then(() => {
-            setDeclinePending(false);
-            setDeclineConfirmOpen(false);
-            setCurrentStatus("geweigerd");
-          });
+        token={token}
+        onClose={() => setDeclineConfirmOpen(false)}
+        onDeclined={() => {
+          setDeclineConfirmOpen(false);
+          setCurrentStatus("geweigerd");
         }}
-        onCancel={() => setDeclineConfirmOpen(false)}
       />
 
       <SignModal
@@ -353,6 +361,7 @@ function BlockSection({
   showDivider,
   comments,
   onCommentAdded,
+  accentColor,
 }: {
   token: string;
   block: BlockDraft;
@@ -362,6 +371,7 @@ function BlockSection({
   showDivider: boolean;
   comments: CommentItem[];
   onCommentAdded: (comment: CommentItem) => void;
+  accentColor: string;
 }) {
   const hasTracked = useRef(false);
 
@@ -382,10 +392,11 @@ function BlockSection({
           <WaveDivider className="text-blue-200" />
         </div>
       )}
-      <BlockPreview block={block} meta={meta} selections={selections} onSelectionsChange={onSelectionsChange} />
+      <BlockPreview block={block} meta={meta} selections={selections} onSelectionsChange={onSelectionsChange} accentColor={accentColor} />
       {block.type !== "cover" && (
         <div className={cn("px-6 pb-8", block.type === "signature" && "pb-10")}>
           <CommentThread
+            accentColor={accentColor}
             comments={comments}
             onSubmit={async (input) => {
               await submitComment(token, { blockId: block.id, ...input });

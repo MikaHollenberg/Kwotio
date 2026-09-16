@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Eye, Pencil, Copy, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { Eye, Pencil, Copy, Trash2, UserPlus, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import type { QuoteStatus } from "@/lib/types/database";
@@ -23,6 +23,23 @@ export function OfferteRowActions({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicatePending, startDuplicateTransition] = useTransition();
+  const [duplicateMenuOpen, setDuplicateMenuOpen] = useState(false);
+  const duplicateMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (duplicateMenuRef.current && !duplicateMenuRef.current.contains(e.target as Node)) {
+        setDuplicateMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function handleDuplicate(sameClientNextYear: boolean) {
+    setDuplicateMenuOpen(false);
+    startDuplicateTransition(() => duplicateQuote(quoteId, { sameClientNextYear }));
+  }
 
   function handleDelete() {
     startTransition(async () => {
@@ -55,16 +72,44 @@ export function OfferteRowActions({
       >
         <Pencil className="size-4" />
       </OfferteEditLink>
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={duplicatePending}
-        title="Offerte dupliceren"
-        data-faq-id={`duplicate-quote-button-${quoteId}`}
-        onClick={() => startDuplicateTransition(() => duplicateQuote(quoteId))}
-      >
-        <Copy className="size-4" />
-      </Button>
+      <div ref={duplicateMenuRef} className="relative">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={duplicatePending}
+          title="Offerte dupliceren"
+          data-faq-id={`duplicate-quote-button-${quoteId}`}
+          onClick={() => setDuplicateMenuOpen((v) => !v)}
+        >
+          <Copy className="size-4" />
+        </Button>
+        {duplicateMenuOpen && (
+          <div className="absolute right-0 top-full z-20 mt-1 w-64 rounded-brand-sm border border-ink-200 bg-white p-1.5 shadow-lg">
+            <button
+              type="button"
+              onClick={() => handleDuplicate(false)}
+              className="flex w-full items-start gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200"
+            >
+              <UserPlus className="mt-0.5 size-4 shrink-0 text-ink-400" />
+              <span>
+                <span className="block font-medium">Voor een nieuwe klant</span>
+                <span className="block text-xs text-ink-400">Zonder klant en datum, klaar om in te vullen</span>
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDuplicate(true)}
+              className="flex w-full items-start gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200"
+            >
+              <CalendarClock className="mt-0.5 size-4 shrink-0 text-ink-400" />
+              <span>
+                <span className="block font-medium">Voor dezelfde klant (volgend jaar)</span>
+                <span className="block text-xs text-ink-400">Klant en datum (+1 jaar) worden meegenomen</span>
+              </span>
+            </button>
+          </div>
+        )}
+      </div>
       <Button
         variant="ghost"
         size="sm"

@@ -36,6 +36,23 @@ export function GrowthComparison({ series }: { series: MonthlySeriesPoint[] }) {
   const effectiveA = keys.includes(periodA) ? periodA : (keys[keys.length - 2] ?? keys[0] ?? "");
   const effectiveB = keys.includes(periodB) ? periodB : (keys[keys.length - 1] ?? "");
 
+  // Snelkoppeling: "dezelfde maand vorig jaar" -- technisch al mogelijk door
+  // in maand-modus zelf de twee juiste opties op te zoeken, maar dat is voor
+  // een seizoensgebonden bedrijf (feestlocatie, terrasseizoen) iets wat je
+  // vaak genoeg wilt zien om een eigen knop te verdienen i.p.v. steeds zelf
+  // te zoeken.
+  const now = new Date();
+  const thisMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const lastYearMonthKey = `${now.getFullYear() - 1}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const monthKeys = toMonthPeriods(series).map((o) => o.key);
+  const yearOverYearAvailable = monthKeys.includes(thisMonthKey) && monthKeys.includes(lastYearMonthKey);
+
+  function selectYearOverYear() {
+    setMode("maand");
+    setPeriodA(lastYearMonthKey);
+    setPeriodB(thisMonthKey);
+  }
+
   const a = options.find((o) => o.key === effectiveA);
   const b = options.find((o) => o.key === effectiveB);
 
@@ -49,20 +66,37 @@ export function GrowthComparison({ series }: { series: MonthlySeriesPoint[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="inline-flex w-fit rounded-brand-sm border border-ink-200/60 bg-white/60 p-0.5 text-xs font-medium">
-        {(["jaar", "maand"] as const).map((m) => (
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex w-fit rounded-brand-sm border border-ink-200/60 bg-white/60 p-0.5 text-xs font-medium">
+          {(["jaar", "maand"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={cn(
+                "rounded-[calc(var(--radius-brand-sm)_-_2px)] px-3 py-1.5 capitalize transition-colors",
+                mode === m ? "bg-teal-500 text-white" : "text-ink-400 hover:text-ink-500",
+              )}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+        {yearOverYearAvailable && (
           <button
-            key={m}
             type="button"
-            onClick={() => setMode(m)}
+            onClick={selectYearOverYear}
+            title="Deze maand vergelijken met dezelfde maand vorig jaar"
             className={cn(
-              "rounded-[calc(var(--radius-brand-sm)_-_2px)] px-3 py-1.5 capitalize transition-colors",
-              mode === m ? "bg-teal-500 text-white" : "text-ink-400 hover:text-ink-500",
+              "rounded-brand-sm border px-3 py-1.5 text-xs font-medium transition-colors",
+              mode === "maand" && effectiveA === lastYearMonthKey && effectiveB === thisMonthKey
+                ? "border-teal-500 bg-teal-500 text-white"
+                : "border-ink-200/60 bg-white/60 text-ink-400 hover:text-ink-500",
             )}
           >
-            {m}
+            Dit seizoen vs. vorig jaar
           </button>
-        ))}
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3">

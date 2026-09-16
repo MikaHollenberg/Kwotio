@@ -73,7 +73,10 @@ export function ClientDetail({
               onChange={(e) => setName(e.target.value)}
               className="font-display text-xl font-semibold text-ink-500 outline-none focus:border-b focus:border-teal-400"
             />
-            <div className="mt-0.5">
+            <div className="mt-0.5 flex items-center gap-2">
+              {client.client_number != null && (
+                <span className="text-xs text-ink-400">Klantnummer {client.client_number}</span>
+              )}
               <AutosaveIndicator status={status} />
             </div>
           </div>

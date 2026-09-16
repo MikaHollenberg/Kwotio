@@ -18,6 +18,7 @@ export function RequestFormModal({
   guestCountFieldActive,
   guestCountFieldLabel,
   closedDates,
+  closedWeekdays,
   onClose,
 }: {
   orgSlug: string;
@@ -28,6 +29,8 @@ export function RequestFormModal({
   guestCountFieldActive: boolean;
   guestCountFieldLabel: string;
   closedDates: string[];
+  /** organizations.closed_weekdays -- 0 = zondag .. 6 = zaterdag. */
+  closedWeekdays: number[];
   onClose: () => void;
 }) {
   const formStartedAt = useRef(0);
@@ -61,9 +64,13 @@ export function RequestFormModal({
       setError("Vul zowel een e-mailadres als telefoonnummer in.");
       return;
     }
-    if (desiredDate && closedDates.includes(desiredDate)) {
-      setError("Op deze datum zijn we gesloten. Kies een andere datum.");
-      return;
+    if (desiredDate) {
+      const [y, m, d] = desiredDate.split("-").map(Number);
+      const weekday = new Date(y, m - 1, d).getDay();
+      if (closedDates.includes(desiredDate) || closedWeekdays.includes(weekday)) {
+        setError("Op deze datum zijn we gesloten. Kies een andere datum.");
+        return;
+      }
     }
     startTransition(async () => {
       const result = await submitQuoteRequest({
@@ -178,7 +185,12 @@ export function RequestFormModal({
               <div className="grid grid-cols-2 gap-3">
                 <label className={labelClass}>
                   Gewenste datum (optioneel)
-                  <ClosedDatePicker value={desiredDate} onChange={setDesiredDate} closedDates={closedDates} />
+                  <ClosedDatePicker
+                    value={desiredDate}
+                    onChange={setDesiredDate}
+                    closedDates={closedDates}
+                    closedWeekdays={closedWeekdays}
+                  />
                 </label>
                 {guestCountFieldActive && (
                   <label className={labelClass}>

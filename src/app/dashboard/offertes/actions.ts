@@ -120,32 +120,48 @@ export async function createDemoQuoteForFaq(options?: { sent?: boolean }): Promi
 }
 
 /**
- * Dupliceert een bestaande offerte (incl. pakketten/opties) voor een
- * vergelijkbare nieuwe klant — zonder eerst een template te hoeven maken.
- * Klantgegevens, status, verzenddatum en handtekening horen bij de
- * ORIGINELE klant en worden bewust niet meegekopieerd; de rest (inhoud,
- * prijzen, instellingen) wel. Alle blok-/pakket-/optie-id's worden vers
+ * Dupliceert een bestaande offerte (incl. pakketten/opties) — zonder eerst
+ * een template te hoeven maken. Standaard (options.sameClientNextYear
+ * false/ongezet) is dit bedoeld voor een VERGELIJKBARE NIEUWE klant:
+ * klantgegevens, status, verzenddatum en handtekening horen bij de
+ * ORIGINELE klant en worden dan bewust niet meegekopieerd. Met
+ * `sameClientNextYear: true` (bv. een jaarlijks terugkerend bedrijfsuitje)
+ * worden klant + klantgegevens juist WEL meegekopieerd en schuift de
+ * eventdatum een jaar op (alleen als de bron er een had). Status,
+ * verzenddatum en handtekening blijven in beide gevallen leeg -- de kopie
+ * is altijd een nieuw concept. Alle blok-/pakket-/optie-id's worden vers
  * gegenereerd (duplicateBlockDraft) zodat de kopie nooit dezelfde rijen
  * deelt met het origineel.
  */
-export async function duplicateQuote(quoteId: string) {
+export async function duplicateQuote(quoteId: string, options?: { sameClientNextYear?: boolean }) {
   const { supabase, organizationId, userId } = await requireOrganization();
+  const sameClientNextYear = options?.sameClientNextYear ?? false;
 
   const { data: source, error } = await supabase
     .from("quotes")
-    .select("title, template_id, language, currency, price_display, price_per_person, discount_amount, aantal_personen_actief")
+    .select(
+      "title, template_id, language, currency, price_display, price_per_person, discount_amount, aantal_personen_actief, client_id, client_display_name, client_display_email, client_display_phone, client_display_company, event_date",
+    )
     .eq("id", quoteId)
     .single();
   if (error) throw error;
 
   const sourceBlocks = await loadQuoteBlocks(supabase, quoteId);
 
+  let nextEventDate: string | null = null;
+  if (sameClientNextYear && source.event_date) {
+    const d = new Date(source.event_date);
+    d.setFullYear(d.getFullYear() + 1);
+    nextEventDate = d.toISOString().slice(0, 10);
+  }
+  const titleSuffix = sameClientNextYear && nextEventDate ? `(${nextEventDate.slice(0, 4)})` : "(kopie)";
+
   const { data: newQuote, error: insertError } = await supabase
     .from("quotes")
     .insert({
       organization_id: organizationId,
       template_id: source.template_id,
-      title: `${source.title} (kopie)`,
+      title: `${source.title} ${titleSuffix}`,
       language: source.language,
       currency: source.currency,
       price_display: source.price_display,
@@ -154,6 +170,16 @@ export async function duplicateQuote(quoteId: string) {
       aantal_personen_actief: source.aantal_personen_actief,
       created_by: userId,
       handled_by_profile_id: userId,
+      ...(sameClientNextYear
+        ? {
+            client_id: source.client_id,
+            client_display_name: source.client_display_name,
+            client_display_email: source.client_display_email,
+            client_display_phone: source.client_display_phone,
+            client_display_company: source.client_display_company,
+            event_date: nextEventDate,
+          }
+        : {}),
     })
     .select("id")
     .single();
@@ -185,6 +211,7 @@ export async function saveQuoteMeta(
     clientDisplayPhone: string;
     clientDisplayCompany: string;
     referenceNumber: string;
+    internalNotes: string;
   },
 ) {
   const { supabase } = await requireOrganization();
@@ -206,6 +233,7 @@ export async function saveQuoteMeta(
       client_display_phone: input.clientDisplayPhone || null,
       client_display_company: input.clientDisplayCompany || null,
       reference_number: input.referenceNumber || null,
+      internal_notes: input.internalNotes || null,
     })
     .eq("id", quoteId);
   if (error) throw error;
@@ -386,6 +414,38 @@ export async function replyToComment(quoteId: string, blockId: string | null, bo
 }
 
 /**
+ * Los contactmomentenlogje per offerte (bv. "gebeld op 14 sept, klant belt
+ * na het weekend terug") -- puur intern, nooit zichtbaar voor de klant, dus
+ * bewust een eigen tabel i.p.v. hergebruik van `comments` (die de klant wél
+ * kan lezen op de publieke offertepagina).
+ */
+export async function addContactLog(quoteId: string, body: string) {
+  const { supabase, userId } = await requireOrganization();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", userId)
+    .single();
+
+  const { error } = await supabase.from("quote_contact_logs").insert({
+    quote_id: quoteId,
+    author_name: profile?.full_name || profile?.email || "Bureau",
+    body,
+  });
+  if (error) throw error;
+
+  revalidatePath(`/dashboard/offertes/${quoteId}`);
+}
+
+export async function deleteContactLog(id: string, quoteId: string) {
+  const { supabase } = await requireOrganization();
+  const { error } = await supabase.from("quote_contact_logs").delete().eq("id", id);
+  if (error) throw error;
+  revalidatePath(`/dashboard/offertes/${quoteId}`);
+}
+
+/**
  * Informeert de klant die de offerte heeft ondertekend dat het bureau 'm
  * daarna nog heeft aangepast. Wordt eenmalig aangeroepen op het moment dat
  * het bureau bevestigt een al-geaccepteerde offerte te willen bewerken —
@@ -432,6 +492,16 @@ export async function notifySignerOfEdit(quoteId: string) {
 export async function deleteQuote(quoteId: string) {
   const { supabase } = await requireOrganization();
   const { error } = await supabase.from("quotes").delete().eq("id", quoteId);
+  if (error) throw error;
+  revalidatePath("/dashboard/offertes");
+}
+
+/** Bulk-variant voor de selectie-acties op de offertes-lijst -- zelfde
+ * RLS-scoping als de losse deleteQuote (current_organization_id()), nu voor
+ * meerdere id's in één keer i.p.v. een los verzoek per offerte. */
+export async function deleteQuotes(quoteIds: string[]) {
+  const { supabase } = await requireOrganization();
+  const { error } = await supabase.from("quotes").delete().in("id", quoteIds);
   if (error) throw error;
   revalidatePath("/dashboard/offertes");
 }

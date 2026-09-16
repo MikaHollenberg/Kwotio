@@ -21,7 +21,7 @@ const STEP_ORDER: Record<QuoteStatus, number> = {
   geweigerd: 3,
 };
 
-export function StatusBar({ status }: { status: QuoteStatus }) {
+export function StatusBar({ status, accentColor }: { status: QuoteStatus; accentColor: string }) {
   const { t } = useTranslation();
   if (status === "concept") return null;
 
@@ -36,13 +36,10 @@ export function StatusBar({ status }: { status: QuoteStatus }) {
         return (
           <div key={step.status} className="flex flex-1 items-center gap-1.5 sm:gap-2">
             <div
+              style={isDone ? { borderColor: accentColor, backgroundColor: accentColor } : isCurrent ? { borderColor: accentColor, color: accentColor } : undefined}
               className={cn(
                 "flex size-6 shrink-0 items-center justify-center rounded-full border-2 text-[11px] font-semibold transition-colors duration-200 ease-brand",
-                isDone
-                  ? "border-teal-500 bg-teal-500 text-white"
-                  : isCurrent
-                    ? "border-teal-500 text-teal-600"
-                    : "border-ink-200 text-ink-300",
+                isDone ? "text-white" : isCurrent ? "" : "border-ink-200 text-ink-300",
               )}
             >
               {isDone ? <Check className="size-3.5" /> : i + 1}
@@ -56,7 +53,10 @@ export function StatusBar({ status }: { status: QuoteStatus }) {
               {t(step.labelKey)}
             </span>
             {i < STEPS.length - 1 && (
-              <div className={cn("h-px flex-1", i < currentIndex ? "bg-teal-500" : "bg-ink-200")} />
+              <div
+                style={i < currentIndex ? { backgroundColor: accentColor } : undefined}
+                className={cn("h-px flex-1", i < currentIndex ? "" : "bg-ink-200")}
+              />
             )}
           </div>
         );

@@ -27,19 +27,54 @@ const META: QuoteMeta = {
   discountAmount: 0,
 };
 
-export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: PublicOrgPageData }) {
+export function PublicOrgPageView({
+  orgSlug,
+  data,
+  embed = false,
+}: {
+  orgSlug: string;
+  data: PublicOrgPageData;
+  /** Kale variant voor de <iframe>-embed op de eigen website van een
+   * organisatie: geen kop/voettekst/eigen achtergrond (die zou dubbelop zijn
+   * met de omliggende site), en meldt zijn eigen hoogte aan de host-pagina
+   * (zie public/embed.js) zodat de iframe nooit een scrollbalkje krijgt. */
+  embed?: boolean;
+}) {
   // Bewust geen automatisch geopende template — pas na een klik van de
   // bezoeker (of een gedeelde ?template=-link, zie het effect hieronder).
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
 
   useEffect(() => {
+    if (embed) return;
     // Mobiele browsers onthouden soms de laatst gescrollde positie voor deze
     // link (scroll restoration) en openen de pagina daardoor niet bovenaan —
     // forceer altijd een schone start bovenaan.
     if ("scrollRestoration" in window.history) window.history.scrollRestoration = "manual";
     window.scrollTo(0, 0);
-  }, []);
+  }, [embed]);
+
+  useEffect(() => {
+    if (!embed) return;
+    // targetOrigin "*" is bewust: de host-site kan elk domein zijn (dat is
+    // het hele punt van embedden) en het bericht bevat toch niets gevoeligers
+    // dan een pixelhoogte. Bij open modal ook window.innerHeight meenemen --
+    // het aanvraagformulier is een position:fixed overlay die niet meetelt
+    // in scrollHeight, en zou anders binnen een te lage iframe afgesneden
+    // worden.
+    function postHeight() {
+      const height = Math.max(document.documentElement.scrollHeight, formOpen ? window.innerHeight : 0);
+      window.parent.postMessage({ type: "kwotio-embed-resize", height }, "*");
+    }
+    const observer = new ResizeObserver(postHeight);
+    observer.observe(document.documentElement);
+    window.addEventListener("resize", postHeight);
+    postHeight();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", postHeight);
+    };
+  }, [embed, formOpen]);
 
   useEffect(() => {
     // Eenmalige sync vanaf de URL bij het laden (deelbare ?template=-link) —
@@ -87,15 +122,17 @@ export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: Pu
 
   return (
     <LanguageProvider initialLang="nl">
-      <div className="min-h-screen bg-sand-100">
-        <header className="border-b border-ink-200/40 bg-white/80 px-6 py-4 backdrop-blur-sm">
-          <div className="mx-auto flex max-w-3xl items-center gap-3">
-            {data.logoUrl ? <Logo logoUrl={data.logoUrl} height={32} priority /> : <KwotioMark size={32} />}
-            <span className="font-display text-lg font-semibold text-ink-500">{data.organizationName}</span>
-          </div>
-        </header>
+      <div className={cn(!embed && "min-h-screen bg-sand-100")}>
+        {!embed && (
+          <header className="border-b border-ink-200/40 bg-white/80 px-6 py-4 backdrop-blur-sm">
+            <div className="mx-auto flex max-w-3xl items-center gap-3">
+              {data.logoUrl ? <Logo logoUrl={data.logoUrl} height={32} /> : <KwotioMark size={32} />}
+              <span className="font-display text-lg font-semibold text-ink-500">{data.organizationName}</span>
+            </div>
+          </header>
+        )}
 
-        <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 sm:px-6">
+        <div className={cn("mx-auto flex max-w-3xl flex-col gap-6", embed ? "px-1 py-4" : "px-4 py-8 sm:px-6")}>
           {data.welcomeMessage && (
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-500">{data.welcomeMessage}</p>
           )}
@@ -154,6 +191,7 @@ export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: Pu
                             selections={selections}
                             onSelectionsChange={() => {}}
                             readOnly
+                            accentColor={data.primaryColor}
                           />
                         </div>
                       ))}
@@ -201,6 +239,7 @@ export function PublicOrgPageView({ orgSlug, data }: { orgSlug: string; data: Pu
           guestCountFieldActive={data.guestCountFieldActive}
           guestCountFieldLabel={data.guestCountFieldLabel}
           closedDates={data.closedDates}
+          closedWeekdays={data.closedWeekdays}
           onClose={() => setFormOpen(false)}
         />
       )}

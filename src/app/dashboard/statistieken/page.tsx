@@ -18,6 +18,9 @@ import { ExportCsvButton } from "@/components/dashboard/export-csv-button";
 import { ButtonLink } from "@/components/ui/button";
 import { STATUS_LABELS } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getInvoiceStats } from "@/lib/stats/invoice-queries";
+import { FacturenStatsView } from "./facturen-stats-view";
+import { StatsViewSwitcher } from "./stats-view-switcher";
 
 export default async function StatistiekenPage() {
   const supabase = await createClient();
@@ -32,15 +35,17 @@ export default async function StatistiekenPage() {
   if (profile?.role !== "owner" && profile?.role !== "admin") redirect("/dashboard");
   const organizationId = profile!.organization_id;
 
-  const [pipeline, monthlySeries, templatePerformance, expectedGuests, popularPackage, busiestDay, publicPageStats] = await Promise.all([
-    getPipeline(supabase, organizationId),
-    getMonthlySeries(supabase, organizationId),
-    getTemplatePerformance(supabase, organizationId),
-    getExpectedGuestsThisMonth(supabase, organizationId),
-    getPopularPackageThisMonth(supabase, organizationId),
-    getBusiestDayThisMonth(supabase, organizationId),
-    getPublicPageStatsThisMonth(supabase, organizationId),
-  ]);
+  const [pipeline, monthlySeries, templatePerformance, expectedGuests, popularPackage, busiestDay, publicPageStats, invoiceStats] =
+    await Promise.all([
+      getPipeline(supabase, organizationId),
+      getMonthlySeries(supabase, organizationId),
+      getTemplatePerformance(supabase, organizationId),
+      getExpectedGuestsThisMonth(supabase, organizationId),
+      getPopularPackageThisMonth(supabase, organizationId),
+      getBusiestDayThisMonth(supabase, organizationId),
+      getPublicPageStatsThisMonth(supabase, organizationId),
+      getInvoiceStats(supabase, organizationId),
+    ]);
 
   const busiestDayLabel = busiestDay
     ? new Date(busiestDay.date).toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })
@@ -81,6 +86,13 @@ export default async function StatistiekenPage() {
   const wonRevenue = pipeline.geaccepteerd.reduce((sum, q) => sum + q.total, 0);
   const lostDeclinedRevenue = pipeline.geweigerd.reduce((sum, q) => sum + q.total, 0);
   const lostExpiredRevenue = pipeline.verlopen.reduce((sum, q) => sum + q.total, 0);
+
+  const declineReasonCounts = pipeline.geweigerd.reduce<Record<string, number>>((acc, q) => {
+    const key = q.declineReason ?? "Geen reden opgegeven";
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+  const declineReasonRows = Object.entries(declineReasonCounts).sort((a, b) => b[1] - a[1]);
 
   const publicPageTiles = [
     {
@@ -123,12 +135,12 @@ export default async function StatistiekenPage() {
     { label: "Omzet gemist (verlopen)", icon: Clock3, value: formatCurrency(lostExpiredRevenue), accent: "bg-sand-200 text-ink-400" },
   ];
 
-  return (
+  const offertesView = (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-sm text-ink-400">Overzicht per status en omzet</p>
-          <h2 className="font-display text-2xl font-semibold text-ink-500">Statistieken</h2>
+          <h2 className="font-display text-2xl font-semibold text-ink-500">Offertes</h2>
         </div>
         <div className="flex items-center gap-2">
           <ExportCsvButton rows={exportRows} filename="offertes-pipeline.csv" />
@@ -162,6 +174,32 @@ export default async function StatistiekenPage() {
           <PipelineStatusChart pipeline={pipeline} />
         </CardContent>
       </Card>
+
+      {declineReasonRows.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Redenen van afwijzen</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-2.5">
+              {declineReasonRows.map(([reason, count]) => {
+                const percent = Math.round((count / pipeline.geweigerd.length) * 100);
+                return (
+                  <div key={reason} className="flex items-center gap-3 text-sm">
+                    <span className="w-40 shrink-0 truncate text-ink-500">{reason}</span>
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-sand-200">
+                      <div className="h-full rounded-full bg-red-400" style={{ width: `${percent}%` }} />
+                    </div>
+                    <span className="w-16 shrink-0 text-right text-ink-400">
+                      {count}× ({percent}%)
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -227,5 +265,12 @@ export default async function StatistiekenPage() {
         </CardContent>
       </Card>
     </div>
+  );
+
+  return (
+    <StatsViewSwitcher
+      offertesView={offertesView}
+      facturenView={<FacturenStatsView stats={invoiceStats} />}
+    />
   );
 }

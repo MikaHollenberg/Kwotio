@@ -51,6 +51,8 @@ export function quoteDeclinedAgencyEmail(input: {
   quoteTitle: string;
   clientName: string;
   dashboardUrl: string;
+  declineReason: string | null;
+  declineNote: string | null;
 }) {
   return emailShell({
     organizationName: input.organizationName,
@@ -61,6 +63,16 @@ export function quoteDeclinedAgencyEmail(input: {
         <strong>${input.clientName}</strong> heeft <strong>${input.quoteTitle}</strong> zojuist
         afgewezen.
       </p>
+      ${
+        input.declineReason
+          ? `<p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 8px;"><strong>Reden:</strong> ${textToSafeHtml(input.declineReason)}</p>`
+          : ""
+      }
+      ${
+        input.declineNote
+          ? `<p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;"><strong>Toelichting:</strong> ${textToSafeHtml(input.declineNote)}</p>`
+          : ""
+      }
       ${emailButton("Bekijk in dashboard", input.dashboardUrl)}
     `,
   });

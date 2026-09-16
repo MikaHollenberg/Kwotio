@@ -97,6 +97,9 @@ const styles = StyleSheet.create({
   grandTotalRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 4 },
   grandTotalLabel: { fontSize: 12, fontWeight: 700, color: COLORS.ink },
   grandTotalValue: { fontSize: 14, fontWeight: 700, color: COLORS.brand },
+  qrBlock: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 16 },
+  qrImage: { width: 40, height: 40 },
+  qrCaption: { fontSize: 8, color: COLORS.muted, maxWidth: 220 },
   footer: {
     position: "absolute",
     bottom: 26,
@@ -168,6 +171,15 @@ export type QuotePdfSignatureData = {
 
 export type QuotePdfData = {
   organizationName: string;
+  /** organizations.brand_theme.primaryColor (via resolveAccentColor()) --
+   * vervangt COLORS.brand op de plekken hieronder, zelfde stijl-array-merge-
+   * patroon dat hier al gebruikt werd voor packageCardSelected. */
+  accentColor: string;
+  /** Publieke offerte-URL + vooraf gegenereerde QR-PNG (data-URI) ernaartoe --
+   * handig zodra iemand deze PDF print of los doorstuurt zonder de
+   * oorspronkelijke link/e-mail erbij. */
+  publicUrl: string;
+  qrCodeDataUri: string;
   organizationLogoUrl?: string | null;
   organizationAddress?: { street?: string; postalCode?: string; city?: string; country?: string } | null;
   organizationKvk?: string | null;
@@ -254,7 +266,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
             // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer's Image is a PDF primitive, not an <img>; it has no alt prop
             <Image src={data.organizationLogoUrl} style={styles.logo} />
           ) : (
-            <Text style={styles.brand}>{data.organizationName}</Text>
+            <Text style={[styles.brand, { color: data.accentColor }]}>{data.organizationName}</Text>
           )}
           <Text style={styles.badge}>OFFERTE</Text>
         </View>
@@ -318,7 +330,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
               const c = block.content as CoverBlockContent;
               return (
                 <View key={block.id} wrap={false}>
-                  {c.eyebrow && <Text style={styles.coverEyebrow}>{c.eyebrow}</Text>}
+                  {c.eyebrow && <Text style={[styles.coverEyebrow, { color: data.accentColor }]}>{c.eyebrow}</Text>}
                   <Text style={styles.coverTitle}>{data.quoteTitle}</Text>
                   <Text style={styles.coverSubtitle}>
                     {data.clientName || "—"}
@@ -375,16 +387,16 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                   {c.packages.map((pkg) => {
                     const isSelected = (data.selections.packageIdByBlock[block.id] ?? []).includes(pkg.id);
                     return (
-                      <View key={pkg.id} style={[styles.packageCard, isSelected ? styles.packageCardSelected : {}]} wrap={false}>
+                      <View key={pkg.id} style={[styles.packageCard, isSelected ? [styles.packageCardSelected, { borderColor: data.accentColor }] : {}]} wrap={false}>
                         <View style={styles.packageHeaderRow}>
                           <Text style={styles.packageName}>{pkg.name}</Text>
-                          <Text style={styles.packagePrice}>
+                          <Text style={[styles.packagePrice, { color: data.accentColor }]}>
                             {formatCurrency(pkg.price, data.currency)}
                             {data.pricePerPerson ? " p.p." : ""}
                           </Text>
                         </View>
                         {pkg.description && <Text style={styles.packageDesc}>{pkg.description}</Text>}
-                        {isSelected && <Text style={styles.selectedBadge}>GESELECTEERD PAKKET</Text>}
+                        {isSelected && <Text style={[styles.selectedBadge, { color: data.accentColor }]}>GESELECTEERD PAKKET</Text>}
                       </View>
                     );
                   })}
@@ -419,7 +431,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                       <Link
                         key={url}
                         src={url}
-                        style={{ fontSize: 9.5, color: COLORS.brand, textDecoration: "underline", marginTop: i === 0 ? 8 : 2 }}
+                        style={{ fontSize: 9.5, color: data.accentColor, textDecoration: "underline", marginTop: i === 0 ? 8 : 2 }}
                       >
                         {label ? `${label}: bekijk PDF` : arr.length > 1 ? `Bijlage ${i + 1}: bekijk PDF` : "Bijlage: bekijk PDF"}
                       </Link>
@@ -436,7 +448,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                   {c.heading && <Text style={styles.sectionHeading}>{c.heading}</Text>}
                   {c.items.map((item) => (
                     <View key={item.id} style={styles.timelineRow} wrap={false}>
-                      <Text style={styles.timelineTime}>{item.time}</Text>
+                      <Text style={[styles.timelineTime, { color: data.accentColor }]}>{item.time}</Text>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.timelineTitle}>{item.title}</Text>
                         {item.description && <Text style={styles.timelineDesc}>{item.description}</Text>}
@@ -477,11 +489,19 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
             <Text style={styles.grandTotalLabel}>
               Totaal{data.pricePerPerson ? " p.p." : ""} ({data.priceDisplayLabel})
             </Text>
-            <Text style={styles.grandTotalValue}>
+            <Text style={[styles.grandTotalValue, { color: data.accentColor }]}>
               {formatCurrency(data.total, data.currency)}
               {data.pricePerPerson ? " p.p." : ""}
             </Text>
           </View>
+        </View>
+
+        <View style={styles.qrBlock}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer's Image is a PDF primitive, not an <img>; it has no alt prop */}
+          <Image src={data.qrCodeDataUri} style={styles.qrImage} />
+          <Text style={styles.qrCaption}>
+            Scan voor de actuele online versie van deze offerte, of ga naar {data.publicUrl}
+          </Text>
         </View>
 
         <Text style={styles.footer} fixed>
@@ -507,7 +527,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
               // eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer's Image is a PDF primitive, not an <img>; it has no alt prop
               <Image src={data.organizationLogoUrl} style={styles.logo} />
             ) : (
-              <Text style={styles.brand}>{data.organizationName}</Text>
+              <Text style={[styles.brand, { color: data.accentColor }]}>{data.organizationName}</Text>
             )}
             <Text style={styles.signedBadge}>DIGITAAL ONDERTEKEND</Text>
           </View>

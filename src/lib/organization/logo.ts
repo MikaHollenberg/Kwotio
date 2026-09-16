@@ -17,3 +17,18 @@ export function resolvePreferredLogo(org: {
   const fallback = org.logo_preference === "vierkant" ? org.logo_horizontal_url : org.logo_square_url;
   return preferred ?? fallback ?? null;
 }
+
+/**
+ * Maakt een logo-URL absoluut voor gebruik in @react-pdf/renderer's `<Image>`.
+ * Een root-relatief pad (bv. `/brand/logo-horizontaal.png`, Caribbean Bar's
+ * eigen gebundelde asset uit `public/`) wordt door react-pdf anders
+ * geïnterpreteerd dan een `<img>` in de browser: het ontbreken van een
+ * `http(s)`-schema laat de PDF-renderer het als een lokaal bestandspad vanaf
+ * de schijf-root lezen (`ENOENT: /brand/...`) i.p.v. als URL op te halen bij
+ * de draaiende server. Storage-URL's (https://...) zijn al absoluut en
+ * blijven ongewijzigd.
+ */
+export function toAbsoluteLogoUrl(url: string | null, origin: string): string | null {
+  if (!url) return null;
+  return /^https?:\/\//.test(url) ? url : `${origin}${url}`;
+}

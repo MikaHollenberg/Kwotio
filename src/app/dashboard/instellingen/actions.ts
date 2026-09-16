@@ -254,3 +254,57 @@ export async function deleteClosedDate(id: string) {
   if (error) throw error;
   revalidatePath("/dashboard/instellingen");
 }
+
+function toDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** "YYYY-MM-DD" -> lokale Date (nooit `new Date("YYYY-MM-DD")` gebruiken --
+ * dat parset als UTC-middernacht en schuift bij een positieve tijdzone een
+ * dag terug, zelfde bekende val als elders in dit project). */
+function parseDateKey(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+const MAX_CLOSED_DATE_RANGE_DAYS = 60;
+
+/** Voegt een reeks achtereenvolgende gesloten dagen in één keer toe (bv. een
+ * week bouwvakantie) i.p.v. elke datum los te moeten aanklikken. Bestaande
+ * datums in de reeks worden overgeslagen (behouden hun eigen reden) i.p.v.
+ * de hele batch te laten mislukken op de unique-constraint. */
+export async function addClosedDateRange(startDate: string, endDate: string, reason: string) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const start = parseDateKey(startDate);
+  const end = parseDateKey(endDate);
+  if (end < start) throw new Error("De einddatum ligt vóór de startdatum.");
+
+  const rows: { organization_id: string; date: string; reason: string | null }[] = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    rows.push({ organization_id: organizationId, date: toDateKey(cursor), reason: reason.trim() || null });
+    cursor.setDate(cursor.getDate() + 1);
+    if (rows.length > MAX_CLOSED_DATE_RANGE_DAYS) {
+      throw new Error(`Een periode van meer dan ${MAX_CLOSED_DATE_RANGE_DAYS} dagen in één keer wordt niet ondersteund.`);
+    }
+  }
+
+  const { error } = await supabase.from("closed_dates").upsert(rows, { onConflict: "organization_id,date", ignoreDuplicates: true });
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}
+
+/** Vaste, wekelijks terugkerende gesloten dag(en) (bv. "wij zijn altijd op
+ * maandag dicht") -- 0 = zondag .. 6 = zaterdag. */
+export async function updateClosedWeekdays(weekdays: number[]) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const { error } = await supabase
+    .from("organizations")
+    .update({ closed_weekdays: [...new Set(weekdays)].sort() })
+    .eq("id", organizationId);
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}

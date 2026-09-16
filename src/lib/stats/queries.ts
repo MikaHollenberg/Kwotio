@@ -432,6 +432,7 @@ export type PipelineQuote = {
   total: number;
   currency: string;
   updatedAt: string;
+  declineReason: string | null;
 };
 
 export async function getPipeline(
@@ -441,7 +442,7 @@ export async function getPipeline(
   const [{ data: quotes }, { data: clients }] = await Promise.all([
     supabase
       .from("quotes")
-      .select("id, title, status, total, currency, updated_at, client_id, price_per_person, aantal_personen")
+      .select("id, title, status, total, currency, updated_at, client_id, price_per_person, aantal_personen, decline_reason")
       .eq("organization_id", organizationId)
       .order("updated_at", { ascending: false }),
     supabase.from("clients").select("id, name").eq("organization_id", organizationId),
@@ -466,6 +467,7 @@ export async function getPipeline(
       total: calculateActualQuoteValue({ total: Number(q.total), pricePerPerson: q.price_per_person, aantalPersonen: q.aantal_personen }),
       currency: q.currency,
       updatedAt: q.updated_at,
+      declineReason: q.decline_reason,
     });
   }
 
@@ -590,4 +592,100 @@ export async function getQuoteEngagement(supabase: Client, quoteId: string): Pro
     optionChanges: rows.filter((e) => e.type === "option_changed").length,
     commentCount: rows.filter((e) => e.type === "comment_added").length,
   };
+}
+
+// ---------------------------------------------------------------------------
+// "Volgende beste actie" op het Overzicht
+// ---------------------------------------------------------------------------
+
+export type NextBestAction = {
+  id: string;
+  message: string;
+  href: string;
+  urgency: "high" | "medium";
+};
+
+const STALE_QUOTE_DAYS = 5;
+const STALE_DISCUSSION_DAYS = 2;
+const EXPIRING_SOON_DAYS = 7;
+const STALE_REQUEST_DAYS = 2;
+
+function daysSince(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+}
+
+/**
+ * Signaleert waar nu het meest zinvol op te reageren is -- puur afgeleid uit
+ * data die er al staat (quotes.updated_at/valid_until, quote_requests), geen
+ * losse tracking-tabel nodig. Bewust een handvol vaste drempels i.p.v. de
+ * per-organisatie e-mailautomatisering-instellingen te hergebruiken: dit is
+ * een losse, altijd-zichtbare menselijke nudge, geen vervanging van die
+ * automatisering.
+ */
+export async function getNextBestActions(supabase: Client, organizationId: string): Promise<NextBestAction[]> {
+  const [{ data: quotes }, { data: clients }, { data: requests }] = await Promise.all([
+    supabase
+      .from("quotes")
+      .select("id, title, status, updated_at, valid_until, client_id")
+      .eq("organization_id", organizationId)
+      .in("status", ["verzonden", "bekeken", "in_overleg"]),
+    supabase.from("clients").select("id, name").eq("organization_id", organizationId),
+    supabase
+      .from("quote_requests")
+      .select("id, customer_name, created_at")
+      .eq("organization_id", organizationId)
+      .eq("status", "nieuw"),
+  ]);
+
+  const nameById = new Map((clients ?? []).map((c) => [c.id, c.name]));
+  const actions: NextBestAction[] = [];
+
+  for (const q of quotes ?? []) {
+    const clientName = q.client_id ? nameById.get(q.client_id) : null;
+    const who = clientName ? ` van ${clientName}` : "";
+
+    if (q.valid_until) {
+      const daysUntilExpiry = Math.ceil((new Date(q.valid_until).getTime() - Date.now()) / 86_400_000);
+      if (daysUntilExpiry >= 0 && daysUntilExpiry <= EXPIRING_SOON_DAYS) {
+        actions.push({
+          id: `expiring-${q.id}`,
+          message: `"${q.title}"${who} verloopt over ${daysUntilExpiry} dag${daysUntilExpiry === 1 ? "" : "en"} en is nog niet ondertekend`,
+          href: `/dashboard/offertes/${q.id}`,
+          urgency: "high",
+        });
+        continue; // geen dubbele melding voor dezelfde offerte
+      }
+    }
+
+    const daysSinceUpdate = daysSince(q.updated_at);
+    if (q.status === "in_overleg" && daysSinceUpdate >= STALE_DISCUSSION_DAYS) {
+      actions.push({
+        id: `discuss-${q.id}`,
+        message: `"${q.title}"${who} staat al ${daysSinceUpdate} dagen op "in overleg" — reageer op de klant`,
+        href: `/dashboard/offertes/${q.id}`,
+        urgency: "medium",
+      });
+    } else if ((q.status === "verzonden" || q.status === "bekeken") && daysSinceUpdate >= STALE_QUOTE_DAYS) {
+      actions.push({
+        id: `stale-${q.id}`,
+        message: `"${q.title}"${who} is al ${daysSinceUpdate} dagen niet bekeken of beantwoord — stuur een herinnering`,
+        href: `/dashboard/offertes/${q.id}`,
+        urgency: "medium",
+      });
+    }
+  }
+
+  for (const r of requests ?? []) {
+    const daysWaiting = daysSince(r.created_at);
+    if (daysWaiting < STALE_REQUEST_DAYS) continue;
+    actions.push({
+      id: `request-${r.id}`,
+      message: `Aanvraag van ${r.customer_name} wacht al ${daysWaiting} dagen op een reactie`,
+      href: `/dashboard/aanvragen/${r.id}`,
+      urgency: "high",
+    });
+  }
+
+  actions.sort((a, b) => (a.urgency === b.urgency ? 0 : a.urgency === "high" ? -1 : 1));
+  return actions.slice(0, 6);
 }

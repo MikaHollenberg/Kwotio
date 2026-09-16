@@ -4,12 +4,21 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { SunWatermark } from "@/components/brand/sun-watermark";
 import { Button } from "@/components/ui/button";
 import { verifyAccessCode } from "./actions";
 import { t, type Lang } from "@/lib/i18n/translations";
 
-export function AccessGate({ token, lang }: { token: string; lang: Lang }) {
+export function AccessGate({
+  token,
+  lang,
+  logoUrl,
+}: {
+  token: string;
+  lang: Lang;
+  logoUrl?: string | null;
+}) {
   const [code, setCode] = useState("");
   const [error, setError] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -22,7 +31,11 @@ export function AccessGate({ token, lang }: { token: string; lang: Lang }) {
       </div>
 
       <div className="relative w-full max-w-sm rounded-brand-lg bg-white p-8 text-center shadow-xl">
-        <Logo variant="rond" height={64} className="mx-auto" />
+        {logoUrl ? (
+          <Logo logoUrl={logoUrl} height={64} className="mx-auto" />
+        ) : (
+          <KwotioMark size={64} className="mx-auto" />
+        )}
         <div className="mx-auto mt-4 flex size-10 items-center justify-center rounded-full bg-blue-50 text-blue-600">
           <Lock className="size-5" />
         </div>

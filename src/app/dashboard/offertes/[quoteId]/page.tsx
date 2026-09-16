@@ -47,23 +47,30 @@ export default async function QuoteEditorPage({
       .order("full_name", { ascending: true }),
   ]);
 
-  const [blocks, { data: comments }, { data: signature }, engagement, { data: blockTemplates }] = await Promise.all([
-    loadQuoteBlocks(supabase, quoteId),
-    supabase.from("comments").select("*").eq("quote_id", quoteId).order("created_at", { ascending: true }),
-    supabase
-      .from("signatures")
-      .select("*")
-      .eq("quote_id", quoteId)
-      .order("signed_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    getQuoteEngagement(supabase, quoteId),
-    supabase
-      .from("block_templates")
-      .select("id, type, name, content")
-      .eq("organization_id", organizationId)
-      .order("name", { ascending: true }),
-  ]);
+  const [blocks, { data: comments }, { data: contactLogs }, { data: signature }, engagement, { data: blockTemplates }, { count: slotfactuurCount }] =
+    await Promise.all([
+      loadQuoteBlocks(supabase, quoteId),
+      supabase.from("comments").select("*").eq("quote_id", quoteId).order("created_at", { ascending: true }),
+      supabase.from("quote_contact_logs").select("*").eq("quote_id", quoteId).order("created_at", { ascending: true }),
+      supabase
+        .from("signatures")
+        .select("*")
+        .eq("quote_id", quoteId)
+        .order("signed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      getQuoteEngagement(supabase, quoteId),
+      supabase
+        .from("block_templates")
+        .select("id, type, name, content")
+        .eq("organization_id", organizationId)
+        .order("name", { ascending: true }),
+      supabase
+        .from("invoices")
+        .select("id", { count: "exact", head: true })
+        .eq("quote_id", quoteId)
+        .eq("type", "slotfactuur"),
+    ]);
 
   return (
     <QuoteEditor
@@ -71,6 +78,7 @@ export default async function QuoteEditorPage({
       client={client}
       initialBlocks={blocks}
       initialComments={comments ?? []}
+      initialContactLogs={contactLogs ?? []}
       signature={signature}
       engagement={engagement}
       organizationId={organizationId}
@@ -78,6 +86,7 @@ export default async function QuoteEditorPage({
       organization={organization ?? null}
       teamMembers={(teamMembers ?? []).map((m) => ({ id: m.id, name: m.full_name || m.email }))}
       initialBlockTemplates={blockTemplates ?? []}
+      hasSlotfactuur={(slotfactuurCount ?? 0) > 0}
     />
   );
 }

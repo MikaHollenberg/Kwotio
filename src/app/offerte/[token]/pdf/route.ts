@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import QRCode from "qrcode";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadQuoteBlocks } from "@/lib/blocks/persistence";
 import {
@@ -11,7 +12,8 @@ import {
 } from "@/lib/blocks/pricing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
 import { renderQuotePdf, type QuotePdfSignatureData } from "@/lib/quote-pdf/quote-document";
-import { resolvePreferredLogo } from "@/lib/organization/logo";
+import { resolvePreferredLogo, toAbsoluteLogoUrl } from "@/lib/organization/logo";
+import { resolveAccentColor, DEFAULT_ACCENT_COLOR } from "@/lib/organization/theme";
 import type { PackagesBlockContent } from "@/lib/blocks/types";
 
 export async function GET(
@@ -34,7 +36,7 @@ export async function GET(
     supabase
       .from("organizations")
       .select(
-        "brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, address, kvk_number, btw_number, contact_email, contact_phone",
+        "brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, address, kvk_number, btw_number, contact_email, contact_phone, brand_theme",
       )
       .eq("id", quote.organization_id)
       .single(),
@@ -102,9 +104,22 @@ export async function GET(
     }
   }
 
+  // QR-code naar de online versie -- handig zodra iemand de PDF print of
+  // los doorstuurt zonder de oorspronkelijke link/e-mail erbij.
+  const origin = new URL(request.url).origin;
+  const publicUrl = `${origin}/offerte/${token}`;
+  const qrCodeDataUri = await QRCode.toDataURL(publicUrl, {
+    width: 200,
+    margin: 1,
+    color: { dark: "#1E2E38", light: "#FFFFFF" },
+  });
+
   const pdf = await renderQuotePdf({
     organizationName: organization?.brand_name ?? "Feest aan het Water",
-    organizationLogoUrl: organization ? resolvePreferredLogo(organization) : null,
+    publicUrl,
+    qrCodeDataUri,
+    accentColor: organization ? resolveAccentColor(organization) : DEFAULT_ACCENT_COLOR,
+    organizationLogoUrl: organization ? toAbsoluteLogoUrl(resolvePreferredLogo(organization), origin) : null,
     organizationAddress: organization?.address as
       | { street?: string; postalCode?: string; city?: string; country?: string }
       | null,

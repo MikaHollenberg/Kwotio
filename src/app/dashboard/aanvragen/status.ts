@@ -30,26 +30,18 @@ export function staleRequestDays(createdAt: string): number {
   return Math.floor((Date.now() - new Date(createdAt).getTime()) / (24 * 60 * 60 * 1000));
 }
 
-/** Twee aanvragen van hetzelfde e-mailadres kort na elkaar zijn vaak een
- * dubbele indiening (bijv. per ongeluk twee keer verzonden, of twee keer
- * omdat de klant dacht dat het niet gelukt was) — dan is het handig om dat
- * meteen te zien voordat je de klant twee keer los benadert. */
+/** Twee aanvragen van hetzelfde e-mailadres of telefoonnummer kort na elkaar
+ * zijn vaak een dubbele indiening (bijv. per ongeluk twee keer verzonden, of
+ * twee keer omdat de klant dacht dat het niet gelukt was) — dan is het
+ * handig om dat meteen te zien voordat je de klant twee keer los benadert. */
 export const DUPLICATE_REQUEST_WINDOW_HOURS = 48;
 
-export function findDuplicateRequestIds<T extends { id: string; customer_email: string | null; created_at: string }>(
-  requests: T[],
-): Set<string> {
-  const byEmail = new Map<string, T[]>();
-  for (const r of requests) {
-    if (!r.customer_email) continue;
-    const key = r.customer_email.trim().toLowerCase();
-    const group = byEmail.get(key);
-    if (group) group.push(r);
-    else byEmail.set(key, [r]);
-  }
+function normalizePhone(phone: string): string {
+  return phone.replace(/[^0-9+]/g, "");
+}
 
-  const duplicates = new Set<string>();
-  for (const group of byEmail.values()) {
+function groupWithinWindow<T extends { id: string; created_at: string }>(groups: Map<string, T[]>, duplicates: Set<string>) {
+  for (const group of groups.values()) {
     if (group.length < 2) continue;
     for (let i = 0; i < group.length; i++) {
       for (let j = i + 1; j < group.length; j++) {
@@ -62,5 +54,26 @@ export function findDuplicateRequestIds<T extends { id: string; customer_email: 
       }
     }
   }
+}
+
+export function findDuplicateRequestIds<
+  T extends { id: string; customer_email: string | null; customer_phone: string | null; created_at: string },
+>(requests: T[]): Set<string> {
+  const byEmail = new Map<string, T[]>();
+  const byPhone = new Map<string, T[]>();
+  for (const r of requests) {
+    if (r.customer_email) {
+      const key = r.customer_email.trim().toLowerCase();
+      (byEmail.get(key) ?? byEmail.set(key, []).get(key)!).push(r);
+    }
+    if (r.customer_phone) {
+      const key = normalizePhone(r.customer_phone);
+      if (key) (byPhone.get(key) ?? byPhone.set(key, []).get(key)!).push(r);
+    }
+  }
+
+  const duplicates = new Set<string>();
+  groupWithinWindow(byEmail, duplicates);
+  groupWithinWindow(byPhone, duplicates);
   return duplicates;
 }

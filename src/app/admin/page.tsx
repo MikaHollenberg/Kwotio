@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { Building2, Users, FileText, Euro } from "lucide-react";
+import { Building2, Users, FileText, Euro, Percent, AlertTriangle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MiniBarChart } from "@/components/admin/mini-bar-chart";
-import { getPlatformStats } from "@/lib/admin/queries";
+import { getPlatformStats, getAtRiskOrganizations } from "@/lib/admin/queries";
 import { formatCurrency } from "@/lib/utils";
 
 export default async function AdminStatsPage() {
-  const stats = await getPlatformStats();
+  const [stats, atRiskOrganizations] = await Promise.all([getPlatformStats(), getAtRiskOrganizations()]);
 
   const kpiCards = [
     {
@@ -28,6 +28,12 @@ export default async function AdminStatsPage() {
       value: formatCurrency(stats.mrr),
       sub: `${formatCurrency(stats.estimatedRevenueToDate)} omzet tot nu toe (schatting)`,
     },
+    {
+      label: "Conversie",
+      icon: Percent,
+      value: stats.conversionRate != null ? `${Math.round(stats.conversionRate * 100)}%` : "—",
+      sub: "geaccepteerd t.o.v. verzonden, alle organisaties",
+    },
   ];
 
   return (
@@ -37,7 +43,7 @@ export default async function AdminStatsPage() {
         <h2 className="font-display text-2xl font-semibold text-ink-500">Statistieken</h2>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {kpiCards.map(({ label, icon: Icon, value, sub }) => (
           <Card key={label}>
             <CardContent className="flex items-start gap-4">
@@ -86,6 +92,34 @@ export default async function AdminStatsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {atRiskOrganizations.length > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50/50">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="size-4 text-yellow-700" />
+              <div>
+                <CardTitle>Organisaties met risico</CardTitle>
+                <CardDescription>Signalering, geen automatische actie -- zelf even naar kijken</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col divide-y divide-yellow-100">
+              {atRiskOrganizations.map((org) => (
+                <Link
+                  key={org.id}
+                  href={`/admin/organisaties/${org.id}`}
+                  className="flex items-center justify-between gap-4 py-3 hover:bg-yellow-100/50"
+                >
+                  <p className="text-sm font-medium text-ink-500">{org.name}</p>
+                  <span className="shrink-0 text-xs text-ink-400">{org.reason}</span>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

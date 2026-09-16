@@ -27,7 +27,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, TextInput } from "@/components/builder/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CommentsPanel } from "./comments-panel";
+import { ContactLogPanel } from "./contact-log-panel";
 import { SignatureInfoCard } from "./signature-info-card";
+import { DeclineInfoCard } from "./decline-info-card";
+import { CreateInvoiceCard } from "./create-invoice-card";
 import { EngagementCard } from "./engagement-card";
 import type { QuoteEngagement } from "@/lib/stats/queries";
 import { cn, toWhatsAppLink } from "@/lib/utils";
@@ -36,6 +39,7 @@ import { useRouter } from "next/navigation";
 type Quote = Database["public"]["Tables"]["quotes"]["Row"];
 type Client = { id: string; name: string; email: string | null } | null;
 type Comment = Database["public"]["Tables"]["comments"]["Row"];
+type ContactLog = Database["public"]["Tables"]["quote_contact_logs"]["Row"];
 type Signature = Database["public"]["Tables"]["signatures"]["Row"];
 type OrganizationHeaderInfo = Pick<
   Database["public"]["Tables"]["organizations"]["Row"],
@@ -56,6 +60,7 @@ export function QuoteEditor({
   client,
   initialBlocks,
   initialComments,
+  initialContactLogs,
   signature,
   engagement,
   organizationId,
@@ -63,11 +68,13 @@ export function QuoteEditor({
   organization,
   teamMembers,
   initialBlockTemplates,
+  hasSlotfactuur,
 }: {
   quote: Quote;
   client: Client;
   initialBlocks: BlockDraft[];
   initialComments: Comment[];
+  initialContactLogs: ContactLog[];
   signature: Signature | null;
   engagement: QuoteEngagement;
   organizationId: string;
@@ -75,6 +82,7 @@ export function QuoteEditor({
   organization: OrganizationHeaderInfo;
   teamMembers: TeamMember[];
   initialBlockTemplates: BlockTemplateSummary[];
+  hasSlotfactuur: boolean;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(quote.title);
@@ -90,6 +98,7 @@ export function QuoteEditor({
   const [clientDisplayPhone, setClientDisplayPhone] = useState(quote.client_display_phone ?? "");
   const [clientDisplayCompany, setClientDisplayCompany] = useState(quote.client_display_company ?? "");
   const [referenceNumber, setReferenceNumber] = useState(quote.reference_number ?? "");
+  const [internalNotes, setInternalNotes] = useState(quote.internal_notes ?? "");
   const [blocks, setBlocks] = useState<BlockDraft[]>(initialBlocks);
   const [blockTemplates, setBlockTemplates] = useState<BlockTemplateSummary[]>(initialBlockTemplates);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
@@ -121,6 +130,7 @@ export function QuoteEditor({
       clientDisplayPhone,
       clientDisplayCompany,
       referenceNumber,
+      internalNotes,
     },
     async (value) => {
       await Promise.all([
@@ -139,6 +149,7 @@ export function QuoteEditor({
           clientDisplayPhone: value.clientDisplayPhone,
           clientDisplayCompany: value.clientDisplayCompany,
           referenceNumber: value.referenceNumber,
+          internalNotes: value.internalNotes,
         }),
         saveQuoteBlocksAction(quote.id, value.blocks),
       ]);
@@ -307,11 +318,46 @@ export function QuoteEditor({
         <SignatureInfoCard signature={signature} shareToken={quote.share_token} aantalPersonen={quote.aantal_personen} />
       )}
 
+      {status === "geaccepteerd" && (
+        <CreateInvoiceCard
+          quoteId={quote.id}
+          depositInvoiceId={quote.deposit_invoice_id}
+          depositAmount={quote.deposit_amount}
+          depositPaidAt={quote.deposit_paid_at}
+          hasSlotfactuur={hasSlotfactuur}
+        />
+      )}
+
+      {status === "geweigerd" && (
+        <DeclineInfoCard declineReason={quote.decline_reason} declineNote={quote.decline_note} />
+      )}
+
       <div data-faq-id="quote-engagement-card">
         <EngagementCard engagement={engagement} blocks={blocks} />
       </div>
 
       <CommentsPanel quoteId={quote.id} comments={initialComments} blocks={blocks} />
+
+      <Card data-faq-id="quote-internal-card">
+        <CardHeader>
+          <div>
+            <CardTitle>Intern (niet zichtbaar voor de klant)</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-semibold text-ink-400">Notitie</span>
+            <textarea
+              value={internalNotes}
+              onChange={(e) => setInternalNotes(e.target.value)}
+              placeholder="bijv. Telefonisch nog even nagevraagd, wil het pas na de zomer boeken…"
+              rows={3}
+              className="rounded-brand-sm border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+            />
+          </label>
+          <ContactLogPanel quoteId={quote.id} logs={initialContactLogs} />
+        </CardContent>
+      </Card>
 
       <Card data-faq-id="quote-header-card">
         <CardHeader>

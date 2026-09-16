@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import type { Metadata } from "next";
 import { getQuoteByToken } from "@/lib/public-quote/data";
 import { resolvePreferredLogo } from "@/lib/organization/logo";
+import { resolveAccentColor } from "@/lib/organization/theme";
 import { hasAccessCookie } from "./actions";
 import { AccessGate } from "./access-gate";
 import { PublicQuoteView } from "./public-quote-view";
@@ -59,7 +60,7 @@ export default async function PublicQuotePage({
 
   if (quote.access_code) {
     const unlocked = await hasAccessCookie(token);
-    if (!unlocked) return <AccessGate token={token} lang={initialLang} />;
+    if (!unlocked) return <AccessGate token={token} lang={initialLang} logoUrl={resolvePreferredLogo(data.organization)} />;
   }
 
   const commentsByBlock: Record<string, CommentItem[]> = {};
@@ -112,6 +113,7 @@ export default async function PublicQuotePage({
       initialSelections={initialSelections}
       commentsByBlock={commentsByBlock}
       logoUrl={resolvePreferredLogo(data.organization)}
+      accentColor={resolveAccentColor(data.organization)}
       organizationName={data.organization.brand_name}
       termsUrl={data.organization.terms_url}
       headcountRequired={quote.aantal_personen_actief}

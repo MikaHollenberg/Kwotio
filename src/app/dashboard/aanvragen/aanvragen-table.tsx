@@ -143,10 +143,10 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
                         </span>
                       )}
                       {duplicateIds.has(r.id) && (
-                        <span title="Mogelijk dubbele aanvraag (zelfde e-mailadres, kort na elkaar)">
+                        <span title="Mogelijk dubbele aanvraag (zelfde e-mailadres of telefoonnummer, kort na elkaar)">
                           <Copy
                             className="size-3.5 shrink-0 text-indigo-500"
-                            aria-label="Mogelijk dubbele aanvraag (zelfde e-mailadres, kort na elkaar)"
+                            aria-label="Mogelijk dubbele aanvraag (zelfde e-mailadres of telefoonnummer, kort na elkaar)"
                           />
                         </span>
                       )}
@@ -204,10 +204,10 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
                           </span>
                         )}
                         {duplicateIds.has(r.id) && (
-                          <span title="Mogelijk dubbele aanvraag (zelfde e-mailadres, kort na elkaar)">
+                          <span title="Mogelijk dubbele aanvraag (zelfde e-mailadres of telefoonnummer, kort na elkaar)">
                             <Copy
                               className="size-3.5 shrink-0 text-indigo-500"
-                              aria-label="Mogelijk dubbele aanvraag (zelfde e-mailadres, kort na elkaar)"
+                              aria-label="Mogelijk dubbele aanvraag (zelfde e-mailadres of telefoonnummer, kort na elkaar)"
                             />
                           </span>
                         )}

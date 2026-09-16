@@ -45,6 +45,13 @@ export const ALL_TOUR_STEPS: TourStep[] = [
       "Bouw herbruikbare offerte-templates, zodat je niet steeds van nul begint. Zet er eentje publiek zichtbaar om aanvragen te ontvangen.",
   },
   {
+    href: "/dashboard/facturen",
+    title: "Facturen",
+    description:
+      "Zet een geaccepteerde offerte om in een factuur, of begin helemaal vanaf 0. Aanbetalingen, slotfacturen en online betalen via Mollie werken hier allemaal.",
+    adminOnly: true,
+  },
+  {
     href: "/dashboard/statistieken",
     title: "Statistieken",
     description: "Conversieratio's, omzet per periode, populairste pakketten en meer.",

@@ -28,11 +28,13 @@ export function CommentThread({
   onSubmit,
   defaultName = "",
   requireName = true,
+  accentColor,
 }: {
   comments: CommentItem[];
   onSubmit: (input: { authorName: string; body: string }) => Promise<void>;
   defaultName?: string;
   requireName?: boolean;
+  accentColor: string;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(defaultName);
@@ -45,7 +47,8 @@ export function CommentThread({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1.5 text-xs font-medium text-teal-600 hover:text-teal-700"
+        style={{ color: accentColor }}
+        className="flex items-center gap-1.5 text-xs font-medium hover:opacity-80"
       >
         {open ? <X className="size-3.5" /> : <MessageCircle className="size-3.5" />}
         {open
@@ -108,7 +111,8 @@ export function CommentThread({
               <button
                 type="submit"
                 disabled={pending || !body.trim()}
-                className="flex size-9 shrink-0 items-center justify-center rounded-brand-sm bg-teal-600 text-white transition-colors duration-200 ease-brand hover:bg-teal-700 disabled:opacity-50"
+                style={{ backgroundColor: accentColor }}
+                className="flex size-9 shrink-0 items-center justify-center rounded-brand-sm text-white transition-opacity duration-200 ease-brand hover:opacity-90 disabled:opacity-50"
               >
                 <Send className="size-4" />
               </button>

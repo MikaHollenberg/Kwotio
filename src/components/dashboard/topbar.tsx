@@ -1,10 +1,11 @@
 "use client";
 
-import { LogOut, Compass } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { MobileNav } from "./mobile-nav";
+import { NotificationBell } from "./notification-bell";
 
 export function Topbar({
   title,
@@ -13,7 +14,6 @@ export function Topbar({
   showAdmin = false,
   canManageOrg = false,
   newRequestCount = 0,
-  onStartTour,
 }: {
   title: string;
   fullName: string | null;
@@ -21,7 +21,6 @@ export function Topbar({
   showAdmin?: boolean;
   canManageOrg?: boolean;
   newRequestCount?: number;
-  onStartTour?: () => void;
 }) {
   const router = useRouter();
 
@@ -49,18 +48,7 @@ export function Topbar({
       </div>
 
       <div className="flex items-center gap-3">
-        {onStartTour && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onStartTour}
-            title="Rondleiding starten"
-            data-faq-id="restart-tour-button"
-          >
-            <Compass className="size-4" />
-            <span className="hidden sm:inline">Rondleiding</span>
-          </Button>
-        )}
+        <NotificationBell />
         <div className="hidden text-right text-sm sm:block">
           <div className="font-medium text-ink-500">{fullName ?? email}</div>
           <div className="text-ink-400">{email}</div>

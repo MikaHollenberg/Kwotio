@@ -27,12 +27,16 @@ export function ClosedDatePicker({
   value,
   onChange,
   closedDates,
+  closedWeekdays = [],
 }: {
   value: string;
   onChange: (value: string) => void;
   closedDates: string[];
+  /** organizations.closed_weekdays -- 0 = zondag .. 6 = zaterdag. */
+  closedWeekdays?: number[];
 }) {
   const closedSet = useMemo(() => new Set(closedDates), [closedDates]);
+  const closedWeekdaySet = useMemo(() => new Set(closedWeekdays), [closedWeekdays]);
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(() => {
     const base = value ? new Date(`${value}T00:00:00`) : new Date();
@@ -96,14 +100,15 @@ export function ClosedDatePicker({
             {cells.map((date, i) => {
               if (!date) return <div key={i} />;
               const key = toDateKey(date);
-              const disabled = key < todayKey || closedSet.has(key);
+              const isClosed = closedSet.has(key) || closedWeekdaySet.has(date.getDay());
+              const disabled = key < todayKey || isClosed;
               const isSelected = key === value;
               return (
                 <button
                   key={i}
                   type="button"
                   disabled={disabled}
-                  title={closedSet.has(key) ? "Gesloten op deze datum" : undefined}
+                  title={isClosed ? "Gesloten op deze datum" : undefined}
                   onClick={() => {
                     onChange(key);
                     setOpen(false);

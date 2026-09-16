@@ -65,7 +65,7 @@ export async function submitQuoteRequest(input: SubmitQuoteRequestInput): Promis
 
   const { data: organization } = await supabase
     .from("organizations")
-    .select("id, brand_name, contact_email")
+    .select("id, brand_name, contact_email, closed_weekdays")
     .eq("public_slug", input.orgSlug)
     .is("archived_at", null)
     .maybeSingle();
@@ -87,6 +87,11 @@ export async function submitQuoteRequest(input: SubmitQuoteRequestInput): Promis
 
   const desiredDate = input.desiredDate || null;
   if (desiredDate) {
+    const [y, m, d] = desiredDate.split("-").map(Number);
+    const weekday = new Date(y, m - 1, d).getDay();
+    if ((organization.closed_weekdays ?? []).includes(weekday)) {
+      return { ok: false, error: "Op deze datum zijn we gesloten. Kies een andere datum." };
+    }
     const { data: closedDate } = await supabase
       .from("closed_dates")
       .select("id")

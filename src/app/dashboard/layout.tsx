@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
+import { TourProvider } from "@/components/dashboard/tour-context";
 
 export default async function DashboardLayout({
   children,
@@ -40,28 +41,29 @@ export default async function DashboardLayout({
   ]);
 
   return (
-    <div className="flex min-h-screen bg-sand-100">
-      <Sidebar
-        showAdmin={profile?.is_super_admin ?? false}
-        canManageOrg={canManageOrg}
-        logoUrl={organization?.logo_horizontal_url}
-        organizationName={organization?.brand_name}
-        newRequestCount={newRequestCount ?? 0}
-      />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <DashboardShell
-          fullName={profile?.full_name ?? null}
-          email={profile?.email ?? user.email ?? ""}
+    <TourProvider canManageOrg={canManageOrg} tourSeen={Boolean(profile?.onboarding_tour_seen_at)}>
+      <div className="flex min-h-screen bg-sand-100">
+        <Sidebar
           showAdmin={profile?.is_super_admin ?? false}
           canManageOrg={canManageOrg}
-          organizationName={organization?.brand_name ?? null}
-          termsUrl={organization?.terms_url ?? null}
+          logoUrl={organization?.logo_horizontal_url}
+          organizationName={organization?.brand_name}
           newRequestCount={newRequestCount ?? 0}
-          tourSeen={Boolean(profile?.onboarding_tour_seen_at)}
-        >
-          {children}
-        </DashboardShell>
+        />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <DashboardShell
+            fullName={profile?.full_name ?? null}
+            email={profile?.email ?? user.email ?? ""}
+            showAdmin={profile?.is_super_admin ?? false}
+            canManageOrg={canManageOrg}
+            organizationName={organization?.brand_name ?? null}
+            termsUrl={organization?.terms_url ?? null}
+            newRequestCount={newRequestCount ?? 0}
+          >
+            {children}
+          </DashboardShell>
+        </div>
       </div>
-    </div>
+    </TourProvider>
   );
 }

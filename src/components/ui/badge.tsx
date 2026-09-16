@@ -49,6 +49,10 @@ export const STATUS_TONES: Record<QuoteStatus, keyof typeof tones> = {
   geweigerd: "red",
 };
 
-export function QuoteStatusBadge({ status }: { status: QuoteStatus }) {
-  return <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>;
+export function QuoteStatusBadge({ status, title }: { status: QuoteStatus; title?: string }) {
+  return (
+    <Badge tone={STATUS_TONES[status]} title={title}>
+      {STATUS_LABELS[status]}
+    </Badge>
+  );
 }

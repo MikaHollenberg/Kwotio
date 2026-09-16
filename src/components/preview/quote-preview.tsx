@@ -26,6 +26,12 @@ import { LanguageProvider, useTranslation } from "@/lib/i18n/language-context";
 
 export { PRICE_DISPLAY_LABELS };
 
+/** Teal-600 -- het bestaande vaste accent in de bureau-builder/dashboard
+ * (nooit org-gebrand, zie architectuurnotitie hierboven). Alleen de
+ * klant-facing offertepagina en de publieke aanvraagpagina geven hun eigen
+ * `organizations.brand_theme.primaryColor` door via de `accentColor`-prop. */
+const DEFAULT_BLOCK_ACCENT = "#0d9488";
+
 export type QuoteMeta = {
   title: string;
   clientName: string;
@@ -137,6 +143,7 @@ export function BlockPreview({
   selections,
   onSelectionsChange,
   readOnly = false,
+  accentColor = DEFAULT_BLOCK_ACCENT,
 }: {
   block: BlockDraft;
   meta: QuoteMeta;
@@ -145,6 +152,10 @@ export function BlockPreview({
   /** Publieke templatepreview (/offertes/[slug]): niets is aanklikbaar en er
    * is geen echte quote/handtekening achter deze weergave. */
   readOnly?: boolean;
+  /** Organisatie-huisstijlkleur voor klant-facing plekken (offertepagina,
+   * publieke aanvraagpagina) -- valt terug op het vaste bureau-teal in de
+   * dashboard-builder, die nooit org-gebrand is. */
+  accentColor?: string;
 }) {
   const { t, lang } = useTranslation();
   const activeContent = lang === "en" && block.contentEn ? block.contentEn : block.content;
@@ -241,6 +252,7 @@ export function BlockPreview({
           selections={selections}
           onSelectionsChange={onSelectionsChange}
           readOnly={readOnly}
+          accentColor={accentColor}
         />
       );
     }
@@ -253,7 +265,7 @@ export function BlockPreview({
           <div className="mt-5 flex flex-col gap-4">
             {c.items.map((item) => (
               <div key={item.id} className="flex gap-4">
-                <span className="w-14 shrink-0 font-display text-sm font-semibold text-teal-600">{item.time}</span>
+                <span style={{ color: accentColor }} className="w-14 shrink-0 font-display text-sm font-semibold">{item.time}</span>
                 <div className="flex-1 border-l border-ink-100 pb-4 pl-4">
                   <p className="text-sm font-medium text-ink-500">{item.title}</p>
                   {item.description && <p className="mt-0.5 text-sm text-ink-400">{item.description}</p>}
@@ -293,6 +305,7 @@ function PackagesBlockPreview({
   selections,
   onSelectionsChange,
   readOnly,
+  accentColor,
 }: {
   block: BlockDraft;
   content: PackagesBlockContent;
@@ -300,6 +313,7 @@ function PackagesBlockPreview({
   selections: Selections;
   onSelectionsChange: (s: Selections) => void;
   readOnly: boolean;
+  accentColor: string;
 }) {
   const { t } = useTranslation();
   const maxSelections = c.maxSelections ?? 1;
@@ -416,7 +430,8 @@ function PackagesBlockPreview({
                           e.stopPropagation();
                           toggleExpanded(pkg.id);
                         }}
-                        className="shrink-0 text-xs font-semibold text-teal-600 hover:text-teal-700"
+                        style={{ color: accentColor }}
+                        className="shrink-0 text-xs font-semibold hover:opacity-80"
                       >
                         {isExpanded ? t("show_less") : t("read_more")}
                       </button>
@@ -578,7 +593,8 @@ function PackagesBlockPreview({
                                   },
                                 })
                         }
-                        className="size-4 accent-teal-600 disabled:opacity-100"
+                        style={{ accentColor }}
+                        className="size-4 disabled:opacity-100"
                       />
                       <div>
                         <p className="text-sm font-medium text-ink-500">{addon.name}</p>
@@ -630,7 +646,8 @@ function PackagesBlockPreview({
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-teal-600 underline decoration-teal-200 hover:text-teal-700"
+                    style={{ color: accentColor }}
+                    className="inline-flex items-center gap-2 text-sm font-medium underline hover:opacity-80"
                   >
                     <FileText className="size-4" />
                     {label ? t("packages_pdf_attachment_named", { name: label }) : t("packages_pdf_attachment")}

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, ShieldCheck, HelpCircle } from "lucide-react";
+import { Menu, X, ShieldCheck, HelpCircle, Compass } from "lucide-react";
 import { NAV_ITEMS } from "./sidebar";
+import { useTour } from "./tour-context";
 import { cn } from "@/lib/utils";
 
 export function MobileNav({
@@ -19,6 +20,7 @@ export function MobileNav({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const { startTour } = useTour();
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || canManageOrg);
 
   return (
@@ -86,6 +88,17 @@ export function MobileNav({
                 <HelpCircle className="size-4.5" strokeWidth={2} />
                 Help &amp; FAQ
               </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  startTour();
+                }}
+                className="flex items-center gap-3 rounded-brand-sm px-3 py-2.5 text-left text-sm font-medium text-ink-400 transition-colors duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500"
+              >
+                <Compass className="size-4.5" strokeWidth={2} />
+                Rondleiding
+              </button>
 
               {showAdmin && (
                 <Link

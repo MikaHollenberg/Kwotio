@@ -1,10 +1,11 @@
-import { FileText, TrendingUp, Clock, Trophy, Circle, CheckCircle2 } from "lucide-react";
+import { FileText, TrendingUp, Clock, Trophy, Circle, CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ButtonLink } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import {
   getDashboardKpis,
+  getNextBestActions,
   getOnboardingSteps,
   getPopularPackageThisMonth,
   getRecentActivity,
@@ -26,12 +27,13 @@ export default async function DashboardOverviewPage() {
     .single();
   const organizationId = profile!.organization_id;
 
-  const [kpis, popularPackage, recentActivity, upcomingEvents, onboardingSteps] = await Promise.all([
+  const [kpis, popularPackage, recentActivity, upcomingEvents, onboardingSteps, nextBestActions] = await Promise.all([
     getDashboardKpis(supabase, organizationId),
     getPopularPackageThisMonth(supabase, organizationId),
     getRecentActivity(supabase, organizationId),
     getUpcomingEvents(supabase, organizationId),
     getOnboardingSteps(supabase, organizationId),
+    getNextBestActions(supabase, organizationId),
   ]);
   const onboardingComplete = onboardingSteps.every((s) => s.done);
 
@@ -67,6 +69,32 @@ export default async function DashboardOverviewPage() {
           Nieuwe offerte
         </ButtonLink>
       </div>
+
+      {nextBestActions.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50/50">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-orange-600" />
+              <CardTitle>Volgende beste actie</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col divide-y divide-orange-100">
+            {nextBestActions.map((action) => (
+              <Link
+                key={action.id}
+                href={action.href}
+                className="flex items-center justify-between gap-4 py-2.5 first:pt-0 last:pb-0 hover:opacity-80"
+              >
+                <span className="flex items-center gap-2 text-sm text-ink-500">
+                  {action.urgency === "high" && <span className="size-1.5 shrink-0 rounded-full bg-red-500" />}
+                  {action.message}
+                </span>
+                <ArrowRight className="size-4 shrink-0 text-ink-400" />
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {!onboardingComplete && (
         <Card>

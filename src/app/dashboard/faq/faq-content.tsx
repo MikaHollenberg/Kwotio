@@ -214,7 +214,7 @@ const CATEGORIES: FaqCategory[] = [
         id: "restart-tour",
         question: "Hoe start ik de rondleiding door de app opnieuw?",
         answer:
-          "Boven in beeld staat een knop 'Rondleiding' -- die start altijd opnieuw dezelfde stap-voor-stap rondleiding langs alle pagina's, ook als je 'm al eerder hebt gezien of overgeslagen.",
+          "Onderin het menu, naast 'Help & FAQ', staat een knop 'Rondleiding' -- die start altijd opnieuw dezelfde stap-voor-stap rondleiding langs alle pagina's, ook als je 'm al eerder hebt gezien of overgeslagen.",
         walkthrough: [
           {
             selector: '[data-faq-id="restart-tour-button"]',
@@ -296,6 +296,81 @@ const CATEGORIES: FaqCategory[] = [
         id: "request-icons",
         question: "Wat betekenen de gekleurde icoontjes bij een aanvraag?",
         answer: "request-icons-explainer",
+      },
+    ],
+  },
+  {
+    title: "Facturen",
+    items: [
+      {
+        id: "quote-to-invoice",
+        question: "Hoe maak ik een factuur van een geaccepteerde offerte?",
+        answer:
+          "Open een geaccepteerde offerte -- bij de kaart 'Facturatie' klik je op 'Maak factuur van deze offerte'. Kies daar tussen een volledige factuur of eerst een aanbetaling (vast bedrag of percentage); de regels worden automatisch overgenomen uit de gekozen pakketten/opties.",
+      },
+      {
+        id: "new-invoice",
+        question: "Hoe maak ik een factuur zonder offerte, helemaal vanaf 0?",
+        answer:
+          "Ga naar Facturen en klik op 'Nieuwe factuur'. Kies een bestaande klant of typ voor een eenmalige factuur direct een naam/adres in (zonder klantrecord aan te maken), voeg regels toe (uit je factuurartikelen of vrij) en kies volledig of aanbetaling.",
+        adminOnly: true,
+        walkthrough: [
+          {
+            href: "/dashboard/facturen",
+            selector: '[data-faq-id="new-invoice-button"]',
+            title: "Nieuwe factuur",
+            description: "Klik hier om een losse factuur te starten, zonder offerte.",
+          },
+          {
+            href: "/dashboard/facturen/nieuw",
+            selector: '[data-faq-id="new-invoice-form"]',
+            title: "Klant, regels en type",
+            description:
+              "Kies of typ een klant, voeg regels toe (uit je factuurartikelen of vrij, elk met een eigen btw-tarief) en kies volledig of aanbetaling.",
+          },
+        ],
+      },
+      {
+        id: "catalog-items",
+        question: "Wat zijn factuurartikelen, en hoe gebruik ik ze?",
+        answer:
+          "Veelgebruikte regels (naam, prijs, btw-tarief) die je opslaat om steeds opnieuw te gebruiken bij het samenstellen van een factuur -- scheelt typewerk en voorkomt fouten in het btw-tarief.",
+        walkthrough: [
+          {
+            href: "/dashboard/facturen/artikelen",
+            selector: '[data-faq-id="catalog-items-card"]',
+            title: "Factuurartikelen",
+            description: "Hier zie je al je opgeslagen artikelen, elk met een eigen btw-tarief.",
+          },
+          {
+            href: "/dashboard/facturen/artikelen",
+            selector: '[data-faq-id="new-catalog-item-button"]',
+            title: "Nieuw artikel",
+            description: "Naam, omschrijving, stukprijs en btw-tarief (Hoog/Laag/0%/Anders) vul je hier in.",
+          },
+        ],
+      },
+      {
+        id: "deposit-final-invoice",
+        question: "Hoe werkt een aanbetaling en de slotfactuur precies?",
+        answer:
+          "Bij een aanbetaling maak je eerst een aparte voorschotfactuur (met de btw al volledig berekend over het aanbetaalde bedrag zelf -- wettelijk vereist). Zodra die betaald is (handmatig of via Mollie), verschijnt op de factuur een knop 'Maak slotfactuur' voor het resterende bedrag -- die toont ook duidelijk wat er al aanbetaald en afgedragen is. Dit werkt zowel bij een offerte-gebonden als bij een losse factuur.",
+      },
+      {
+        id: "invoicing-settings",
+        question: "Hoe stel ik btw-tarieven, Mollie en extra logo's voor facturen in?",
+        answer:
+          "Ga naar Instellingen -- bij 'Facturatie' stel je het hoge/lage btw-tarief in, koppel je je eigen Mollie-account voor online betalen, en upload je tot 2 extra logo's naast je hoofdlogo (bv. voor een zusterbedrijf).",
+        adminOnly: true,
+        walkthrough: [
+          {
+            href: "/dashboard/instellingen",
+            selector: '[data-faq-id="settings-facturatie"]',
+            title: "Facturatie",
+            description:
+              "Factuurnummer-voorvoegsel, vervaltermijn, btw-tarieven, automatisch versturen, Mollie-koppeling en extra logo's stel je hier allemaal in.",
+          },
+        ],
       },
     ],
   },

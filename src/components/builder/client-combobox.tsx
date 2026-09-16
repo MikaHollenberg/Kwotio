@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { Search, UserPlus, Check, ArrowLeft } from "lucide-react";
 import { searchClients, createClientRecord } from "@/app/dashboard/klanten/actions";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,8 @@ export function ClientCombobox({
   const [results, setResults] = useState<SelectedClient[]>([]);
   const [pending, startTransition] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [panelPos, setPanelPos] = useState({ top: 0, left: 0, width: 0 });
 
   const [creatingNew, setCreatingNew] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -29,16 +32,39 @@ export function ClientCombobox({
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, startCreateTransition] = useTransition();
 
+  // Portal naar document.body (zelfde patroon als ConfirmDialog/MobileNav/
+  // NotificationBell) -- deze combobox staat vaak in een Card met
+  // backdrop-blur, wat een eigen stacking-context maakt en een
+  // position:absolute paneel hierbinnen achter een latere Card (bv. een
+  // "Regels"-blok eronder) laat wegzakken i.p.v. erboven te liggen. Positie
+  // wordt daarom zelf berekend (fixed, gebaseerd op het invoerveld) i.p.v.
+  // relatief aan een voorouder.
   useEffect(() => {
+    if (!open) return;
+    function updatePosition() {
+      const rect = ref.current?.getBoundingClientRect();
+      if (rect) setPanelPos({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    }
+    updatePosition();
     function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-        setCreatingNew(false);
-      }
+      const target = e.target as Node;
+      if (ref.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
+      setCreatingNew(false);
+    }
+    function handleDismiss() {
+      setOpen(false);
+      setCreatingNew(false);
     }
     document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+    window.addEventListener("scroll", handleDismiss, true);
+    window.addEventListener("resize", handleDismiss);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      window.removeEventListener("scroll", handleDismiss, true);
+      window.removeEventListener("resize", handleDismiss);
+    };
+  }, [open]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -95,9 +121,15 @@ export function ClientCombobox({
         />
       </div>
 
-      {open && (query.length > 0 || results.length > 0) && (
-        <div className="absolute left-0 top-full z-20 mt-1.5 w-full overflow-hidden rounded-brand-sm border border-ink-200 bg-white shadow-lg">
-          {creatingNew ? (
+      {open &&
+        (query.length > 0 || results.length > 0) &&
+        createPortal(
+          <div
+            ref={panelRef}
+            style={{ position: "fixed", top: panelPos.top, left: panelPos.left, width: panelPos.width }}
+            className="z-50 overflow-hidden rounded-brand-sm border border-ink-200 bg-white shadow-lg"
+          >
+            {creatingNew ? (
             <div className="flex flex-col gap-3 p-3.5">
               <button
                 type="button"
@@ -178,8 +210,9 @@ export function ClientCombobox({
               )}
             </>
           )}
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

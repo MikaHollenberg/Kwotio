@@ -47,6 +47,15 @@ export type OrgStatus = "proefperiode" | "actief" | "opgezegd";
 export type LogoPreference = "horizontaal" | "vierkant";
 export type QuoteRequestStatus = "nieuw" | "in_behandeling" | "omgezet" | "genegeerd";
 export type PublicPageEventType = "page_view" | "template_opened" | "request_form_opened";
+export type InvoiceStatus = "concept" | "open" | "deels_betaald" | "betaald" | "vervallen" | "geannuleerd";
+export type InvoiceType = "standaard" | "aanbetaling" | "slotfactuur" | "creditnota";
+export type InvoicePaymentMethod = "mollie" | "overboeking" | "pin" | "contant" | "sponsoring" | "overig";
+export type InvoiceVatRateType = "hoog" | "laag" | "nul" | "aangepast";
+/** Basisregels van een PERCENTAGE-aanbetaling (offerte-pakketten, of zelf
+ * ingevulde regels bij een losse factuur) -- alleen gevuld bij mode
+ * "percentage", nooit bij een vast bedrag. Voedt de voorinvulling van de
+ * slotfactuur-pagina. */
+export type DepositBasisLine = { description: string; quantity: number; unitPrice: number; vatRate: number };
 
 export interface Database {
   public: {
@@ -72,6 +81,7 @@ export interface Database {
           guest_count_field_active: boolean;
           guest_count_field_label: string | null;
           brand_theme: Record<string, unknown>;
+          closed_weekdays: number[];
           status: OrgStatus;
           plan: string | null;
           monthly_price: number;
@@ -79,6 +89,21 @@ export interface Database {
           contact_email: string | null;
           contact_phone: string | null;
           archived_at: string | null;
+          invoice_number_prefix: string | null;
+          next_invoice_number: number;
+          invoice_number_reset_year: number | null;
+          invoice_vat_rate_high: number;
+          invoice_vat_rate_low: number;
+          invoice_due_days: number;
+          invoice_auto_send: boolean;
+          invoice_reminder_enabled: boolean;
+          mollie_api_key: string | null;
+          invoice_extra_logo_urls: string[];
+          next_client_number: number;
+          invoice_sent_email_subject: string | null;
+          invoice_sent_email_body: string | null;
+          invoice_reminder_email_subject: string | null;
+          invoice_reminder_email_body: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -121,6 +146,7 @@ export interface Database {
           avatar_url: string | null;
           is_super_admin: boolean;
           onboarding_tour_seen_at: string | null;
+          notifications_seen_at: string;
           created_at: string;
           updated_at: string;
         };
@@ -142,6 +168,7 @@ export interface Database {
           company_name: string | null;
           notes: string | null;
           archived_at: string | null;
+          client_number: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -241,6 +268,12 @@ export interface Database {
           client_display_phone: string | null;
           client_display_company: string | null;
           reference_number: string | null;
+          decline_reason: string | null;
+          decline_note: string | null;
+          internal_notes: string | null;
+          deposit_invoice_id: string | null;
+          deposit_amount: number | null;
+          deposit_paid_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -249,6 +282,22 @@ export interface Database {
           title: string;
         };
         Update: Partial<Database["public"]["Tables"]["quotes"]["Row"]>;
+        Relationships: [];
+      };
+      quote_contact_logs: {
+        Row: {
+          id: string;
+          quote_id: string;
+          author_name: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["quote_contact_logs"]["Row"]> & {
+          quote_id: string;
+          author_name: string;
+          body: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["quote_contact_logs"]["Row"]>;
         Relationships: [];
       };
       quote_blocks: {
@@ -467,8 +516,115 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["closed_dates"]["Row"]>;
         Relationships: [];
       };
+      invoices: {
+        Row: {
+          id: string;
+          organization_id: string;
+          quote_id: string | null;
+          client_id: string | null;
+          deposit_invoice_id: string | null;
+          credit_for_invoice_id: string | null;
+          type: InvoiceType;
+          status: InvoiceStatus;
+          invoice_number: string;
+          invoice_year: number;
+          invoice_date: string;
+          due_date: string;
+          delivery_date: string | null;
+          org_name: string;
+          org_address: Record<string, unknown>;
+          org_btw_number: string | null;
+          org_kvk_number: string | null;
+          org_iban: string | null;
+          client_name: string;
+          client_company: string | null;
+          client_address: Record<string, unknown> | null;
+          client_email: string | null;
+          subtotal_excl_vat: number;
+          vat_amount: number;
+          total_incl_vat: number;
+          deposit_basis_percentage: number | null;
+          deposit_basis_amount: number | null;
+          deposit_basis_lines: DepositBasisLine[] | null;
+          payment_method: InvoicePaymentMethod | null;
+          paid_at: string | null;
+          paid_note: string | null;
+          mollie_payment_id: string | null;
+          mollie_payment_status: string | null;
+          reminder_sent_at: string | null;
+          sent_at: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["invoices"]["Row"]> & {
+          organization_id: string;
+          invoice_number: string;
+          invoice_year: number;
+          due_date: string;
+          org_name: string;
+          client_name: string;
+          subtotal_excl_vat: number;
+          vat_amount: number;
+          total_incl_vat: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["invoices"]["Row"]>;
+        Relationships: [];
+      };
+      invoice_lines: {
+        Row: {
+          id: string;
+          invoice_id: string;
+          description: string;
+          quantity: number;
+          unit_price: number;
+          vat_rate: number;
+          vat_amount: number;
+          line_total: number;
+          sort_order: number;
+          source_package_id: string | null;
+          source_addon_id: string | null;
+          source_catalog_item_id: string | null;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["invoice_lines"]["Row"]> & {
+          invoice_id: string;
+          description: string;
+          unit_price: number;
+          vat_rate: number;
+          vat_amount: number;
+          line_total: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["invoice_lines"]["Row"]>;
+        Relationships: [];
+      };
+      invoice_catalog_items: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          description: string | null;
+          unit_price: number;
+          vat_rate_type: InvoiceVatRateType;
+          vat_rate_custom: number | null;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["invoice_catalog_items"]["Row"]> & {
+          organization_id: string;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["invoice_catalog_items"]["Row"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      next_invoice_number: {
+        Args: { p_organization_id: string };
+        Returns: { invoice_number: string; invoice_year: number }[];
+      };
+    };
   };
 }

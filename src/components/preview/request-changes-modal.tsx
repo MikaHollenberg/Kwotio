@@ -17,10 +17,12 @@ export function RequestChangesModal({
   open,
   onClose,
   token,
+  accentColor,
 }: {
   open: boolean;
   onClose: () => void;
   token: string;
+  accentColor: string;
 }) {
   const [name, setName] = useState("");
   const [body, setBody] = useState("");
@@ -72,12 +74,12 @@ export function RequestChangesModal({
 
           {sent ? (
             <div className="mt-6 flex flex-col items-center gap-3 py-4 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full bg-teal-100 text-teal-700">
+              <div style={{ backgroundColor: `${accentColor}1a`, color: accentColor }} className="flex size-12 items-center justify-center rounded-full">
                 <Check className="size-6" />
               </div>
               <p className="font-display text-lg font-semibold text-ink-500">{t("request_changes_sent_title")}</p>
               <p className="text-sm text-ink-400">{t("request_changes_sent_body")}</p>
-              <Button onClick={handleClose} className="mt-2">
+              <Button onClick={handleClose} style={{ backgroundColor: accentColor }} className="mt-2 hover:opacity-90 active:opacity-90">
                 {t("close")}
               </Button>
             </div>
@@ -97,7 +99,12 @@ export function RequestChangesModal({
                 rows={4}
                 className="min-h-28 resize-y rounded-brand-sm border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
               />
-              <Button disabled={!canSubmit || pending} onClick={handleSubmit}>
+              <Button
+                disabled={!canSubmit || pending}
+                onClick={handleSubmit}
+                style={{ backgroundColor: accentColor }}
+                className="hover:opacity-90 active:opacity-90"
+              >
                 {pending ? t("request_changes_sending") : t("request_changes_submit")}
               </Button>
             </div>

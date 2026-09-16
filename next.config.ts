@@ -9,6 +9,15 @@ const supabaseHostname = (() => {
 })();
 
 const nextConfig: NextConfig = {
+  // De factuur-PDF laadt Kwotio's eigen lettertypen (Bricolage Grotesque/
+  // Manrope) als losse TTF-bestanden vanaf schijf (zie
+  // src/lib/invoice-pdf/fonts.ts) i.p.v. via een import -- Next.js'
+  // automatische file-tracing voor Vercel-serverless-functies pikt zulke
+  // pas-op-runtime-berekende paden niet vanzelf op, dus expliciet
+  // meegeven zodat de fonts ook in productie meegedeployed worden.
+  outputFileTracingIncludes: {
+    "/dashboard/facturen/**": ["./src/lib/invoice-pdf/fonts/**/*"],
+  },
   images: {
     // De on-the-fly sharp-optimalisatiepijplijn faalt stil in lokale dev op
     // dit externe/exFAT-volume (gecorrumpeerde cache-writes) — zie

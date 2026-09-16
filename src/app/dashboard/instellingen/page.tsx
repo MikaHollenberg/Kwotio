@@ -7,6 +7,8 @@ import { OrganizationSettingsCard } from "./organization-settings-card";
 import { HeadcountSettingsCard } from "./headcount-settings-card";
 import { ClosedDatesCard } from "./closed-dates-card";
 import { DataExportCard } from "./data-export-card";
+import { InvoicingSettingsCard } from "./invoicing-settings-card";
+import { InvoiceEmailTemplatesCard } from "./invoice-email-templates-card";
 
 export default async function InstellingenPage() {
   const supabase = await createClient();
@@ -119,7 +121,35 @@ export default async function InstellingenPage() {
         canEdit={canManageOrg}
       />
 
-      <ClosedDatesCard closedDates={closedDateRows ?? []} canEdit={canManageOrg} />
+      <ClosedDatesCard
+        closedDates={closedDateRows ?? []}
+        closedWeekdays={organization?.closed_weekdays ?? []}
+        canEdit={canManageOrg}
+      />
+
+      <InvoicingSettingsCard
+        canEdit={canManageOrg}
+        organizationId={profile!.organization_id}
+        initialPrefix={organization?.invoice_number_prefix ?? ""}
+        initialDueDays={organization?.invoice_due_days ?? 14}
+        initialAutoSend={organization?.invoice_auto_send ?? false}
+        initialReminderEnabled={organization?.invoice_reminder_enabled ?? true}
+        initialVatRateHigh={organization?.invoice_vat_rate_high ?? 21}
+        initialVatRateLow={organization?.invoice_vat_rate_low ?? 9}
+        initialExtraLogoUrls={organization?.invoice_extra_logo_urls ?? []}
+        maskedMollieKey={
+          organization?.mollie_api_key ? `•••• ${organization.mollie_api_key.slice(-4)}` : null
+        }
+        hasBtwOrKvk={Boolean(organization?.btw_number || organization?.kvk_number)}
+      />
+
+      <InvoiceEmailTemplatesCard
+        canEdit={canManageOrg}
+        initialSentSubject={organization?.invoice_sent_email_subject ?? ""}
+        initialSentBody={organization?.invoice_sent_email_body ?? ""}
+        initialReminderSubject={organization?.invoice_reminder_email_subject ?? ""}
+        initialReminderBody={organization?.invoice_reminder_email_body ?? ""}
+      />
 
       <EmailAutomationCard rules={emailRules} canEdit={canManageOrg} />
 

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Topbar } from "@/components/dashboard/topbar";
-import { ProductTour, ALL_TOUR_STEPS, type TourPhase } from "@/components/dashboard/product-tour";
+import { ProductTour } from "@/components/dashboard/product-tour";
+import { useTour } from "@/components/dashboard/tour-context";
 import { FaqWalkthroughProvider } from "@/components/dashboard/faq-walkthrough";
-import { markTourSeen } from "@/app/dashboard/tour-actions";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
 
 const TITLES: Record<string, string> = {
@@ -33,40 +33,19 @@ export function DashboardShell({
   organizationName,
   termsUrl,
   newRequestCount = 0,
-  tourSeen = true,
 }: {
   children: React.ReactNode;
   fullName: string | null;
   email: string;
   showAdmin?: boolean;
-  /** Rol is owner/admin -- bepaalt zowel welke nav-items zichtbaar zijn als
-   * welke rondleiding-stappen meegenomen worden (een teamlid/alleen-lezen
-   * mag niet naar Statistieken/Instellingen, dus die stappen slaan we over). */
   canManageOrg?: boolean;
   organizationName?: string | null;
   termsUrl?: string | null;
   newRequestCount?: number;
-  /** profiles.onboarding_tour_seen_at !== null -- stuurt alleen de
-   * automatische eerste-keer-prompt aan (zie ProductTour). */
-  tourSeen?: boolean;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const pageTitle = titleFor(pathname, organizationName ?? "Kwotio");
-
-  const tourSteps = useMemo(() => ALL_TOUR_STEPS.filter((s) => !s.adminOnly || canManageOrg), [canManageOrg]);
-  const [tourPhase, setTourPhase] = useState<TourPhase>(() => (tourSeen ? "closed" : "intro"));
-  const [tourStep, setTourStep] = useState(0);
-
-  function closeTour(markSeen: boolean) {
-    setTourPhase("closed");
-    if (markSeen) void markTourSeen();
-  }
-
-  function goToStep(index: number) {
-    setTourStep(index);
-    router.push(tourSteps[index].href);
-  }
+  const { phase: tourPhase, stepIndex: tourStep, steps: tourSteps, beginSteps, closeTour, goToStep } = useTour();
 
   // Badge in de titel van het browsertabblad ("(2) Offertes") zodra er
   // nieuwe, nog niet opgepakte aanvragen zijn -- zo valt het ook op als het
@@ -99,10 +78,6 @@ export function DashboardShell({
         showAdmin={showAdmin}
         canManageOrg={canManageOrg}
         newRequestCount={newRequestCount}
-        onStartTour={() => {
-          setTourStep(0);
-          setTourPhase("intro");
-        }}
       />
       <FaqWalkthroughProvider>
         <main className="min-w-0 flex-1 px-6 py-8 lg:px-8">{children}</main>
@@ -125,10 +100,7 @@ export function DashboardShell({
         phase={tourPhase}
         stepIndex={tourStep}
         steps={tourSteps}
-        onStart={() => {
-          setTourPhase("steps");
-          goToStep(0);
-        }}
+        onStart={beginSteps}
         onSkip={() => closeTour(true)}
         onNext={() => {
           if (tourStep >= tourSteps.length - 1) closeTour(true);

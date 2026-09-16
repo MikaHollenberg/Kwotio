@@ -132,6 +132,10 @@ export type PlatformStats = {
   quotesPerMonth: { month: string; count: number }[];
   revenuePerMonth: { month: string; total: number }[];
   topOrganizations: { id: string; name: string; quoteCount: number; revenue: number }[];
+  /** Aandeel offertes met status "geaccepteerd" t.o.v. alle offertes die de
+   * conceptfase voorbij zijn (verzonden of verder), over alle organisaties
+   * heen. Null zolang er nog geen enkele offerte verzonden is. */
+  conversionRate: number | null;
 };
 
 export async function getPlatformStats(): Promise<PlatformStats> {
@@ -220,6 +224,10 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     .sort((a, b) => b.quoteCount - a.quoteCount)
     .slice(0, 5);
 
+  const sentOrFurther = quoteRows.filter((q) => q.status !== "concept").length;
+  const accepted = quoteRows.filter((q) => q.status === "geaccepteerd").length;
+  const conversionRate = sentOrFurther > 0 ? accepted / sentOrFurther : null;
+
   return {
     organizationsTotal: orgRows.length,
     organizationsByStatus,
@@ -232,5 +240,72 @@ export async function getPlatformStats(): Promise<PlatformStats> {
     quotesPerMonth,
     revenuePerMonth,
     topOrganizations,
+    conversionRate,
   };
+}
+
+export type AtRiskOrganization = {
+  id: string;
+  name: string;
+  status: OrgStatus;
+  reason: string;
+};
+
+/**
+ * Organisaties die extra aandacht kunnen gebruiken -- puur signalering
+ * (geen automatische actie): actieve organisaties die al 30+ dagen geen
+ * enkele offerte hebben aangemaakt/bijgewerkt, en proefperiode-organisaties
+ * die al 14+ dagen bestaan zonder ooit een offerte te hebben aangemaakt.
+ * Alles afgeleid van bestaande kolommen -- geen aparte migratie nodig.
+ */
+export async function getAtRiskOrganizations(): Promise<AtRiskOrganization[]> {
+  const admin = createAdminClient();
+  const [{ data: orgs }, { data: quotes }] = await Promise.all([
+    admin
+      .from("organizations")
+      .select("id, name, status, created_at")
+      .neq("name", "Platform")
+      .is("archived_at", null),
+    admin.from("quotes").select("organization_id, updated_at"),
+  ]);
+
+  const lastActivityByOrg = new Map<string, string>();
+  for (const q of quotes ?? []) {
+    const current = lastActivityByOrg.get(q.organization_id);
+    if (!current || q.updated_at > current) lastActivityByOrg.set(q.organization_id, q.updated_at);
+  }
+
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86_400_000);
+  const fourteenDaysAgo = new Date(now.getTime() - 14 * 86_400_000);
+
+  const atRisk: AtRiskOrganization[] = [];
+  for (const o of orgs ?? []) {
+    const lastActivity = lastActivityByOrg.get(o.id);
+    if (o.status === "actief") {
+      const isStale = !lastActivity || new Date(lastActivity) < thirtyDaysAgo;
+      if (isStale) {
+        atRisk.push({
+          id: o.id,
+          name: o.name,
+          status: o.status,
+          reason: lastActivity
+            ? `Geen offerte-activiteit sinds ${new Date(lastActivity).toLocaleDateString("nl-NL")}`
+            : "Nog nooit een offerte aangemaakt",
+        });
+      }
+    } else if (o.status === "proefperiode") {
+      const isOldTrialWithoutQuotes = !lastActivity && new Date(o.created_at) < fourteenDaysAgo;
+      if (isOldTrialWithoutQuotes) {
+        atRisk.push({
+          id: o.id,
+          name: o.name,
+          status: o.status,
+          reason: "Proefperiode 14+ dagen bezig zonder enige offerte",
+        });
+      }
+    }
+  }
+
+  return atRisk;
 }

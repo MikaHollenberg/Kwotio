@@ -1,0 +1,11 @@
+-- Beveiligingsfix, gevonden via de security-advisor direct na het draaien
+-- van 0055: assign_client_number() is alleen bedoeld als BEFORE INSERT-
+-- trigger (leest `NEW`, bestaat niet buiten triggercontext) maar werd
+-- door Postgres' standaardgedrag (EXECUTE aan PUBLIC bij het aanmaken van
+-- een functie) toch los aanroepbaar via /rest/v1/rpc/assign_client_number.
+-- Een directe aanroep zou toch meteen falen (geen `NEW` beschikbaar) --
+-- geen daadwerkelijk lek -- maar hoort net als de andere SECURITY
+-- DEFINER-functies in dit project niet los aanroepbaar te zijn. De trigger
+-- zelf blijft gewoon werken: het vuren van een trigger vereist geen eigen
+-- EXECUTE-recht van de gebruiker die de INSERT doet.
+revoke execute on function assign_client_number() from anon, authenticated;

@@ -7,6 +7,17 @@
 
 export type Lang = "nl" | "en";
 
+/** Vaste, kiesbare redenen bij "Offerte afwijzen" -- gedeeld tussen de
+ * client-modal (decline-quote-modal.tsx) en de server-side validatie in
+ * offerte/[token]/actions.ts, zodat beide altijd dezelfde set gebruiken. */
+export const DECLINE_REASON_KEYS = [
+  "decline_reason_too_expensive",
+  "decline_reason_other_supplier",
+  "decline_reason_event_cancelled",
+  "decline_reason_no_longer_needed",
+  "decline_reason_other",
+] as const;
+
 const dict = {
   status_verzonden: { nl: "Verzonden", en: "Sent" },
   status_bekeken: { nl: "Bekeken", en: "Viewed" },
@@ -97,7 +108,20 @@ const dict = {
     nl: "Weet je zeker dat je deze offerte wilt afwijzen? Het bureau wordt hiervan op de hoogte gesteld.",
     en: "Are you sure you want to decline this quote? The agency will be notified.",
   },
+  decline_reason_label: { nl: "Waarom wijs je deze offerte af?", en: "Why are you declining this quote?" },
+  decline_reason_placeholder: { nl: "Kies een reden…", en: "Choose a reason…" },
+  decline_reason_too_expensive: { nl: "Te duur", en: "Too expensive" },
+  decline_reason_other_supplier: { nl: "Andere leverancier gekozen", en: "Chose another supplier" },
+  decline_reason_event_cancelled: { nl: "Event gaat niet door", en: "Event is cancelled" },
+  decline_reason_no_longer_needed: { nl: "Geen reactie meer nodig", en: "No longer needed" },
+  decline_reason_other: { nl: "Anders", en: "Other" },
+  decline_note_placeholder: { nl: "Wil je nog iets toelichten? (optioneel)", en: "Anything you'd like to add? (optional)" },
+  decline_note_placeholder_required: { nl: "Licht toe waarom (verplicht bij 'Anders')", en: "Explain why (required for 'Other')" },
   decline_confirm_button: { nl: "Ja, afwijzen", en: "Yes, decline" },
+  decline_error: {
+    nl: "Afwijzen is niet gelukt. Probeer het opnieuw.",
+    en: "Declining failed. Please try again.",
+  },
   declined_banner: {
     nl: "Je hebt deze offerte afgewezen. Neem contact op als je van gedachten bent veranderd.",
     en: "You've declined this quote. Get in touch if you've changed your mind.",

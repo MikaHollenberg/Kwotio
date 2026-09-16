@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/client";
 import { quoteOpenedAgencyEmail, quoteDeclinedAgencyEmail, newCommentAgencyEmail } from "@/lib/email/templates/notifications";
 import type { Selections } from "@/lib/blocks/pricing";
+import { t as translate, DECLINE_REASON_KEYS, type TranslationKey } from "@/lib/i18n/translations";
 
 const ACCESS_COOKIE_PREFIX = "qac_";
 
@@ -126,14 +127,25 @@ export async function trackView(token: string) {
   }
 }
 
-export async function declineQuote(token: string) {
+export async function declineQuote(token: string, reasonKey: string | null, note: string | null) {
   const quote = await getQuoteIdByToken(token);
   if (!quote) return;
   if (quote.status === "geaccepteerd" || quote.status === "geweigerd") return;
   const supabase = createAdminClient();
 
-  await supabase.from("quotes").update({ status: "geweigerd" }).eq("id", quote.id);
-  await logActivity(supabase, quote.id, "declined");
+  // Nooit de client-input direct opslaan -- reasonKey moet één van de vaste
+  // vertaal-keys zijn, anders (geknoeide request) valt terug op null i.p.v.
+  // een willekeurige string in de database te zetten.
+  const isValidReasonKey = (reasonKey ?? "") in Object.fromEntries(DECLINE_REASON_KEYS.map((k) => [k, true]));
+  const declineReason = isValidReasonKey ? translate(reasonKey as TranslationKey, "nl") : null;
+  const declineNote = note?.trim() ? note.trim().slice(0, 1000) : null;
+
+  const { error: updateError } = await supabase
+    .from("quotes")
+    .update({ status: "geweigerd", decline_reason: declineReason, decline_note: declineNote })
+    .eq("id", quote.id);
+  if (updateError) throw updateError;
+  await logActivity(supabase, quote.id, "declined", { reason: declineReason, note: declineNote });
 
   const client = quote.client_id
     ? (await supabase.from("clients").select("name").eq("id", quote.client_id).maybeSingle()).data
@@ -146,6 +158,8 @@ export async function declineQuote(token: string) {
       quoteTitle: quote.title,
       clientName: client?.name ?? "Een klant",
       dashboardUrl,
+      declineReason,
+      declineNote,
     }),
   }));
 

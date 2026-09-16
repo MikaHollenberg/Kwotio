@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadTemplateBlocks } from "@/lib/blocks/persistence";
 import { resolvePreferredLogo } from "@/lib/organization/logo";
+import { resolveAccentColor } from "@/lib/organization/theme";
 import type { BlockDraft } from "@/lib/blocks/types";
 
 export type PublicOrgTemplate = {
@@ -29,9 +30,10 @@ export type PublicOrgPageData = {
    * begrensd op 2 jaar vooruit (een organisatie zet dit doorgaans maar een
    * beperkt aantal maanden vooruit). */
   closedDates: string[];
+  /** organizations.closed_weekdays -- 0 = zondag .. 6 = zaterdag, een vaste
+   * wekelijkse sluitingsdag naast de losse datums hierboven. */
+  closedWeekdays: number[];
 };
-
-const DEFAULT_PRIMARY_COLOR = "#CC7A3E";
 
 /**
  * Enige toegangspad voor de publieke organisatiepagina: alles wordt
@@ -52,7 +54,7 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
   const { data: organization, error: orgError } = await supabase
     .from("organizations")
     .select(
-      "id, brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, public_welcome_message, guest_count_field_active, guest_count_field_label, brand_theme, archived_at",
+      "id, brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, public_welcome_message, guest_count_field_active, guest_count_field_label, brand_theme, closed_weekdays, archived_at",
     )
     .eq("public_slug", slug)
     .maybeSingle();
@@ -97,8 +99,9 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     welcomeMessage: organization.public_welcome_message,
     guestCountFieldActive: organization.guest_count_field_active,
     guestCountFieldLabel: organization.guest_count_field_label || "Aantal personen",
-    primaryColor: (organization.brand_theme as { primaryColor?: string } | null)?.primaryColor || DEFAULT_PRIMARY_COLOR,
+    primaryColor: resolveAccentColor(organization),
     templates,
     closedDates: (closedDateRows ?? []).map((r) => r.date),
+    closedWeekdays: organization.closed_weekdays ?? [],
   };
 }

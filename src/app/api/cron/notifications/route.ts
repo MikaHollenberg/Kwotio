@@ -8,9 +8,11 @@ import {
   rebookingReminderClientEmail,
   expiringSoonAgencyEmail,
 } from "@/lib/email/templates/notifications";
+import { invoiceOverdueReminderEmail } from "@/lib/email/templates/invoicing";
+import { INVOICE_TYPE_LABELS } from "@/lib/invoicing/status";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
 import { renderEmailTemplate } from "@/lib/email/template-vars";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatCurrency } from "@/lib/utils";
 
 /**
  * Dagelijkse cron-taak (zie vercel.json): stuurt de door het bureau zelf
@@ -42,11 +44,14 @@ export async function GET(request: NextRequest) {
     rebookingRemindersSent: 0,
     expiringSoonNotified: 0,
     markedExpired: 0,
+    invoiceRemindersSent: 0,
   };
 
   const { data: organizations } = await supabase
     .from("organizations")
-    .select("id, brand_name, terms_url, review_url, public_slug");
+    .select(
+      "id, brand_name, terms_url, review_url, public_slug, invoice_reminder_enabled, invoice_reminder_email_subject, invoice_reminder_email_body",
+    );
   const orgById = new Map((organizations ?? []).map((o) => [o.id, o]));
   const origin = `${request.nextUrl.protocol}//${request.nextUrl.host}`;
 
@@ -354,6 +359,57 @@ export async function GET(request: NextRequest) {
   // zijn hooguit 15 minuten, dus alles ouder dan 2 dagen is sowieso irrelevant.
   const twoDaysAgo = new Date(now.getTime() - 2 * 86_400_000).toISOString();
   await supabase.from("rate_limit_hits").delete().lt("created_at", twoDaysAgo);
+
+  // 5. Herinnering bij een verlopen factuurvervaldatum (Fase 6) — eigen
+  // try/catch, volledig los van de secties hierboven: een bug hier mag de
+  // al langer bestaande offerte-herinnering/auto-verloop-logica nooit raken.
+  // Eenmalig per factuur (reminder_sent_at is null), niet herhaald.
+  try {
+    const { data: overdueInvoices } = await supabase
+      .from("invoices")
+      .select("id, organization_id, type, invoice_number, client_email, client_name, total_incl_vat, due_date")
+      .in("status", ["open", "deels_betaald"])
+      .lt("due_date", todayKey)
+      .is("reminder_sent_at", null);
+
+    for (const invoice of overdueInvoices ?? []) {
+      const org = orgById.get(invoice.organization_id);
+      // Organisatie heeft herinneringen uit staan: sla deze factuur voorlopig
+      // over i.p.v. 'm als "verzonden" te markeren -- zo blijft hij alsnog
+      // oppakbaar zodra de instelling later aangezet wordt.
+      if (!org?.invoice_reminder_enabled || !invoice.client_email) continue;
+
+      const vars = {
+        klantnaam: invoice.client_name,
+        factuurnummer: invoice.invoice_number,
+        bedrag: formatCurrency(Number(invoice.total_incl_vat)),
+        vervaldatum: formatDate(invoice.due_date),
+        factuurtype: INVOICE_TYPE_LABELS[invoice.type],
+      };
+      const subject = org.invoice_reminder_email_subject
+        ? renderEmailTemplate(org.invoice_reminder_email_subject, vars)
+        : `Herinnering: factuur ${invoice.invoice_number} van ${org.brand_name}`;
+
+      await sendEmail({
+        to: invoice.client_email,
+        subject,
+        html: invoiceOverdueReminderEmail({
+          organizationName: org.brand_name,
+          invoiceNumber: invoice.invoice_number,
+          invoiceTypeLabel: INVOICE_TYPE_LABELS[invoice.type],
+          totalInclVat: Number(invoice.total_incl_vat),
+          dueDate: invoice.due_date,
+          privacyUrl: `${origin}${PRIVACYBELEID_URL}`,
+          customBodyText: org.invoice_reminder_email_body ? renderEmailTemplate(org.invoice_reminder_email_body, vars) : null,
+        }),
+      });
+      results.invoiceRemindersSent += 1;
+
+      await supabase.from("invoices").update({ reminder_sent_at: new Date().toISOString() }).eq("id", invoice.id);
+    }
+  } catch (invoiceReminderError) {
+    console.error("[cron] Factuur-herinneringen mislukt:", invoiceReminderError);
+  }
 
   return NextResponse.json({ ok: true, ...results });
 }

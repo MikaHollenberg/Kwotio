@@ -7,7 +7,7 @@ export default async function OffertesPage() {
     supabase
       .from("quotes")
       .select(
-        "id, title, status, total, currency, created_at, updated_at, event_date, client_id, price_per_person, aantal_personen, share_token",
+        "id, title, status, total, currency, created_at, updated_at, event_date, client_id, price_per_person, aantal_personen, share_token, decline_reason",
       )
       .order("updated_at", { ascending: false }),
     supabase.from("clients").select("id, name"),
