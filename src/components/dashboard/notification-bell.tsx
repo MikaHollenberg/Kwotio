@@ -3,9 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Bell, MessageCircle, ThumbsDown, CheckCircle2, Inbox } from "lucide-react";
+import { Bell, MessageCircle, ThumbsDown, CheckCircle2, Inbox, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getNotifications, markNotificationsSeen, type NotificationsData } from "@/app/dashboard/notifications-actions";
+import {
+  getNotifications,
+  markNotificationsSeen,
+  dismissNotification,
+  clearAllNotifications,
+  type NotificationsData,
+} from "@/app/dashboard/notifications-actions";
 import type { NotificationItem } from "@/lib/notifications/queries";
 
 const POLL_INTERVAL_MS = 45_000;
@@ -84,6 +90,18 @@ export function NotificationBell() {
     };
   }, [open]);
 
+  function handleDismiss(id: string) {
+    setData((prev) => (prev ? { ...prev, items: prev.items.filter((i) => i.id !== id) } : prev));
+    void dismissNotification(id);
+  }
+
+  function handleClearAll() {
+    const ids = data?.items.map((i) => i.id) ?? [];
+    if (ids.length === 0) return;
+    setData((prev) => (prev ? { ...prev, items: [] } : prev));
+    void clearAllNotifications(ids);
+  }
+
   function toggleOpen() {
     setOpen((v) => {
       const next = !v;
@@ -131,8 +149,17 @@ export function NotificationBell() {
             style={{ position: "fixed", top: panelPos.top, right: panelPos.right, width: PANEL_WIDTH }}
             className="z-50 max-w-[90vw] rounded-brand-sm border border-ink-200 bg-white shadow-lg"
           >
-            <div className="border-b border-ink-100 px-4 py-2.5">
+            <div className="flex items-center justify-between border-b border-ink-100 px-4 py-2.5">
               <p className="text-sm font-semibold text-ink-500">Meldingen</p>
+              {data && data.items.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearAll}
+                  className="text-xs font-medium text-ink-400 hover:text-ink-500 hover:underline"
+                >
+                  Alles wissen
+                </button>
+              )}
             </div>
 
             <div className="max-h-96 overflow-y-auto">
@@ -145,24 +172,29 @@ export function NotificationBell() {
                   const Icon = ICONS[item.type];
                   const isUnread = item.createdAt > seenAt;
                   return (
-                    <Link
-                      key={item.id}
-                      href={item.href}
-                      onClick={() => setOpen(false)}
-                      className="flex gap-3 border-b border-sand-200 px-4 py-3 last:border-b-0 hover:bg-sand-100"
-                    >
-                      <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-brand-sm", ICON_TONE[item.type])}>
-                        <Icon className="size-4" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-baseline gap-1.5">
-                          <span className={cn("text-sm text-ink-500", isUnread ? "font-bold" : "font-medium")}>{item.title}</span>
-                          {isUnread && <span className="size-1.5 shrink-0 rounded-full bg-orange-500" />}
+                    <div key={item.id} className="group flex items-stretch border-b border-sand-200 last:border-b-0 hover:bg-sand-100">
+                      <Link href={item.href} onClick={() => setOpen(false)} className="flex min-w-0 flex-1 gap-3 px-4 py-3">
+                        <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-brand-sm", ICON_TONE[item.type])}>
+                          <Icon className="size-4" />
                         </span>
-                        <span className="line-clamp-2 block text-xs text-ink-400">{item.detail}</span>
-                        <span className="text-[11px] text-ink-300">{timeAgo(item.createdAt)}</span>
-                      </span>
-                    </Link>
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-baseline gap-1.5">
+                            <span className={cn("text-sm text-ink-500", isUnread ? "font-bold" : "font-medium")}>{item.title}</span>
+                            {isUnread && <span className="size-1.5 shrink-0 rounded-full bg-orange-500" />}
+                          </span>
+                          <span className="line-clamp-2 block text-xs text-ink-400">{item.detail}</span>
+                          <span className="text-[11px] text-ink-300">{timeAgo(item.createdAt)}</span>
+                        </span>
+                      </Link>
+                      <button
+                        type="button"
+                        title="Melding wegklikken"
+                        onClick={() => handleDismiss(item.id)}
+                        className="flex w-8 shrink-0 items-center justify-center text-ink-300 hover:text-ink-500"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </div>
                   );
                 })
               )}

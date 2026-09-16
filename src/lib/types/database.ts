@@ -147,6 +147,7 @@ export interface Database {
           is_super_admin: boolean;
           onboarding_tour_seen_at: string | null;
           notifications_seen_at: string;
+          dismissed_notification_ids: string[];
           created_at: string;
           updated_at: string;
         };

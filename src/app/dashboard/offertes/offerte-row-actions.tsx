@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Eye, Pencil, Copy, Trash2, UserPlus, CalendarClock } from "lucide-react";
+import { Eye, Pencil, Copy, Trash2, UserPlus, CalendarClock, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { CreateInvoiceModal } from "@/components/invoicing/create-invoice-modal";
 import type { QuoteStatus } from "@/lib/types/database";
 import { OfferteEditLink } from "./offerte-edit-link";
 import { deleteQuote, duplicateQuote } from "./actions";
@@ -25,6 +26,7 @@ export function OfferteRowActions({
   const [duplicatePending, startDuplicateTransition] = useTransition();
   const [duplicateMenuOpen, setDuplicateMenuOpen] = useState(false);
   const duplicateMenuRef = useRef<HTMLDivElement>(null);
+  const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -72,6 +74,16 @@ export function OfferteRowActions({
       >
         <Pencil className="size-4" />
       </OfferteEditLink>
+      {status === "geaccepteerd" && (
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Factuur maken van deze offerte"
+          onClick={() => setInvoiceModalOpen(true)}
+        >
+          <Receipt className="size-4" />
+        </Button>
+      )}
       <div ref={duplicateMenuRef} className="relative">
         <Button
           variant="ghost"
@@ -139,6 +151,9 @@ export function OfferteRowActions({
         onConfirm={() => setError(null)}
         onCancel={() => setError(null)}
       />
+      {status === "geaccepteerd" && (
+        <CreateInvoiceModal quoteId={quoteId} open={invoiceModalOpen} onClose={() => setInvoiceModalOpen(false)} />
+      )}
     </div>
   );
 }
