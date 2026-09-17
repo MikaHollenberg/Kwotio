@@ -68,7 +68,7 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
           <h2 className="font-display text-2xl font-semibold text-ink-500">Offerte-aanvragen</h2>
         </div>
         <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-          <Inbox className="size-8 text-ink-300" />
+          <Inbox className="kw-bob size-8 text-ink-300" />
           <p className="text-sm text-ink-400">
             Nog geen aanvragen binnengekomen. Zet een template op &quot;publiek zichtbaar&quot; en deel je
             publieke offertepagina om aanvragen te ontvangen.
@@ -122,7 +122,7 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
 
       {visibleRequests.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-          <Inbox className="size-8 text-ink-300" />
+          <Inbox className="kw-bob size-8 text-ink-300" />
           <p className="text-sm text-ink-400">Geen aanvragen gevonden voor deze zoekopdracht/filter.</p>
         </Card>
       ) : (

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -59,27 +60,53 @@ export function Sidebar({
   const { startTour } = useTour();
   const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || canManageOrg);
 
+  const navRef = useRef<HTMLElement>(null);
+  const itemRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
+  const [pill, setPill] = useState<{ top: number; height: number } | null>(null);
+
+  const activeHref = visibleNavItems.find(({ href }) => (href === "/dashboard" ? pathname === href : pathname.startsWith(href)))?.href;
+
+  useEffect(() => {
+    const navEl = navRef.current;
+    const activeEl = activeHref ? itemRefs.current.get(activeHref) : null;
+    if (!navEl || !activeEl) {
+      setPill(null);
+      return;
+    }
+    setPill({ top: activeEl.offsetTop, height: activeEl.offsetHeight });
+  }, [activeHref]);
+
   return (
     <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-ink-200/40 bg-white/60 px-4 py-6 lg:flex">
       <Link href="/dashboard" className="mb-8 px-2">
         {logoUrl ? <Logo logoUrl={logoUrl} height={32} /> : <KwotioMark size={32} />}
       </Link>
 
-      <nav className="flex flex-1 flex-col gap-1">
+      <nav ref={navRef} className="relative flex flex-1 flex-col gap-1">
+        {/* Levende pil-achtergrond die meeglijdt naar het actieve item i.p.v.
+            dat de kleur instant verspringt (Kwotio Motion Concepts #6). */}
+        {pill && (
+          <div
+            aria-hidden
+            className="absolute inset-x-0 z-0 rounded-brand-sm bg-blue-500 transition-all duration-[400ms] ease-brand"
+            style={{ top: pill.top, height: pill.height }}
+          />
+        )}
         {visibleNavItems.map(({ href, label, icon: Icon }) => {
-          const isActive =
-            href === "/dashboard"
-              ? pathname === href
-              : pathname.startsWith(href);
+          const isActive = href === activeHref;
 
           return (
             <Link
               key={href}
               href={href}
               data-tour-id={href}
+              ref={(el) => {
+                if (el) itemRefs.current.set(href, el);
+                else itemRefs.current.delete(href);
+              }}
               className={cn(
-                "flex items-center gap-3 rounded-brand-sm px-3 py-2.5 text-sm font-medium text-ink-400 transition-colors duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500",
-                isActive && "bg-blue-500 text-white hover:bg-blue-500 hover:text-white",
+                "relative z-10 flex items-center gap-3 rounded-brand-sm px-3 py-2.5 text-sm font-medium text-ink-400 transition-colors duration-200 ease-brand hover:text-ink-500",
+                isActive ? "text-white hover:text-white" : "hover:bg-sand-200",
               )}
             >
               <Icon className="size-4.5" strokeWidth={2} />

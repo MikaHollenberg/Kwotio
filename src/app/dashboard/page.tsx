@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { FileText, TrendingUp, Clock, Trophy, Circle, CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import {
 } from "@/lib/stats/queries";
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { EventsCalendar } from "@/components/dashboard/events-calendar";
+import { CountUpValue } from "@/components/dashboard/count-up-value";
 import { formatDate, cn } from "@/lib/utils";
 
 export default async function DashboardOverviewPage() {
@@ -37,17 +39,31 @@ export default async function DashboardOverviewPage() {
   ]);
   const onboardingComplete = onboardingSteps.every((s) => s.done);
 
-  const kpiCards = [
-    { label: "Offertes deze maand", icon: FileText, value: String(kpis.quotesThisMonth) },
+  const kpiCards: { label: string; icon: typeof FileText; value: ReactNode }[] = [
+    {
+      label: "Offertes deze maand",
+      icon: FileText,
+      value: <CountUpValue value={kpis.quotesThisMonth} format={(n) => String(Math.round(n))} />,
+    },
     {
       label: "Conversieratio",
       icon: TrendingUp,
-      value: kpis.conversionRate === null ? "—" : `${Math.round(kpis.conversionRate * 100)}%`,
+      value:
+        kpis.conversionRate === null ? (
+          "—"
+        ) : (
+          <CountUpValue value={kpis.conversionRate * 100} format={(n) => `${Math.round(n)}%`} />
+        ),
     },
     {
       label: "Gem. doorlooptijd",
       icon: Clock,
-      value: kpis.avgDaysToAccept === null ? "—" : `${kpis.avgDaysToAccept.toFixed(1)}d`,
+      value:
+        kpis.avgDaysToAccept === null ? (
+          "—"
+        ) : (
+          <CountUpValue value={kpis.avgDaysToAccept} format={(n) => `${n.toFixed(1)}d`} />
+        ),
     },
     {
       label: "Populairste pakket deze maand",

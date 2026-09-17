@@ -22,6 +22,9 @@ import { QuotePreview } from "@/components/preview/quote-preview";
 import type { QuoteHeaderData } from "@/components/preview/quote-header";
 import { resolvePreferredLogo } from "@/lib/organization/logo";
 import { Button } from "@/components/ui/button";
+import { MorphButton } from "@/components/ui/morph-button";
+import { SegmentedToggle } from "@/components/ui/segmented-toggle";
+import { useToast } from "@/components/dashboard/toast-context";
 import { QuoteStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, TextInput } from "@/components/builder/field";
@@ -106,6 +109,8 @@ export function QuoteEditor({
   const [status, setStatusLocal] = useState(quote.status);
   const [language, setLanguage] = useState(quote.language === "en" ? "en" : "nl");
   const [sending, startSendTransition] = useTransition();
+  const [justSent, setJustSent] = useState(false);
+  const { showToast } = useToast();
   const [copied, setCopied] = useState(false);
   const [translating, startTranslateTransition] = useTransition();
   const [translateError, setTranslateError] = useState<string | null>(null);
@@ -241,20 +246,32 @@ export function QuoteEditor({
             <Languages className="size-4" />
             {translating ? "Bezig met vertalen…" : translateDone ? "Vertaald ✓" : "Vertaal naar Engels"}
           </Button>
-          <Button
+          <MorphButton
             variant="secondary"
             size="sm"
-            disabled={sending}
+            pending={sending}
+            done={justSent}
             data-faq-id="quote-send-button"
+            idleLabel={
+              <>
+                <Send className="size-4" /> {status === "concept" ? "Offerte aanmaken" : "Versturen"}
+              </>
+            }
+            doneLabel={status === "concept" ? "Aangemaakt" : "Verzonden"}
             onClick={() =>
               startSendTransition(async () => {
                 await sendQuote(quote.id);
                 setStatusLocal("verzonden");
+                setJustSent(true);
+                showToast(
+                  status === "concept"
+                    ? `Offerte "${title}" is aangemaakt`
+                    : `Offerte "${title}" is verzonden naar de klant`,
+                );
+                setTimeout(() => setJustSent(false), 1500);
               })
             }
-          >
-            <Send className="size-4" /> {sending ? "Bezig…" : status === "concept" ? "Offerte aanmaken" : "Versturen"}
-          </Button>
+          />
           <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
             <Trash2 className="size-4" />
           </Button>
@@ -423,38 +440,24 @@ export function QuoteEditor({
           />
         </FieldBox>
         <FieldBox label="Prijzen">
-          <div className="flex gap-1 -ml-1 -mt-0.5">
-            {(["incl_btw", "excl_btw"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setPriceDisplay(mode)}
-                className={cn(
-                  "rounded-brand-sm px-2 py-1 text-xs font-medium transition-colors duration-200 ease-brand",
-                  priceDisplay === mode ? "bg-blue-500 text-white" : "text-ink-400 hover:bg-sand-200",
-                )}
-              >
-                {mode === "incl_btw" ? "Incl. btw" : "Excl. btw"}
-              </button>
-            ))}
-          </div>
+          <SegmentedToggle
+            value={priceDisplay}
+            onChange={setPriceDisplay}
+            options={[
+              { value: "incl_btw", label: "Incl. btw" },
+              { value: "excl_btw", label: "Excl. btw" },
+            ]}
+          />
         </FieldBox>
         <FieldBox label="Weergave">
-          <div className="flex gap-1 -ml-1 -mt-0.5">
-            {([false, true] as const).map((perPerson) => (
-              <button
-                key={String(perPerson)}
-                type="button"
-                onClick={() => setPricePerPerson(perPerson)}
-                className={cn(
-                  "rounded-brand-sm px-2 py-1 text-xs font-medium transition-colors duration-200 ease-brand",
-                  pricePerPerson === perPerson ? "bg-blue-500 text-white" : "text-ink-400 hover:bg-sand-200",
-                )}
-              >
-                {perPerson ? "Per persoon" : "Totaal"}
-              </button>
-            ))}
-          </div>
+          <SegmentedToggle
+            value={pricePerPerson ? "per_persoon" : "totaal"}
+            onChange={(v) => setPricePerPerson(v === "per_persoon")}
+            options={[
+              { value: "totaal", label: "Totaal" },
+              { value: "per_persoon", label: "Per persoon" },
+            ]}
+          />
         </FieldBox>
         <FieldBox label="Korting (€)">
           <input

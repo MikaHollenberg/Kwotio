@@ -18,11 +18,11 @@ export function AnimatedPrice({
       <AnimatePresence mode="popLayout" initial={false}>
         <motion.span
           key={amount}
-          initial={{ y: -10, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 10, opacity: 0 }}
-          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-          style={{ gridArea: "1 / 1" }}
+          initial={{ y: -10, opacity: 0, scale: 0.92 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 10, opacity: 0, scale: 0.92 }}
+          transition={{ duration: 0.32, ease: [0.34, 1.56, 0.64, 1] }}
+          style={{ gridArea: "1 / 1", display: "inline-block" }}
         >
           {formatCurrency(amount, currency)}
         </motion.span>

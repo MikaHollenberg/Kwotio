@@ -47,17 +47,26 @@ function SortableBlockCard({
   onSaveAsTemplate: () => void;
   organizationId: string;
 }) {
+  // Eigen ease-brand-timing i.p.v. dnd-kit's standaard transitie, zodat het
+  // "landen" van de andere blokken bij een herschikking hetzelfde vloeiende
+  // gevoel heeft als de rest van de app (Kwotio Motion Concepts #9).
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: block.id,
+    transition: { duration: 350, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
   });
+  const baseTransform = CSS.Transform.toString(transform);
 
   return (
     <div
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{
+        transform: isDragging && baseTransform ? `${baseTransform} scale(1.02) rotate(-0.6deg)` : baseTransform,
+        transition,
+        boxShadow: isDragging ? "0 20px 40px -16px rgba(30,46,56,.35)" : undefined,
+      }}
       className={cn(
-        "rounded-brand-lg border border-ink-200/60 bg-white",
-        isDragging && "z-10 shadow-lg",
+        "rounded-brand-lg border border-ink-200/60 bg-white transition-shadow duration-200 ease-brand",
+        isDragging && "z-10",
       )}
     >
       <div className="flex items-center gap-2 px-3 py-3">

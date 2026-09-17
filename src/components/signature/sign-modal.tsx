@@ -155,7 +155,7 @@ export function SignModal({
               </div>
             )}
 
-            <SignaturePad ref={sigRef} />
+            <SignaturePad ref={sigRef} flourish={pending} />
 
             <label className="flex items-start gap-2.5 rounded-brand-sm border border-yellow-300 bg-yellow-50 px-3.5 py-3 text-xs text-ink-500">
               <input

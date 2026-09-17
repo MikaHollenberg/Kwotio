@@ -139,17 +139,29 @@ function FaqWalkthroughOverlay({
   return createPortal(
     <div className="fixed inset-0 z-50">
       {targetRect ? (
-        <div
-          aria-hidden
-          className="pointer-events-none fixed rounded-brand-sm transition-all duration-300 ease-brand"
-          style={{
-            top: targetRect.top - 6,
-            left: targetRect.left - 6,
-            width: targetRect.width + 12,
-            height: targetRect.height + 12,
-            boxShadow: "0 0 0 3px #14b8a6, 0 0 0 9999px rgba(15, 23, 32, 0.65)",
-          }}
-        />
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none fixed rounded-brand-sm transition-all duration-300 ease-brand"
+            style={{
+              top: targetRect.top - 6,
+              left: targetRect.left - 6,
+              width: targetRect.width + 12,
+              height: targetRect.height + 12,
+              boxShadow: "0 0 0 3px #14b8a6, 0 0 0 9999px rgba(15, 23, 32, 0.65)",
+            }}
+          />
+          <div
+            aria-hidden
+            className="kw-ring-pulse pointer-events-none fixed rounded-brand-sm border-2 border-teal-400 transition-all duration-300 ease-brand"
+            style={{
+              top: targetRect.top - 6,
+              left: targetRect.left - 6,
+              width: targetRect.width + 12,
+              height: targetRect.height + 12,
+            }}
+          />
+        </>
       ) : (
         <div aria-hidden className="pointer-events-none fixed inset-0 bg-ink-500/60" />
       )}

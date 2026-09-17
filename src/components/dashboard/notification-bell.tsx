@@ -45,14 +45,26 @@ export function NotificationBell() {
   const [data, setData] = useState<NotificationsData | null>(null);
   const [open, setOpen] = useState(false);
   const [panelPos, setPanelPos] = useState({ top: 0, right: 0 });
+  const [justArrived, setJustArrived] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const lastTopIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
     function refresh() {
       getNotifications().then((next) => {
-        if (!cancelled) setData(next);
+        if (cancelled) return;
+        const newestId = next.items[0]?.id ?? null;
+        // Alleen "rinkelen" als er al eerder een stand bekend was én de
+        // nieuwste melding daadwerkelijk gewijzigd is -- nooit bij de
+        // allereerste load (anders schudt de bel bij elke pagina-bezoek).
+        if (lastTopIdRef.current !== undefined && newestId !== null && newestId !== lastTopIdRef.current) {
+          setJustArrived(true);
+          setTimeout(() => setJustArrived(false), 1000);
+        }
+        lastTopIdRef.current = newestId;
+        setData(next);
       });
     }
     refresh();
@@ -134,7 +146,10 @@ export function NotificationBell() {
           open && "bg-sand-200 text-ink-500",
         )}
       >
-        <Bell className="size-4" />
+        {justArrived && (
+          <span aria-hidden className="kw-ring-pulse absolute inset-0 rounded-full border-2 border-orange-500" />
+        )}
+        <Bell className={cn("size-4", justArrived && "kw-shake")} />
         {unreadCount > 0 && (
           <span className="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold leading-none text-white">
             {unreadCount > 9 ? "9+" : unreadCount}

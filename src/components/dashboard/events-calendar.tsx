@@ -82,9 +82,9 @@ export function EventsCalendar({ events }: { events: CalendarEvent[] }) {
             <div
               key={i}
               className={cn(
-                "flex min-h-14 flex-col items-center gap-0.5 rounded-brand-sm border border-transparent px-1 py-1.5 text-xs",
+                "flex min-h-14 flex-col items-center gap-0.5 rounded-brand-sm border border-transparent px-1 py-1.5 text-xs transition-all duration-200 ease-brand",
                 isToday && "border-teal-300 bg-teal-50",
-                dayEvents.length > 0 && !isToday && "bg-orange-50",
+                dayEvents.length > 0 && !isToday && "bg-orange-50 hover:shadow-[0_0_0_3px_rgba(204,122,62,0.25)]",
               )}
             >
               <span className={cn("font-medium", isToday ? "text-teal-700" : "text-ink-400")}>{date.getDate()}</span>

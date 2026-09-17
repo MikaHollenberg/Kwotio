@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { Send, CircleCheck, Link2, FileStack, X } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -42,6 +42,13 @@ export function InvoiceActionsBar({
   const [note, setNote] = useState("");
   const [paidError, setPaidError] = useState<string | null>(null);
   const [paidPending, startPaidTransition] = useTransition();
+  const [justPaid, setJustPaid] = useState(false);
+  // Munten-burst als eigen beloningsmomentje bij "betaald" (Kwotio Motion
+  // Concepts #13) -- de willekeurige hoek/afstand per deeltje wordt bewust
+  // in de event-handler zelf bepaald (handleMarkPaid), niet tijdens render
+  // (useMemo/render moeten puur blijven -- Math.random() daar zou bij elke
+  // re-render een andere burst opleveren).
+  const [coinParticles, setCoinParticles] = useState<{ id: number; dx: number; dy: number }[]>([]);
 
   const [mollieUrl, setMollieUrl] = useState<string | null>(null);
   const [mollieError, setMollieError] = useState<string | null>(null);
@@ -88,6 +95,15 @@ export function InvoiceActionsBar({
       try {
         await markInvoicePaid(invoiceId, { paidDate, note, method });
         setMarkPaidOpen(false);
+        setCoinParticles(
+          Array.from({ length: 12 }, (_, i) => {
+            const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.4;
+            const dist = 70 + Math.random() * 60;
+            return { id: i, dx: Math.cos(angle) * dist, dy: Math.sin(angle) * dist - 20 };
+          }),
+        );
+        setJustPaid(true);
+        setTimeout(() => setJustPaid(false), 1000);
       } catch (err) {
         setPaidError(err instanceof Error ? err.message : "Opslaan mislukt.");
       }
@@ -105,11 +121,29 @@ export function InvoiceActionsBar({
     type !== "creditnota" && status !== "concept" && status !== "geannuleerd" && !hasCreditNote;
 
   const canMarkPaid = status === "concept" || status === "open" || status === "deels_betaald" || status === "vervallen";
-  if (status === "betaald" && !showSlotfactuurButton && !showCreditNoteButton) return null;
+
+  const coinBurst =
+    justPaid &&
+    typeof document !== "undefined" &&
+    createPortal(
+      <div aria-hidden className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
+        {coinParticles.map((p) => (
+          <span
+            key={p.id}
+            className="kw-coin-burst absolute size-3 rounded-full bg-yellow-500"
+            style={{ "--kw-dx": `${p.dx}px`, "--kw-dy": `${p.dy}px` } as CSSProperties}
+          />
+        ))}
+      </div>,
+      document.body,
+    );
+
+  if (status === "betaald" && !showSlotfactuurButton && !showCreditNoteButton) return coinBurst || null;
   if (status === "geannuleerd") return null;
 
   return (
     <div className="flex flex-col items-end gap-1">
+      {coinBurst}
       <div className="flex items-center gap-2">
         {status === "concept" && (
           <Button type="button" variant="primary" size="sm" onClick={handleSend} disabled={sendPending}>

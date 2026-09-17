@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ImageUploadField } from "@/components/builder/image-upload-field";
@@ -66,6 +67,7 @@ export function OrganizationSettingsCard({
   const [slugSaved, setSlugSaved] = useState(false);
   const [slugError, setSlugError] = useState<string | null>(null);
   const [slugPending, startSlugTransition] = useTransition();
+  const [showQrPreview, setShowQrPreview] = useState(false);
   const [welcomeMessage, setWelcomeMessage] = useState(initialWelcomeMessage);
   const [welcomeSaved, setWelcomeSaved] = useState(false);
   const [embedCopied, setEmbedCopied] = useState(false);
@@ -320,12 +322,37 @@ export function OrganizationSettingsCard({
             </Button>
             {slugSaved && !slugPending && <span className="text-sm text-emerald-600">Opgeslagen.</span>}
             {publicSlug && (
+              <button
+                type="button"
+                onClick={() => setShowQrPreview((v) => !v)}
+                className="inline-flex h-9 items-center rounded-brand-sm border border-ink-200 px-3 text-sm font-medium text-ink-500 hover:bg-sand-100"
+              >
+                {showQrPreview ? "Verberg QR-code" : "Bekijk QR-code"}
+              </button>
+            )}
+            {publicSlug && (
               <a
                 href={`/api/public-page-qr?slug=${encodeURIComponent(publicSlug)}`}
                 className="inline-flex h-9 items-center rounded-brand-sm border border-ink-200 px-3 text-sm font-medium text-ink-500 hover:bg-sand-100"
               >
                 QR-code downloaden
               </a>
+            )}
+            {publicSlug && showQrPreview && (
+              // "Materialiseert" bij openen i.p.v. meteen kaal te verschijnen
+              // (Kwotio Motion Concepts #16) -- key=publicSlug zorgt dat de
+              // animatie opnieuw speelt als de link ondertussen gewijzigd is.
+              <div className="w-full basis-full">
+                <Image
+                  key={publicSlug}
+                  src={`/api/public-page-qr?slug=${encodeURIComponent(publicSlug)}`}
+                  alt="QR-code naar je publieke offertepagina"
+                  width={160}
+                  height={160}
+                  unoptimized
+                  className="kw-materialize rounded-brand-sm border border-ink-200 bg-white p-2"
+                />
+              </div>
             )}
             {publicSlug && (
               <Button

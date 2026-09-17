@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { Check, FileText, Star, Image as ImageIcon } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Check, FileText, Star, Image as ImageIcon, X } from "lucide-react";
 import type { BlockDraft } from "@/lib/blocks/types";
 import type {
   CoverBlockContent,
@@ -218,29 +219,7 @@ export function BlockPreview({
 
     case "gallery": {
       const c = activeContent as GalleryBlockContent;
-      return (
-        <div className="px-6 py-10">
-          <SectionHeading>{c.heading}</SectionHeading>
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {c.images.map((img) =>
-              img.url ? (
-                <div key={img.id} className="relative aspect-square overflow-hidden rounded-brand-sm bg-sand-200">
-                  <Image
-                    src={img.url}
-                    alt={img.caption}
-                    fill
-                    sizes="(min-width: 640px) 33vw, 50vw"
-                    className="object-cover"
-                  />
-                </div>
-              ) : null,
-            )}
-            {c.images.length === 0 && (
-              <p className="col-span-full text-sm text-ink-300">{t("no_photos")}</p>
-            )}
-          </div>
-        </div>
-      );
+      return <GalleryBlockPreview heading={c.heading} images={c.images} noPhotosLabel={t("no_photos")} />;
     }
 
     case "packages": {
@@ -299,6 +278,71 @@ export function BlockPreview({
  * andere bloktypes, eigen hooks nodig heeft (uitklap-status + meting van
  * afgekapte omschrijvingen op mobiel) — hooks mogen niet voorwaardelijk in
  * een switch-case binnen BlockPreview staan. */
+/** Fotogalerij met lightbox: een klik op een foto zoomt 'm soepel uit vanaf
+ * de plek van de thumbnail zelf (shared layoutId, geen "uit het niets"-
+ * fade) i.p.v. een aparte lightbox-library. */
+function GalleryBlockPreview({
+  heading,
+  images,
+  noPhotosLabel,
+}: {
+  heading: string;
+  images: GalleryBlockContent["images"];
+  noPhotosLabel: string;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const openImg = images.find((img) => img.id === openId) ?? null;
+
+  return (
+    <div className="px-6 py-10">
+      <SectionHeading>{heading}</SectionHeading>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {images.map((img) =>
+          img.url ? (
+            <motion.button
+              key={img.id}
+              type="button"
+              layoutId={`gallery-${img.id}`}
+              onClick={() => setOpenId(img.id)}
+              className="relative aspect-square cursor-zoom-in overflow-hidden rounded-brand-sm bg-sand-200"
+            >
+              <Image src={img.url} alt={img.caption} fill sizes="(min-width: 640px) 33vw, 50vw" className="object-cover" />
+            </motion.button>
+          ) : null,
+        )}
+        {images.length === 0 && <p className="col-span-full text-sm text-ink-300">{noPhotosLabel}</p>}
+      </div>
+
+      <AnimatePresence>
+        {openImg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-ink-500/85 p-6"
+            onClick={() => setOpenId(null)}
+          >
+            <motion.div
+              layoutId={`gallery-${openImg.id}`}
+              className="relative h-[70vh] w-[min(90vw,700px)] cursor-auto overflow-hidden rounded-brand-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Image src={openImg.url} alt={openImg.caption} fill sizes="90vw" className="object-contain" />
+            </motion.div>
+            <button
+              type="button"
+              onClick={() => setOpenId(null)}
+              className="fixed right-5 top-5 flex size-10 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+            >
+              <X className="size-5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function PackagesBlockPreview({
   block,
   content: c,
@@ -408,7 +452,7 @@ function PackagesBlockPreview({
                     {pkg.name}
                   </span>
                   {pkg.isDefaultSelected && (
-                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-800">
+                    <span className="kw-shimmer flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-800">
                       <Star className="size-2.5 fill-yellow-600 text-yellow-600" /> {t("most_chosen")}
                     </span>
                   )}
@@ -446,11 +490,12 @@ function PackagesBlockPreview({
               {!readOnly && (
                 <span
                   className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
+                    "flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300 ease-brand",
                     isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-ink-200",
                   )}
+                  style={isSelected ? { boxShadow: `0 0 0 3px ${accentColor}33` } : undefined}
                 >
-                  {isSelected && <Check className="size-3" />}
+                  {isSelected && <Check key={pkg.id} className="size-3 kw-pop-in" />}
                 </span>
               )}
             </>
@@ -495,11 +540,12 @@ function PackagesBlockPreview({
               const isSelected = selectedIds.includes(pkg.id);
               const disabled = maxSelections > 1 && !isSelected && atMax;
               const cardClassName = cn(
-                "flex flex-col overflow-hidden rounded-brand-lg border text-left transition-colors duration-200 ease-brand",
+                "flex flex-col overflow-hidden rounded-brand-lg border text-left transition-all duration-300 ease-brand",
                 isSelected ? "border-2 border-orange-500" : "border-ink-100",
                 !readOnly && !isSelected && "hover:border-ink-200",
                 !readOnly && disabled && "opacity-40 hover:border-ink-100",
               );
+              const cardStyle = isSelected ? { boxShadow: `0 0 0 3px ${accentColor}26` } : undefined;
               const cardContent = (
                 <>
                   <div className="relative aspect-square shrink-0 bg-sand-200">
@@ -515,7 +561,7 @@ function PackagesBlockPreview({
                     <div className="flex flex-wrap items-center gap-1.5">
                       <span className="font-display text-sm font-semibold text-ink-500">{pkg.name}</span>
                       {pkg.isDefaultSelected && (
-                        <span className="flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-800">
+                        <span className="kw-shimmer flex shrink-0 items-center gap-1 rounded-full bg-yellow-100 px-1.5 py-0.5 text-[10px] font-semibold text-yellow-800">
                           <Star className="size-2.5 fill-yellow-600 text-yellow-600" /> {t("most_chosen")}
                         </span>
                       )}
@@ -530,7 +576,7 @@ function PackagesBlockPreview({
 
               if (readOnly) {
                 return (
-                  <div key={pkg.id} className={cardClassName}>
+                  <div key={pkg.id} className={cardClassName} style={cardStyle}>
                     {cardContent}
                   </div>
                 );
@@ -558,6 +604,7 @@ function PackagesBlockPreview({
                     });
                   }}
                   className={cardClassName}
+                  style={cardStyle}
                 >
                   {cardContent}
                 </button>

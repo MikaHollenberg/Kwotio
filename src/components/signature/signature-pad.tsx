@@ -3,6 +3,7 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { Eraser } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type SignaturePadHandle = {
   isEmpty: () => boolean;
@@ -10,7 +11,10 @@ export type SignaturePadHandle = {
   clear: () => void;
 };
 
-export const SignaturePad = forwardRef<SignaturePadHandle>(function SignaturePad(_props, ref) {
+export const SignaturePad = forwardRef<SignaturePadHandle, { flourish?: boolean }>(function SignaturePad(
+  { flourish = false },
+  ref,
+) {
   const sigRef = useRef<SignatureCanvas>(null);
   const [isEmpty, setIsEmpty] = useState(true);
 
@@ -25,7 +29,12 @@ export const SignaturePad = forwardRef<SignaturePadHandle>(function SignaturePad
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative overflow-hidden rounded-brand-sm border-2 border-dashed border-ink-200 bg-sand-50">
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-brand-sm border-2 border-dashed border-ink-200 bg-sand-50 transition-shadow duration-300 ease-brand",
+          flourish && "kw-shimmer border-teal-300 shadow-[0_0_0_3px_rgba(41,145,180,0.25)]",
+        )}
+      >
         <SignatureCanvas
           ref={sigRef}
           penColor="#1E2E38"

@@ -6,6 +6,7 @@ import { Topbar } from "@/components/dashboard/topbar";
 import { ProductTour } from "@/components/dashboard/product-tour";
 import { useTour } from "@/components/dashboard/tour-context";
 import { FaqWalkthroughProvider } from "@/components/dashboard/faq-walkthrough";
+import { ToastProvider } from "@/components/dashboard/toast-context";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
 
 const TITLES: Record<string, string> = {
@@ -79,9 +80,11 @@ export function DashboardShell({
         canManageOrg={canManageOrg}
         newRequestCount={newRequestCount}
       />
-      <FaqWalkthroughProvider>
-        <main className="min-w-0 flex-1 px-6 py-8 lg:px-8">{children}</main>
-      </FaqWalkthroughProvider>
+      <ToastProvider>
+        <FaqWalkthroughProvider>
+          <main className="min-w-0 flex-1 px-6 py-8 lg:px-8">{children}</main>
+        </FaqWalkthroughProvider>
+      </ToastProvider>
       <footer className="px-6 py-4 text-center text-xs text-ink-300 lg:px-8">
         {termsUrl && (
           <>
