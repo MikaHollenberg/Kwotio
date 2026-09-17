@@ -293,7 +293,8 @@ function PublicQuoteViewInner({
                     style={{ backgroundColor: accentColor }}
                     className="hover:opacity-90 active:opacity-90"
                   >
-                    {t("accept_and_sign")}
+                    <span className="sm:hidden">{t("accept_and_sign_short")}</span>
+                    <span className="hidden sm:inline">{t("accept_and_sign")}</span>
                   </Button>
                 </>
               )}

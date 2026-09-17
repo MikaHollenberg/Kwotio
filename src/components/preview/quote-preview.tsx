@@ -23,6 +23,7 @@ import { SunWatermark } from "@/components/brand/sun-watermark";
 import { Button } from "@/components/ui/button";
 import type { PriceDisplayMode } from "@/lib/types/database";
 import { LanguageProvider, useTranslation } from "@/lib/i18n/language-context";
+import { sanitizeBlockHtml } from "@/lib/blocks/sanitize-html";
 
 export { PRICE_DISPLAY_LABELS };
 
@@ -209,7 +210,7 @@ export function BlockPreview({
           <SectionHeading>{c.heading}</SectionHeading>
           <div
             className="prose prose-sm mt-3 max-w-none text-ink-400"
-            dangerouslySetInnerHTML={{ __html: c.html }}
+            dangerouslySetInnerHTML={{ __html: sanitizeBlockHtml(c.html) }}
           />
         </div>
       );

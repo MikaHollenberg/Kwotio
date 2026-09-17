@@ -13,10 +13,10 @@ export function quoteReceivedClientEmail(input: {
     organizationName: input.organizationName,
     preheader: `Je hebt een nieuwe offerte ontvangen: ${input.quoteTitle}`,
     bodyHtml: `
-      <h1 style="font-size:20px;margin:0 0 12px;">Hoi ${input.clientName}! 🌴</h1>
+      <h1 style="font-size:20px;margin:0 0 12px;">Hoi ${textToSafeHtml(input.clientName)}! 🌴</h1>
       <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
-        ${input.organizationName} heeft een offerte voor je klaargezet:
-        <strong>${input.quoteTitle}</strong>. Bekijk 'm hieronder, kies je pakket
+        ${textToSafeHtml(input.organizationName)} heeft een offerte voor je klaargezet:
+        <strong>${textToSafeHtml(input.quoteTitle)}</strong>. Bekijk 'm hieronder, kies je pakket
         en laat gerust een reactie achter als je nog vragen hebt.
       </p>
       ${emailButton("Bekijk je offerte", input.shareUrl)}
@@ -38,8 +38,8 @@ export function quoteOpenedAgencyEmail(input: {
     bodyHtml: `
       <h1 style="font-size:20px;margin:0 0 12px;">Offerte geopend 👀</h1>
       <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
-        <strong>${input.clientName}</strong> heeft zojuist voor het eerst
-        <strong>${input.quoteTitle}</strong> geopend.
+        <strong>${textToSafeHtml(input.clientName)}</strong> heeft zojuist voor het eerst
+        <strong>${textToSafeHtml(input.quoteTitle)}</strong> geopend.
       </p>
       ${emailButton("Bekijk in dashboard", input.dashboardUrl)}
     `,
@@ -60,7 +60,7 @@ export function quoteDeclinedAgencyEmail(input: {
     bodyHtml: `
       <h1 style="font-size:20px;margin:0 0 12px;">Offerte afgewezen</h1>
       <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
-        <strong>${input.clientName}</strong> heeft <strong>${input.quoteTitle}</strong> zojuist
+        <strong>${textToSafeHtml(input.clientName)}</strong> heeft <strong>${textToSafeHtml(input.quoteTitle)}</strong> zojuist
         afgewezen.
       </p>
       ${
@@ -90,8 +90,8 @@ export function quoteRequestReceivedEmail(input: {
     bodyHtml: `
       <h1 style="font-size:20px;margin:0 0 12px;">Nieuwe offerte-aanvraag 📥</h1>
       <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
-        <strong>${input.customerName}</strong> heeft via jullie publieke offertepagina een offerte
-        aangevraagd${input.templateName ? ` voor <strong>${input.templateName}</strong>` : ""}.
+        <strong>${textToSafeHtml(input.customerName)}</strong> heeft via jullie publieke offertepagina een offerte
+        aangevraagd${input.templateName ? ` voor <strong>${textToSafeHtml(input.templateName)}</strong>` : ""}.
       </p>
       ${emailButton("Bekijk aanvraag", input.dashboardUrl)}
     `,
@@ -111,11 +111,11 @@ export function newCommentAgencyEmail(input: {
     bodyHtml: `
       <h1 style="font-size:20px;margin:0 0 12px;">Nieuwe reactie 💬</h1>
       <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 12px;">
-        <strong>${input.authorName}</strong> heeft een reactie achtergelaten op
-        <strong>${input.quoteTitle}</strong>:
+        <strong>${textToSafeHtml(input.authorName)}</strong> heeft een reactie achtergelaten op
+        <strong>${textToSafeHtml(input.quoteTitle)}</strong>:
       </p>
       <p style="font-size:14px;line-height:1.6;color:#1E2E38;background:#FBF6EC;border-radius:12px;padding:12px 16px;margin:0 0 20px;">
-        "${input.body}"
+        "${textToSafeHtml(input.body)}"
       </p>
       ${emailButton("Beantwoorden", input.dashboardUrl)}
     `,
@@ -229,7 +229,7 @@ export function expiringSoonAgencyEmail(input: {
     bodyHtml: `
       <h1 style="font-size:20px;margin:0 0 12px;">Offerte verloopt bijna ⏳</h1>
       <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
-        <strong>${input.quoteTitle}</strong> voor ${input.clientName}
+        <strong>${textToSafeHtml(input.quoteTitle)}</strong> voor ${textToSafeHtml(input.clientName)}
         (${formatCurrency(input.total, input.currency)}) is geldig tot ${input.validUntil}
         en is nog niet geaccepteerd. Misschien tijd voor een belletje?
       </p>

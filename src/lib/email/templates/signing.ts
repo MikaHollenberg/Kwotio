@@ -1,4 +1,4 @@
-import { emailShell, emailButton } from "./base";
+import { emailShell, emailButton, textToSafeHtml } from "./base";
 import { formatCurrency } from "@/lib/utils";
 
 export function signingConfirmationClientEmail(input: {
@@ -15,15 +15,15 @@ export function signingConfirmationClientEmail(input: {
     organizationName: input.organizationName,
     preheader: `Je hebt de offerte "${input.quoteTitle}" ondertekend.`,
     bodyHtml: `
-      <h1 style="font-size:20px;margin:0 0 12px;">Bedankt, ${input.signerName}! 🎉</h1>
+      <h1 style="font-size:20px;margin:0 0 12px;">Bedankt, ${textToSafeHtml(input.signerName)}! 🎉</h1>
       <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
-        Je hebt de offerte <strong>${input.quoteTitle}</strong> succesvol ondertekend voor
+        Je hebt de offerte <strong>${textToSafeHtml(input.quoteTitle)}</strong> succesvol ondertekend voor
         een totaalbedrag van <strong>${formatCurrency(input.total, input.currency)}</strong>.
         Het ondertekeningscertificaat vind je als bijlage bij deze e-mail.
       </p>
       ${emailButton("Bekijk je offerte", input.shareUrl)}
       <p style="font-size:13px;color:#7C8F97;margin-top:24px;">
-        ${input.organizationName} neemt binnenkort contact met je op om alles verder af te stemmen.
+        ${textToSafeHtml(input.organizationName)} neemt binnenkort contact met je op om alles verder af te stemmen.
       </p>
     `,
     termsUrl: input.termsUrl,
@@ -45,8 +45,8 @@ export function quoteEditedAfterSigningClientEmail(input: {
     bodyHtml: `
       <h1 style="font-size:20px;margin:0 0 12px;">Update over je offerte</h1>
       <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
-        Hoi ${input.signerName}, ${input.organizationName} heeft de door jou geaccepteerde offerte
-        <strong>${input.quoteTitle}</strong> zojuist aangepast. Bekijk hieronder de actuele versie.
+        Hoi ${textToSafeHtml(input.signerName)}, ${textToSafeHtml(input.organizationName)} heeft de door jou geaccepteerde offerte
+        <strong>${textToSafeHtml(input.quoteTitle)}</strong> zojuist aangepast. Bekijk hieronder de actuele versie.
       </p>
       ${emailButton("Bekijk de offerte", input.shareUrl)}
     `,
@@ -70,8 +70,8 @@ export function signingNotificationAgencyEmail(input: {
     bodyHtml: `
       <h1 style="font-size:20px;margin:0 0 12px;">Offerte ondertekend ✍️</h1>
       <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
-        <strong>${input.signerName}</strong> (${input.signerEmail}) heeft zojuist
-        <strong>${input.quoteTitle}</strong> ondertekend voor een totaalbedrag van
+        <strong>${textToSafeHtml(input.signerName)}</strong> (${textToSafeHtml(input.signerEmail)}) heeft zojuist
+        <strong>${textToSafeHtml(input.quoteTitle)}</strong> ondertekend voor een totaalbedrag van
         <strong>${formatCurrency(input.total, input.currency)}</strong>.
       </p>
       ${emailButton("Bekijk in dashboard", input.dashboardUrl)}

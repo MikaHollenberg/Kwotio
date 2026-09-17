@@ -44,6 +44,10 @@ const dict = {
   show_less: { nl: "Toon minder", en: "Show less" },
 
   accept_and_sign: { nl: "Akkoord & ondertekenen", en: "Approve & sign" },
+  /** Korte variant voor de vaste onderbalk op smalle schermen (<375px) --
+   * "Akkoord & ondertekenen" past daar samen met de 3 andere knoppen
+   * (PDF/afwijzen/wijziging aanvragen) niet meer op één regel en brak af. */
+  accept_and_sign_short: { nl: "Tekenen", en: "Sign" },
   sign_coming_note: {
     nl: "Digitaal ondertekenen komt er zeer binnenkort aan — laat gerust alvast een reactie achter.",
     en: "Digital signing is coming very soon — feel free to leave a comment in the meantime.",

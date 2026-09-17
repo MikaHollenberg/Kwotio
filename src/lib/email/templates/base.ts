@@ -9,8 +9,9 @@ export function emailShell(opts: {
   termsUrl?: string | null;
   privacyUrl?: string;
 }) {
+  const safeOrgName = textToSafeHtml(opts.organizationName);
   const termsSentence = opts.termsUrl
-    ? `Op deze offerte zijn de <a href="${opts.termsUrl}" style="color:#46626E;">algemene voorwaarden</a> van ${opts.organizationName} van toepassing.`
+    ? `Op deze offerte zijn de <a href="${opts.termsUrl}" style="color:#46626E;">algemene voorwaarden</a> van ${safeOrgName} van toepassing.`
     : "";
   const privacyLine = opts.privacyUrl
     ? `<a href="${opts.privacyUrl}" style="color:#46626E;">Privacybeleid</a>`
@@ -21,14 +22,14 @@ export function emailShell(opts: {
   return `<!doctype html>
 <html lang="nl">
   <body style="margin:0;padding:0;background-color:#FBF6EC;font-family:Arial,Helvetica,sans-serif;color:#1E2E38;">
-    <span style="display:none;max-height:0;overflow:hidden;">${opts.preheader}</span>
+    <span style="display:none;max-height:0;overflow:hidden;">${textToSafeHtml(opts.preheader)}</span>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FBF6EC;padding:32px 16px;">
       <tr>
         <td align="center">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:20px;overflow:hidden;">
             <tr>
               <td style="background-color:#1E2E38;padding:24px 32px;">
-                <span style="color:#ffffff;font-size:16px;font-weight:bold;">${opts.organizationName}</span>
+                <span style="color:#ffffff;font-size:16px;font-weight:bold;">${safeOrgName}</span>
               </td>
             </tr>
             <tr>
@@ -38,7 +39,7 @@ export function emailShell(opts: {
             </tr>
             <tr>
               <td style="padding:20px 32px;background-color:#F3EBDA;font-size:12px;color:#46626E;">
-                ${opts.organizationName} · feestaanhetwater.nl${legalLine}
+                ${safeOrgName} · feestaanhetwater.nl${legalLine}
               </td>
             </tr>
           </table>
