@@ -113,6 +113,18 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/dashboard/facturen/**": ["./src/lib/invoice-pdf/fonts/**/*"],
   },
+  experimental: {
+    // Turbopack's persistente filesystem-cache voor `next dev` (standaard
+    // aan sinds Next 16.1) schrijft een eigen databasebestand naar
+    // .next/dev/cache/turbopack -- op dit externe/exFAT-volume corrumpeert
+    // dat bestand herhaaldelijk ("Failed to open database... invalid digit
+    // found in string"), soms al bij de eerstvolgende herstart. `next dev`
+    // draait nooit op Vercel (alleen lokaal), dus dit uitzetten raakt de
+    // productie-build op Vercel niet -- lokaal alleen een iets kouder
+    // opstartmoment per herstart, in ruil voor het definitief stoppen van
+    // deze steeds terugkerende cache-corruptie.
+    turbopackFileSystemCacheForDev: false,
+  },
   images: {
     // De on-the-fly sharp-optimalisatiepijplijn faalt stil in lokale dev op
     // dit externe/exFAT-volume (gecorrumpeerde cache-writes) — zie
