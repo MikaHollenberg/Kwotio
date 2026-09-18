@@ -43,7 +43,7 @@ export default async function DashboardOverviewPage() {
     {
       label: "Offertes deze maand",
       icon: FileText,
-      value: <CountUpValue value={kpis.quotesThisMonth} format={(n) => String(Math.round(n))} />,
+      value: <CountUpValue value={kpis.quotesThisMonth} format="int" />,
     },
     {
       label: "Conversieratio",
@@ -52,7 +52,7 @@ export default async function DashboardOverviewPage() {
         kpis.conversionRate === null ? (
           "—"
         ) : (
-          <CountUpValue value={kpis.conversionRate * 100} format={(n) => `${Math.round(n)}%`} />
+          <CountUpValue value={kpis.conversionRate * 100} format="percent" />
         ),
     },
     {
@@ -62,7 +62,7 @@ export default async function DashboardOverviewPage() {
         kpis.avgDaysToAccept === null ? (
           "—"
         ) : (
-          <CountUpValue value={kpis.avgDaysToAccept} format={(n) => `${n.toFixed(1)}d`} />
+          <CountUpValue value={kpis.avgDaysToAccept} format="decimal1" />
         ),
     },
     {
