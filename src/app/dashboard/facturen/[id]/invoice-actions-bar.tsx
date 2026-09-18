@@ -122,9 +122,13 @@ export function InvoiceActionsBar({
 
   const canMarkPaid = status === "concept" || status === "open" || status === "deels_betaald" || status === "vervallen";
 
+  // Geen `typeof document`-check nodig: `justPaid` wordt uitsluitend
+  // client-side gezet (in handleMarkPaid, na een klik), dus zodra deze
+  // portal ooit gerenderd wordt bestaat `document` altijd al -- eerste
+  // render (server + client-hydratie) heeft `justPaid` sowieso nog op
+  // `false` staan, dus geen hydration-mismatch hier.
   const coinBurst =
     justPaid &&
-    typeof document !== "undefined" &&
     createPortal(
       <div aria-hidden className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center">
         {coinParticles.map((p) => (

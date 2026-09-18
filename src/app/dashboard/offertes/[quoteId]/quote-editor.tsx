@@ -59,6 +59,7 @@ type OrganizationHeaderInfo = Pick<
 type TeamMember = { id: string; name: string };
 
 export function QuoteEditor({
+  origin,
   quote,
   client,
   initialBlocks,
@@ -73,6 +74,11 @@ export function QuoteEditor({
   initialBlockTemplates,
   hasSlotfactuur,
 }: {
+  /** Server-berekende origin (protocol+host, via headers()) voor de
+   * deel-link -- bewust NIET `window.location.origin` client-side, dat
+   * geeft op de server "" en op de client de echte waarde, dus een
+   * hydration-mismatch bij de allereerste render (zelf tegenaan gelopen). */
+  origin: string;
   quote: Quote;
   client: Client;
   initialBlocks: BlockDraft[];
@@ -178,8 +184,7 @@ export function QuoteEditor({
     referenceNumber: referenceNumber || null,
   };
 
-  const shareUrl =
-    typeof window !== "undefined" ? `${window.location.origin}/offerte/${quote.share_token}` : "";
+  const shareUrl = `${origin}/offerte/${quote.share_token}`;
   const whatsappText = `Hoi${clientDisplayName ? ` ${clientDisplayName}` : ""}! Hier is jullie offerte: ${shareUrl}`;
   // Zonder telefoonnummer (leeg pad na wa.me/) opent WhatsApp gewoon de
   // contactkiezer van de gebruiker — met nummer gaat 'm direct naar de klant.

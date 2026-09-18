@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { loadQuoteBlocks } from "@/lib/blocks/persistence";
 import { getQuoteEngagement } from "@/lib/stats/queries";
@@ -11,6 +12,8 @@ export default async function QuoteEditorPage({
 }) {
   const { quoteId } = await params;
   const supabase = await createClient();
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host")}`;
 
   const [{ data: quote }, { data: userData }] = await Promise.all([
     supabase.from("quotes").select("*").eq("id", quoteId).maybeSingle(),
@@ -74,6 +77,7 @@ export default async function QuoteEditorPage({
 
   return (
     <QuoteEditor
+      origin={origin}
       quote={quote}
       client={client}
       initialBlocks={blocks}

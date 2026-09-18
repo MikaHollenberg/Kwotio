@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2 } from "lucide-react";
 
@@ -21,6 +21,17 @@ export function useToast() {
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const idRef = useRef(0);
+  // `typeof document !== "undefined"` als portal-voorwaarde levert exact het
+  // server/client-verschil op dat React's eigen hydration-foutmelding
+  // waarschuwt ("A server/client branch"): server rendert zonder de portal
+  // (geen document), de client rendert 'm meteen wél -- mismatch. `mounted`
+  // start op beide identiek `false` en wordt pas ná hydratie in een effect
+  // omgezet, dus de portal verschijnt pas ná de eerste, matchende render.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
 
   const showToast = useCallback((message: string) => {
     const id = ++idRef.current;
@@ -33,7 +44,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      {typeof document !== "undefined" &&
+      {mounted &&
         createPortal(
           <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[60] flex flex-col items-center gap-2 px-4">
             {toasts.map((toast) => (
