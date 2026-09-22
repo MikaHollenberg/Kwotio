@@ -5,6 +5,7 @@
  */
 
 export type UserRole = "owner" | "admin" | "member" | "readonly";
+export type PublicPageBackgroundStyle = "none" | "coastline" | "icons";
 export type BlockType =
   | "cover"
   | "text"
@@ -82,6 +83,9 @@ export interface Database {
           guest_count_field_label: string | null;
           brand_theme: Record<string, unknown>;
           closed_weekdays: number[];
+          public_page_background_style: PublicPageBackgroundStyle;
+          location_photo_url: string | null;
+          location_caption: string | null;
           status: OrgStatus;
           plan: string | null;
           monthly_price: number;

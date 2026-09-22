@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { slugify, SLUG_PATTERN } from "@/lib/organization/slug";
-import type { UserRole, EmailTriggerType, LogoPreference } from "@/lib/types/database";
+import type { UserRole, EmailTriggerType, LogoPreference, PublicPageBackgroundStyle } from "@/lib/types/database";
 
 async function requireOwnerOrAdmin() {
   const supabase = await createClient();
@@ -123,6 +123,29 @@ export async function updatePublicWelcomeMessage(message: string) {
   const { error } = await supabase
     .from("organizations")
     .update({ public_welcome_message: message.trim() || null })
+    .eq("id", organizationId);
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}
+
+export async function updatePublicPageBackgroundStyle(style: PublicPageBackgroundStyle) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const { error } = await supabase
+    .from("organizations")
+    .update({ public_page_background_style: style })
+    .eq("id", organizationId);
+  if (error) throw error;
+  revalidatePath("/dashboard/instellingen");
+}
+
+export async function updateLocationSection(fields: { photoUrl: string; caption: string }) {
+  const { supabase, organizationId } = await requireOwnerOrAdmin();
+  const { error } = await supabase
+    .from("organizations")
+    .update({
+      location_photo_url: fields.photoUrl || null,
+      location_caption: fields.caption.trim() || null,
+    })
     .eq("id", organizationId);
   if (error) throw error;
   revalidatePath("/dashboard/instellingen");

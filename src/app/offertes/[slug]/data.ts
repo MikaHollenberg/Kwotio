@@ -4,6 +4,7 @@ import { loadTemplateBlocks } from "@/lib/blocks/persistence";
 import { resolvePreferredLogo } from "@/lib/organization/logo";
 import { resolveAccentColor } from "@/lib/organization/theme";
 import type { BlockDraft } from "@/lib/blocks/types";
+import type { PublicPageBackgroundStyle } from "@/lib/types/database";
 
 export type PublicOrgTemplate = {
   id: string;
@@ -33,6 +34,17 @@ export type PublicOrgPageData = {
   /** organizations.closed_weekdays -- 0 = zondag .. 6 = zaterdag, een vaste
    * wekelijkse sluitingsdag naast de losse datums hierboven. */
   closedWeekdays: number[];
+  /** organizations.public_page_background_style -- per organisatie te
+   * kiezen decoratieve achtergrondstijl (zie Instellingen → Organisatie →
+   * "Publieke offertepagina"). Standaard "none". */
+  backgroundStyle: PublicPageBackgroundStyle;
+  /** organizations.location_photo_url -- geen foto ingesteld = geen
+   * locatiesectie op de pagina (bewust geen aparte aan/uit-toggle nodig). */
+  locationPhotoUrl: string | null;
+  locationCaption: string | null;
+  /** Voorgeformatteerd adres ("Straat 1, 1234 AB Plaats") uit
+   * organizations.address, of null als er geen straat/plaats is ingevuld. */
+  locationAddress: string | null;
 };
 
 /**
@@ -54,7 +66,7 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
   const { data: organization, error: orgError } = await supabase
     .from("organizations")
     .select(
-      "id, brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, public_welcome_message, guest_count_field_active, guest_count_field_label, brand_theme, closed_weekdays, archived_at",
+      "id, brand_name, logo_horizontal_url, logo_square_url, logo_preference, terms_url, public_welcome_message, guest_count_field_active, guest_count_field_label, brand_theme, closed_weekdays, archived_at, public_page_background_style, location_photo_url, location_caption, address",
     )
     .eq("public_slug", slug)
     .maybeSingle();
@@ -103,5 +115,16 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     templates,
     closedDates: (closedDateRows ?? []).map((r) => r.date),
     closedWeekdays: organization.closed_weekdays ?? [],
+    backgroundStyle: organization.public_page_background_style ?? "none",
+    locationPhotoUrl: organization.location_photo_url,
+    locationCaption: organization.location_caption,
+    locationAddress: formatAddress(organization.address as { street?: string; postalCode?: string; city?: string } | null),
   };
+}
+
+function formatAddress(address: { street?: string; postalCode?: string; city?: string } | null): string | null {
+  const street = address?.street?.trim();
+  const cityLine = [address?.postalCode?.trim(), address?.city?.trim()].filter(Boolean).join(" ");
+  const parts = [street, cityLine].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : null;
 }

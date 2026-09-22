@@ -18,8 +18,17 @@ import {
   updatePublicSlug,
   updatePublicWelcomeMessage,
   updateGuestCountFieldSettings,
+  updatePublicPageBackgroundStyle,
+  updateLocationSection,
   type OrganizationSettingsFields,
 } from "./actions";
+import type { PublicPageBackgroundStyle } from "@/lib/types/database";
+
+const BACKGROUND_STYLE_OPTIONS: { value: PublicPageBackgroundStyle; label: string }[] = [
+  { value: "none", label: "Geen" },
+  { value: "coastline", label: "Kustlijn" },
+  { value: "icons", label: "Iconen" },
+];
 
 const inputClass =
   "h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20";
@@ -37,6 +46,9 @@ export function OrganizationSettingsCard({
   initialWelcomeMessage,
   initialGuestCountActive,
   initialGuestCountLabel,
+  initialBackgroundStyle,
+  initialLocationPhotoUrl,
+  initialLocationCaption,
   publicPageOrigin,
   canEdit,
 }: {
@@ -51,6 +63,9 @@ export function OrganizationSettingsCard({
   initialWelcomeMessage: string;
   initialGuestCountActive: boolean;
   initialGuestCountLabel: string;
+  initialBackgroundStyle: PublicPageBackgroundStyle;
+  initialLocationPhotoUrl: string | null;
+  initialLocationCaption: string | null;
   /** Origin (bijv. https://kwotio.vercel.app) voor de volledige publieke link. */
   publicPageOrigin: string;
   canEdit: boolean;
@@ -77,6 +92,20 @@ export function OrganizationSettingsCard({
   const [guestCountLabel, setGuestCountLabel] = useState(initialGuestCountLabel);
   const [guestCountSaved, setGuestCountSaved] = useState(false);
   const [guestCountPending, startGuestCountTransition] = useTransition();
+  const [backgroundStyle, setBackgroundStyle] = useState(initialBackgroundStyle);
+  const [backgroundStylePending, startBackgroundStyleTransition] = useTransition();
+  const [locationPhotoUrl, setLocationPhotoUrl] = useState(initialLocationPhotoUrl ?? "");
+  const [locationCaption, setLocationCaption] = useState(initialLocationCaption ?? "");
+  const [locationSaved, setLocationSaved] = useState(false);
+  const [locationPending, startLocationTransition] = useTransition();
+
+  function saveLocation(next: { photoUrl: string; caption: string }) {
+    setLocationSaved(false);
+    startLocationTransition(async () => {
+      await updateLocationSection(next);
+      setLocationSaved(true);
+    });
+  }
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -455,6 +484,74 @@ export function OrganizationSettingsCard({
             />
           </label>
           {guestCountSaved && !guestCountPending && <span className="text-sm text-emerald-600">Opgeslagen.</span>}
+
+          <div className="flex flex-col gap-2 border-t border-ink-100 pt-4">
+            <span className="text-xs font-semibold text-ink-400">
+              Vrolijke achtergrond — een decoratieve stijl op de achtergrond van deze pagina. Staat
+              standaard uit.
+            </span>
+            <div className="inline-flex w-fit rounded-brand-sm border border-ink-200/60 bg-white p-0.5 text-xs font-medium">
+              {BACKGROUND_STYLE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => {
+                    setBackgroundStyle(option.value);
+                    startBackgroundStyleTransition(async () => {
+                      await updatePublicPageBackgroundStyle(option.value);
+                    });
+                  }}
+                  className={cn(
+                    "rounded-[calc(var(--radius-brand-sm)_-_2px)] px-3 py-1.5 transition-colors",
+                    backgroundStyle === option.value ? "bg-teal-500 text-white" : "text-ink-400 hover:text-ink-500",
+                  )}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-ink-400">
+              {backgroundStyle === "coastline" && "Een subtiele lijn-illustratie (horizon, bootjes, zonnetje) onderaan de pagina."}
+              {backgroundStyle === "icons" && "Grote, speelse iconen (zon, cocktail, bbq, zeilboot) verspreid over de pagina."}
+              {backgroundStyle === "none" && "Geen decoratieve achtergrond — de pagina blijft zoals hij nu is."}
+            </p>
+            {backgroundStylePending && <span className="text-sm text-ink-400">Bezig met opslaan…</span>}
+          </div>
+
+          <div className="flex flex-col gap-2 border-t border-ink-100 pt-4">
+            <span className="text-xs font-semibold text-ink-400">
+              Locatiefoto — een foto van jullie locatie, onderaan de publieke offertepagina. Leeg
+              laten toont geen locatiesectie.
+            </span>
+            <div className="max-w-sm">
+              <ImageUploadField
+                label="Locatiefoto"
+                aspect="aspect-video"
+                organizationId={organizationId}
+                value={locationPhotoUrl}
+                onChange={(url) => {
+                  setLocationPhotoUrl(url);
+                  saveLocation({ photoUrl: url, caption: locationCaption });
+                }}
+              />
+            </div>
+            <label className={labelClass}>
+              Onderschrift (optioneel) — bijv. &quot;Aan het water, direct bereikbaar per boot of over
+              de kade&quot;. Het adres uit de bedrijfsgegevens hieronder wordt er automatisch bij getoond.
+              <input
+                value={locationCaption}
+                onChange={(e) => {
+                  setLocationCaption(e.target.value);
+                  setLocationSaved(false);
+                }}
+                onBlur={() => saveLocation({ photoUrl: locationPhotoUrl, caption: locationCaption })}
+                placeholder="Aan het water, direct bereikbaar per boot of over de kade"
+                className={inputClass}
+              />
+            </label>
+            {locationPending && <p className="text-xs text-ink-400">Bezig met opslaan…</p>}
+            {locationSaved && !locationPending && <p className="text-xs text-emerald-600">Opgeslagen.</p>}
+          </div>
         </div>
 
         <form

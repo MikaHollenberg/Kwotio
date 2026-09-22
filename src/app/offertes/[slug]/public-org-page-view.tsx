@@ -5,6 +5,9 @@ import { LayoutTemplate, Info } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { WaveDivider } from "@/components/brand/wave-divider";
+import { CoastlineBackground } from "@/components/brand/coastline-background";
+import { IconsBackground } from "@/components/brand/icons-background";
+import { LocationSection } from "./location-section";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LanguageProvider } from "@/lib/i18n/language-context";
@@ -122,7 +125,9 @@ export function PublicOrgPageView({
 
   return (
     <LanguageProvider initialLang="nl">
-      <div className={cn(!embed && "min-h-screen bg-sand-100")}>
+      <div className={cn(!embed && "relative isolate min-h-screen overflow-hidden bg-sand-100")}>
+        {!embed && data.backgroundStyle === "coastline" && <CoastlineBackground />}
+        {!embed && data.backgroundStyle === "icons" && <IconsBackground />}
         {!embed && (
           <header className="border-b border-ink-200/40 bg-white/80 px-6 py-4 backdrop-blur-sm">
             <div className="mx-auto flex max-w-3xl items-center gap-3">
@@ -213,6 +218,16 @@ export function PublicOrgPageView({
                 </Button>
               </div>
             </>
+          )}
+
+          {data.locationPhotoUrl && (
+            <LocationSection
+              photoUrl={data.locationPhotoUrl}
+              caption={data.locationCaption}
+              address={data.locationAddress}
+              organizationName={data.organizationName}
+              accentColor={data.primaryColor}
+            />
           )}
         </div>
 

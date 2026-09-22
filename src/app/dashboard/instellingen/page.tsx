@@ -92,6 +92,9 @@ export default async function InstellingenPage() {
         initialWelcomeMessage={organization?.public_welcome_message ?? ""}
         initialGuestCountActive={organization?.guest_count_field_active ?? false}
         initialGuestCountLabel={organization?.guest_count_field_label ?? ""}
+        initialBackgroundStyle={organization?.public_page_background_style ?? "none"}
+        initialLocationPhotoUrl={organization?.location_photo_url ?? null}
+        initialLocationCaption={organization?.location_caption ?? null}
         publicPageOrigin={publicPageOrigin}
         initial={{
           name: organization?.name ?? "",
