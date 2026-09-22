@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { updateHeadcountSettings } from "./actions";
 
 const textareaClass =
@@ -36,18 +35,15 @@ export function HeadcountSettingsCard({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div>
-          <CardTitle>Aantal personen bij ondertekening</CardTitle>
-          <CardDescription>
-            Laat de klant bij het ondertekenen het definitieve aantal personen invullen — handig
-            voor evenementen-offertes. Staat standaard uit; per offerte apart aan te zetten zodra
-            dit hier actief staat.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 border-t border-ink-100 pt-5">
+      <div>
+        <p className="font-display text-sm font-semibold text-ink-500">Aantal personen bij ondertekening</p>
+        <p className="mt-1 text-xs text-ink-400">
+          Laat de klant bij het ondertekenen het definitieve aantal personen invullen — handig voor
+          evenementen-offertes. Staat standaard uit; per offerte apart aan te zetten zodra dit hier
+          actief staat.
+        </p>
+      </div>
         <label className="flex items-center gap-2.5">
           <input
             type="checkbox"
@@ -86,7 +82,6 @@ export function HeadcountSettingsCard({
         {error && <p className="text-sm text-red-600">{error}</p>}
         {pending && <p className="text-xs text-ink-400">Bezig met opslaan…</p>}
         {saved && !pending && <p className="text-xs text-emerald-600">Opgeslagen.</p>}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

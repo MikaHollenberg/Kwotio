@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ImageUploadField } from "@/components/builder/image-upload-field";
 import { updateInvoicingDefaults, updateMollieApiKey, clearMollieApiKey, updateInvoiceExtraLogos } from "./invoicing-actions";
@@ -104,18 +103,12 @@ export function InvoicingSettingsCard({
   }
 
   return (
-    <Card data-faq-id="settings-facturatie">
-      <CardHeader>
-        <div>
-          <CardTitle>Facturatie</CardTitle>
-          <CardDescription>
-            Instellingen voor de factuurmodule: nummering, vervaltermijn, automatisch versturen en de
-            Mollie-koppeling voor online betalen.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
-        {!hasBtwOrKvk && (
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-ink-400">
+        Instellingen voor de factuurmodule: nummering, vervaltermijn, automatisch versturen en de
+        Mollie-koppeling voor online betalen.
+      </p>
+      {!hasBtwOrKvk && (
           <p className="rounded-brand-sm bg-yellow-50 px-3 py-2 text-xs text-yellow-800">
             Vul bij &quot;Organisatie&quot; hierboven ook je KvK- en btw-nummer in — die zijn wettelijk verplicht op
             elke factuur.
@@ -277,7 +270,6 @@ export function InvoicingSettingsCard({
           </div>
           {logosPending && <p className="mt-1 text-xs text-ink-400">Opslaan…</p>}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }

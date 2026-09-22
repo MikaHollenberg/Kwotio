@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { Trash2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn, formatDate } from "@/lib/utils";
 import { addClosedDate, addClosedDateRange, deleteClosedDate, updateClosedWeekdays } from "./actions";
@@ -78,18 +77,12 @@ export function ClosedDatesCard({
   }
 
   return (
-    <Card data-faq-id="settings-gesloten-dagen">
-      <CardHeader>
-        <div>
-          <CardTitle>Gesloten dagen</CardTitle>
-          <CardDescription>
-            Data waarop jullie sowieso dicht zijn — een klant kan deze datum niet kiezen als
-            gewenste datum op de publieke aanvraagpagina.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
-        <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-ink-400">
+        Data waarop jullie sowieso dicht zijn — een klant kan deze datum niet kiezen als gewenste
+        datum op de publieke aanvraagpagina.
+      </p>
+      <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold text-ink-400">Vaste gesloten dag(en) in de week</p>
           <div className="flex flex-wrap gap-1.5">
             {WEEKDAY_LABELS.map(({ value, label }) => (
@@ -211,7 +204,6 @@ export function ClosedDatesCard({
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

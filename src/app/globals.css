@@ -199,6 +199,22 @@ h1, h2, h3, h4, .font-display {
   animation: kw-skeleton 1.6s ease-in-out infinite;
 }
 
+/* Instellingen-accordion (Fase 16): grid-template-rows 0fr -> 1fr i.p.v. een
+   vaste max-height -- animeert vloeiend naar de werkelijke inhoudshoogte,
+   ongeacht hoeveel velden een categorie heeft. */
+.kw-accordion {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 420ms var(--ease-brand);
+}
+.kw-accordion.kw-accordion-open {
+  grid-template-rows: 1fr;
+}
+.kw-accordion > div {
+  overflow: hidden;
+  min-height: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kw-shimmer::after,
   .kw-bob,
@@ -212,5 +228,8 @@ h1, h2, h3, h4, .font-display {
   .kw-pop-in,
   .kw-skeleton {
     animation: none !important;
+  }
+  .kw-accordion {
+    transition: none !important;
   }
 }

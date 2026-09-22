@@ -2,13 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AutosaveIndicator } from "@/components/builder/autosave-indicator";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAutosave } from "@/hooks/use-autosave";
+import { cn } from "@/lib/utils";
 import type { EmailTriggerType } from "@/lib/types/database";
-import { createEmailRule, updateEmailRule, deleteEmailRule, type EmailRuleFields } from "./actions";
+import { createEmailRule, updateEmailRule, deleteEmailRule, updateReviewUrl, type EmailRuleFields } from "./actions";
 
 export type EmailRule = {
   id: string;
@@ -177,84 +177,121 @@ function RuleEditor({
   );
 }
 
-export function EmailAutomationCard({ rules, canEdit }: { rules: EmailRule[]; canEdit: boolean }) {
+export function EmailAutomationCard({
+  rules,
+  canEdit,
+  initialReviewUrl,
+}: {
+  rules: EmailRule[];
+  canEdit: boolean;
+  initialReviewUrl: string | null;
+}) {
   const [selectedId, setSelectedId] = useState<string | null>(rules[0]?.id ?? null);
   const [pendingCreate, setPendingCreate] = useState(false);
+  const [reviewUrl, setReviewUrl] = useState(initialReviewUrl ?? "");
+  const [reviewUrlSaved, setReviewUrlSaved] = useState(false);
+  const [reviewUrlPending, startReviewUrlTransition] = useTransition();
   const selectedRule = rules.find((r) => r.id === selectedId) ?? null;
 
   return (
-    <Card data-faq-id="settings-email-automatisering">
-      <CardHeader>
-        <div>
-          <CardTitle>E-mailautomatisering</CardTitle>
-          <CardDescription>
-            Beheer je automatische klant-e-mails: wanneer ze verstuurd worden en wat erin staat.
-            Beschikbare variabelen:{" "}
-            <code className="rounded bg-sand-200 px-1 py-0.5 text-xs">{"{{klantnaam}}"}</code>{" "}
-            <code className="rounded bg-sand-200 px-1 py-0.5 text-xs">{"{{offertetitel}}"}</code>{" "}
-            <code className="rounded bg-sand-200 px-1 py-0.5 text-xs">{"{{evenementdatum}}"}</code>{" "}
-            <code className="rounded bg-sand-200 px-1 py-0.5 text-xs">{"{{link}}"}</code> — bij de
-            eerste twee triggermomenten staat er altijd een knop naar de offerte onder de mail; bij
-            &quot;dagen na evenementdatum&quot; is dat in plaats daarvan een knop naar je
-            review-link hieronder (alleen als je die hebt ingevuld); bij &quot;dagen voor de
-            jaardatum&quot; is dat een knop naar je publieke offertepagina, zodat de klant meteen
-            opnieuw een offerte kan aanvragen.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
-        <div className="flex items-center gap-2" data-faq-id="settings-new-email-rule-button">
-          <select
-            value={selectedId ?? ""}
-            onChange={(e) => setSelectedId(e.target.value)}
-            className={inputClass}
-          >
-            {rules.length === 0 && <option value="">Nog geen e-mails</option>}
-            {rules.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name} {r.enabled ? "" : "(uit)"}
-              </option>
-            ))}
-          </select>
+    <div className="flex flex-col gap-5">
+      <p className="text-sm text-ink-400">
+        Beheer je automatische klant-e-mails: wanneer ze verstuurd worden en wat erin staat.
+        Beschikbare variabelen:{" "}
+        <code className="rounded bg-sand-200 px-1 py-0.5 text-xs">{"{{klantnaam}}"}</code>{" "}
+        <code className="rounded bg-sand-200 px-1 py-0.5 text-xs">{"{{offertetitel}}"}</code>{" "}
+        <code className="rounded bg-sand-200 px-1 py-0.5 text-xs">{"{{evenementdatum}}"}</code>{" "}
+        <code className="rounded bg-sand-200 px-1 py-0.5 text-xs">{"{{link}}"}</code> — bij de eerste
+        twee triggermomenten staat er altijd een knop naar de offerte onder de mail; bij &quot;dagen
+        na evenementdatum&quot; is dat in plaats daarvan een knop naar je review-link hieronder
+        (alleen als je die hebt ingevuld); bij &quot;dagen voor de jaardatum&quot; is dat een knop
+        naar je publieke offertepagina, zodat de klant meteen opnieuw een offerte kan aanvragen.
+      </p>
+
+      <div className="flex flex-col gap-2 border-b border-ink-100 pb-5">
+        <span className="text-xs font-semibold text-ink-400">
+          Review-link (optioneel) — bijv. je Google- of Facebook-reviewpagina. Wordt gebruikt in de
+          automatische review-aanvraag-e-mail (&quot;dagen na evenementdatum&quot;).
+        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="url"
+            value={reviewUrl}
+            disabled={!canEdit}
+            placeholder="https://g.page/r/.../review"
+            onChange={(e) => {
+              setReviewUrl(e.target.value);
+              setReviewUrlSaved(false);
+            }}
+            className={cn(inputClass, "w-full max-w-md")}
+          />
           {canEdit && (
             <Button
+              type="button"
               variant="outline"
               size="sm"
-              disabled={pendingCreate}
-              className="shrink-0"
-              onClick={async () => {
-                setPendingCreate(true);
-                try {
-                  const id = await createEmailRule({
-                    name: "Nieuwe e-mail",
-                    triggerType: "days_after_sent_no_reaction",
-                    triggerDays: 3,
-                    subject: 'Over je offerte "{{offertetitel}}"',
-                    body: "Hoi {{klantnaam}},",
-                    enabled: true,
-                  });
-                  setSelectedId(id);
-                } finally {
-                  setPendingCreate(false);
-                }
+              disabled={reviewUrlPending}
+              onClick={() => {
+                startReviewUrlTransition(async () => {
+                  await updateReviewUrl(reviewUrl);
+                  setReviewUrlSaved(true);
+                });
               }}
             >
-              <Plus className="size-4" /> Nieuwe e-mail
+              {reviewUrlPending ? "Bezig…" : "Opslaan"}
             </Button>
           )}
+          {reviewUrlSaved && !reviewUrlPending && <span className="text-sm text-emerald-600">Opgeslagen.</span>}
         </div>
+      </div>
 
-        {selectedRule && (
-          <div data-faq-id="settings-email-rule-editor">
-            <RuleEditor
-              key={selectedRule.id}
-              rule={selectedRule}
-              canEdit={canEdit}
-              onDeleted={() => setSelectedId(rules.find((r) => r.id !== selectedRule.id)?.id ?? null)}
-            />
-          </div>
+      <div className="flex items-center gap-2" data-faq-id="settings-new-email-rule-button">
+        <select value={selectedId ?? ""} onChange={(e) => setSelectedId(e.target.value)} className={inputClass}>
+          {rules.length === 0 && <option value="">Nog geen e-mails</option>}
+          {rules.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name} {r.enabled ? "" : "(uit)"}
+            </option>
+          ))}
+        </select>
+        {canEdit && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={pendingCreate}
+            className="shrink-0"
+            onClick={async () => {
+              setPendingCreate(true);
+              try {
+                const id = await createEmailRule({
+                  name: "Nieuwe e-mail",
+                  triggerType: "days_after_sent_no_reaction",
+                  triggerDays: 3,
+                  subject: 'Over je offerte "{{offertetitel}}"',
+                  body: "Hoi {{klantnaam}},",
+                  enabled: true,
+                });
+                setSelectedId(id);
+              } finally {
+                setPendingCreate(false);
+              }
+            }}
+          >
+            <Plus className="size-4" /> Nieuwe e-mail
+          </Button>
         )}
-      </CardContent>
-    </Card>
+      </div>
+
+      {selectedRule && (
+        <div data-faq-id="settings-email-rule-editor">
+          <RuleEditor
+            key={selectedRule.id}
+            rule={selectedRule}
+            canEdit={canEdit}
+            onDeleted={() => setSelectedId(rules.find((r) => r.id !== selectedRule.id)?.id ?? null)}
+          />
+        </div>
+      )}
+    </div>
   );
 }

@@ -53,23 +53,41 @@ export function useSpotlightRect(selector: string | null) {
       }
     }
 
+    if (!selector) {
+      measure();
+      return;
+    }
+    // Geeft een collapsed accordion-sectie (bijv. Instellingen) de kans om
+    // zichzelf open te klappen vóórdat we meten -- zie SettingsSection, dat
+    // op dit event luistert en zichzelf opent als het doelelement een
+    // afstammeling is. Een generiek event i.p.v. dat deze hook iets afweet
+    // van accordions/collapsible secties elders in de app.
+    window.dispatchEvent(new CustomEvent("kw:reveal", { detail: { selector } }));
     measure();
-    if (!selector) return;
     window.addEventListener("resize", measure);
     // `capture: true` zodat scrollen binnen geneste containers (bijv. de
     // live preview of de sidebar, die hun eigen overflow-y-auto hebben) ook
     // wordt opgepikt -- zulke scroll-events bubbelen niet naar window.
     window.addEventListener("scroll", measure, true);
+    // Vangt het moment op waarop een CSS-transition (bijv. een accordion die
+    // openklapt na het `kw:reveal`-event hierboven) klaar is -- de
+    // tussentijdse metingen tijdens zo'n animatie zijn niet erg, maar zonder
+    // dit zou de spotlight na afloop op de verkeerde (te kleine) positie
+    // kunnen blijven staan.
+    window.addEventListener("transitionend", measure, true);
     // Een routewissel is niet synchroon -- vooral bij een nog niet
     // gecompileerde dev-route kan het even (soms een paar seconden) duren
     // voordat de nieuwe pagina er staat. Een MutationObserver op de hele
     // pagina vangt dat moment op, ongeacht hoe lang het duurt, i.p.v. te
-    // gokken met een vaste timeout.
+    // gokken met een vaste timeout. `attributes: true` vangt ook een
+    // klasse-/stijlwissel op een al bestaand element (bijv. een accordion
+    // die open-/dichtklapt zonder dat er DOM-knopen bij komen of weggaan).
     const observer = new MutationObserver(measure);
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"] });
     return () => {
       window.removeEventListener("resize", measure);
       window.removeEventListener("scroll", measure, true);
+      window.removeEventListener("transitionend", measure, true);
       observer.disconnect();
     };
   }, [selector]);

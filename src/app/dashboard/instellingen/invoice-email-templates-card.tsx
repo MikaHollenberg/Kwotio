@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { updateInvoiceEmailTemplates } from "./invoicing-actions";
 
@@ -48,22 +47,19 @@ export function InvoiceEmailTemplatesCard({
   }
 
   return (
-    <Card data-faq-id="settings-factuur-email">
-      <CardHeader>
-        <div>
-          <CardTitle>E-mailteksten factuur</CardTitle>
-          <CardDescription>
-            Pas de inhoud aan van de twee automatische factuur-e-mails. Leeg laten = de standaardtekst blijft
-            gelden. Beschikbare variabelen:{" "}
-            {PLACEHOLDERS.map((p) => (
-              <code key={p} className="mr-1 rounded bg-sand-200 px-1 py-0.5 text-xs">
-                {p}
-              </code>
-            ))}
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 border-t border-ink-100 pt-5" data-faq-id="settings-factuur-email">
+      <div>
+        <p className="font-display text-sm font-semibold text-ink-500">E-mailteksten factuur</p>
+        <p className="mt-1 text-xs text-ink-400">
+          Pas de inhoud aan van de twee automatische factuur-e-mails. Leeg laten = de standaardtekst
+          blijft gelden. Beschikbare variabelen:{" "}
+          {PLACEHOLDERS.map((p) => (
+            <code key={p} className="mr-1 rounded bg-sand-200 px-1 py-0.5 text-xs">
+              {p}
+            </code>
+          ))}
+        </p>
+      </div>
         <div className="flex flex-col gap-3">
           <p className="text-xs font-semibold text-ink-400">Verstuur-mail (bij &quot;Verstuur factuur&quot;)</p>
           <label className="flex flex-col gap-1.5 text-xs font-semibold text-ink-400">
@@ -121,7 +117,6 @@ export function InvoiceEmailTemplatesCard({
             {error && <span className="text-xs text-red-600">{error}</span>}
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }

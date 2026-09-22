@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { UserPlus, Trash2 } from "lucide-react";
 import type { UserRole } from "@/lib/types/database";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { inviteTeamMember, updateMemberRole, removeMember } from "./actions";
@@ -23,18 +22,13 @@ export function TeamCard({ members, currentUserId }: { members: TeamMember[]; cu
   const [removeTarget, setRemoveTarget] = useState<TeamMember | null>(null);
 
   return (
-    <Card data-faq-id="settings-team">
-      <CardHeader>
-        <div>
-          <CardTitle>Team & rechten</CardTitle>
-          <CardDescription>
-            Eigenaar/admin kunnen alles, inclusief Instellingen en Statistieken. Teamlid werkt met offertes, klanten,
-            aanvragen en templates, maar heeft geen toegang tot Instellingen of Statistieken. Alleen-lezen kan overal
-            alleen kijken.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+    <>
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-ink-400">
+          Eigenaar/admin kunnen alles, inclusief Instellingen en Statistieken. Teamlid werkt met
+          offertes, klanten, aanvragen en templates, maar heeft geen toegang tot Instellingen of
+          Statistieken. Alleen-lezen kan overal alleen kijken.
+        </p>
         <div className="flex flex-col divide-y divide-ink-100">
           {members.map((m) => (
             <div key={m.id} className="flex items-center justify-between gap-3 py-3">
@@ -114,7 +108,7 @@ export function TeamCard({ members, currentUserId }: { members: TeamMember[]; cu
           </Button>
         </form>
         {error && <p className="text-sm text-red-600">{error}</p>}
-      </CardContent>
+      </div>
 
       <ConfirmDialog
         open={!!removeTarget}
@@ -132,6 +126,6 @@ export function TeamCard({ members, currentUserId }: { members: TeamMember[]; cu
         }}
         onCancel={() => setRemoveTarget(null)}
       />
-    </Card>
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExportCsvButton } from "@/components/dashboard/export-csv-button";
 import { formatDate } from "@/lib/utils";
 
@@ -62,21 +61,16 @@ export async function DataExportCard({ organizationId }: { organizationId: strin
   }));
 
   return (
-    <Card data-faq-id="settings-data-exporteren">
-      <CardHeader>
-        <div>
-          <CardTitle>Data exporteren</CardTitle>
-          <CardDescription>
-            Download al jullie klant-, offerte- en templategegevens als CSV — handig als backup of om ergens
-            anders mee verder te werken.
-          </CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-3">
+      <p className="text-sm text-ink-400">
+        Download al jullie klant-, offerte- en templategegevens als CSV — handig als backup of om
+        ergens anders mee verder te werken.
+      </p>
+      <div className="flex flex-wrap gap-2">
         <ExportCsvButton rows={clientRows} filename="klanten.csv" label={`Klanten (${clientRows.length})`} />
         <ExportCsvButton rows={quoteRows} filename="offertes.csv" label={`Offertes (${quoteRows.length})`} />
         <ExportCsvButton rows={templateRows} filename="templates.csv" label={`Templates (${templateRows.length})`} />
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
