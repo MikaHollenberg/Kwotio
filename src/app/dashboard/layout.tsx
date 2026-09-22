@@ -18,8 +18,17 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Kwotio" },
 };
 
+// maximumScale/userScalable vastgezet op verzoek van de gebruiker: mobiel
+// Safari onthoudt een pinch-zoom-niveau tussen client-side navigaties binnen
+// dezelfde tab, waardoor een prima passende pagina er na eerder inzoomen
+// opeens "afgesneden" uitziet (live gemeld en herleid tijdens deze sessie).
+// Bewust alleen hier (dashboard, bureaupersoneel) — de publieke
+// klant-facing pagina's (/offerte, /offertes) blijven vrij zoombaar, o.a.
+// voor foto's/contracttekst.
 export const viewport: Viewport = {
   themeColor: "#fbf6ec",
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default async function DashboardLayout({
