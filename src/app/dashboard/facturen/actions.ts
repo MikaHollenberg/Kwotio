@@ -19,6 +19,7 @@ import { invoiceSentClientEmail } from "@/lib/email/templates/invoicing";
 import { renderEmailTemplate } from "@/lib/email/template-vars";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
 import { getMollieClient, toMollieAmount } from "@/lib/invoicing/mollie";
+import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 /** Facturen raken geld -- strenger dan de gebruikelijke "!= 'readonly'"-regel
@@ -37,6 +38,9 @@ async function requireOwnerOrAdmin() {
     .eq("id", user.id)
     .single();
   if (!profile) throw new Error("Geen organisatie gevonden voor deze gebruiker.");
+  if (!isInvoicingEnabled(profile.organization_id)) {
+    throw new Error("De facturenmodule is momenteel niet beschikbaar.");
+  }
   if (profile.role !== "owner" && profile.role !== "admin") {
     throw new Error("Alleen eigenaren en admins mogen facturen aanmaken of wijzigen.");
   }
@@ -61,6 +65,9 @@ async function requireCanCreateInvoice() {
     .eq("id", user.id)
     .single();
   if (!profile) throw new Error("Geen organisatie gevonden voor deze gebruiker.");
+  if (!isInvoicingEnabled(profile.organization_id)) {
+    throw new Error("De facturenmodule is momenteel niet beschikbaar.");
+  }
   if (profile.role === "readonly") {
     throw new Error("Alleen-lezen accounts mogen geen facturen aanmaken.");
   }

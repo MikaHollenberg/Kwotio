@@ -7,6 +7,7 @@ import { ExportCsvButton } from "@/components/dashboard/export-csv-button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { INVOICE_TYPE_LABELS } from "@/lib/invoicing/status";
 import { getVatReturnForQuarter, quarterRange, currentQuarter, type Quarter } from "@/lib/invoicing/vat-return";
+import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
 import { QuarterPicker } from "./quarter-picker";
 
 function parseQuarter(value: string | undefined): number | null {
@@ -33,6 +34,7 @@ export default async function AdministratiePage({
   } = await supabase.auth.getUser();
   const { data: profile } = await supabase.from("profiles").select("organization_id, role").eq("id", user!.id).single();
   if (profile?.role !== "owner" && profile?.role !== "admin") redirect("/dashboard");
+  if (!isInvoicingEnabled(profile?.organization_id)) redirect("/dashboard");
   const organizationId = profile!.organization_id;
 
   const params = await searchParams;

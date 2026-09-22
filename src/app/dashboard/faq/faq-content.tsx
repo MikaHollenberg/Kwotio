@@ -29,7 +29,7 @@ type FaqItem = {
   adminOnly?: boolean;
 };
 
-type FaqCategory = { title: string; items: FaqItem[] };
+type FaqCategory = { title: string; items: FaqItem[]; invoicingOnly?: boolean };
 
 // ---------------------------------------------------------------------------
 // Stappenplannen die eerst een tijdelijke voorbeeldofferte/-template/
@@ -301,6 +301,7 @@ const CATEGORIES: FaqCategory[] = [
   },
   {
     title: "Facturen",
+    invoicingOnly: true,
     items: [
       {
         id: "quote-to-invoice",
@@ -598,7 +599,14 @@ function FaqRow({ item, canManageOrg }: { item: FaqItem; canManageOrg: boolean }
   );
 }
 
-export function FaqContent({ canManageOrg }: { canManageOrg: boolean }) {
+export function FaqContent({
+  canManageOrg,
+  invoicingEnabled = false,
+}: {
+  canManageOrg: boolean;
+  invoicingEnabled?: boolean;
+}) {
+  const categories = CATEGORIES.filter((category) => !category.invoicingOnly || invoicingEnabled);
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -610,7 +618,7 @@ export function FaqContent({ canManageOrg }: { canManageOrg: boolean }) {
         </p>
       </div>
 
-      {CATEGORIES.map((category) => (
+      {categories.map((category) => (
         <Card key={category.title}>
           <CardHeader>
             <CardTitle>{category.title}</CardTitle>

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
 import type { InvoiceVatRateType } from "@/lib/types/database";
 
 /** Factuurartikelen zijn puur een naslaglijst, geen geldbeweging -- volgt
@@ -21,6 +22,9 @@ async function requireNotReadonly() {
     .eq("id", user.id)
     .single();
   if (!profile) throw new Error("Geen organisatie gevonden voor deze gebruiker.");
+  if (!isInvoicingEnabled(profile.organization_id)) {
+    throw new Error("De facturenmodule is momenteel niet beschikbaar.");
+  }
   if (profile.role === "readonly") throw new Error("Alleen-lezen teamleden mogen dit niet aanpassen.");
 
   return { supabase, organizationId: profile.organization_id };

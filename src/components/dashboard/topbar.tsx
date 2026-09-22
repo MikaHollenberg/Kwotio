@@ -13,6 +13,7 @@ export function Topbar({
   email,
   showAdmin = false,
   canManageOrg = false,
+  invoicingEnabled = false,
   newRequestCount = 0,
 }: {
   title: string;
@@ -20,6 +21,7 @@ export function Topbar({
   email: string;
   showAdmin?: boolean;
   canManageOrg?: boolean;
+  invoicingEnabled?: boolean;
   newRequestCount?: number;
 }) {
   const router = useRouter();
@@ -41,7 +43,12 @@ export function Topbar({
   return (
     <header className="flex items-center justify-between gap-4 border-b border-ink-200/40 bg-sand-100/80 px-6 py-4 backdrop-blur-sm lg:px-8">
       <div className="flex items-center gap-3">
-        <MobileNav showAdmin={showAdmin} canManageOrg={canManageOrg} newRequestCount={newRequestCount} />
+        <MobileNav
+          showAdmin={showAdmin}
+          canManageOrg={canManageOrg}
+          invoicingEnabled={invoicingEnabled}
+          newRequestCount={newRequestCount}
+        />
         <h1 className="font-display text-xl font-semibold text-ink-500">
           {title}
         </h1>

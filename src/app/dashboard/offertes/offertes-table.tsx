@@ -100,7 +100,13 @@ function SortableHeader({
   );
 }
 
-export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
+export function OffertesTable({
+  quotes,
+  invoicingEnabled = false,
+}: {
+  quotes: QuoteRow[];
+  invoicingEnabled?: boolean;
+}) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<Set<QuoteStatus>>(new Set());
   const [sortColumn, setSortColumn] = useState<SortColumn>("updated_at");
@@ -320,7 +326,7 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
                       Aangemaakt {formatDate(q.created_at)} · Gewijzigd {formatDate(q.updated_at)}
                     </span>
                   </div>
-                  <OfferteRowActions quoteId={q.id} title={q.title} status={q.status} shareToken={q.share_token} />
+                  <OfferteRowActions quoteId={q.id} title={q.title} status={q.status} shareToken={q.share_token} invoicingEnabled={invoicingEnabled} />
                 </div>
               </div>
             ))}
@@ -399,7 +405,7 @@ export function OffertesTable({ quotes }: { quotes: QuoteRow[] }) {
                     <td className="px-5 py-3 text-right text-ink-400">{formatDate(q.created_at)}</td>
                     <td className="px-5 py-3 text-right text-ink-400">{formatDate(q.updated_at)}</td>
                     <td className="px-5 py-3 text-right">
-                      <OfferteRowActions quoteId={q.id} title={q.title} status={q.status} shareToken={q.share_token} />
+                      <OfferteRowActions quoteId={q.id} title={q.title} status={q.status} shareToken={q.share_token} invoicingEnabled={invoicingEnabled} />
                     </td>
                   </tr>
                 ))}

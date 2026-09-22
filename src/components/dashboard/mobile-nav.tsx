@@ -12,16 +12,20 @@ import { cn } from "@/lib/utils";
 export function MobileNav({
   showAdmin = false,
   canManageOrg = false,
+  invoicingEnabled = false,
   newRequestCount = 0,
 }: {
   showAdmin?: boolean;
   canManageOrg?: boolean;
+  invoicingEnabled?: boolean;
   newRequestCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { startTour } = useTour();
-  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || canManageOrg);
+  const visibleNavItems = NAV_ITEMS.filter(
+    (item) => (!item.adminOnly || canManageOrg) && (!item.invoicingOnly || invoicingEnabled),
+  );
 
   return (
     <>

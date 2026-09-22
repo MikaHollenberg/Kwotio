@@ -13,6 +13,7 @@ import { DataExportCard } from "./data-export-card";
 import { InvoicingSettingsCard } from "./invoicing-settings-card";
 import { InvoiceEmailTemplatesCard } from "./invoice-email-templates-card";
 import { SettingsSection } from "./settings-section";
+import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
 
 /** Icoon-vlakje voor een SettingsSection-header -- gerenderd HIER (Server
  * Component) i.p.v. de kale Lucide-componentreferentie als prop door te
@@ -41,6 +42,7 @@ export default async function InstellingenPage() {
     .eq("id", user!.id)
     .single();
   if (profile?.role !== "owner" && profile?.role !== "admin") redirect("/dashboard");
+  const invoicingEnabled = isInvoicingEnabled(profile?.organization_id);
 
   const { data: organization } = profile
     ? await supabase
@@ -182,34 +184,36 @@ export default async function InstellingenPage() {
         />
       </SettingsSection>
 
-      <SettingsSection
-        icon={<IconBox icon={Receipt} bg="bg-emerald-50" color="text-emerald-600" />}
-        title="Facturatie"
-        summary="Nummering, btw-tarieven, betaaltermijn, Mollie, e-mailteksten"
-        faqId="settings-facturatie"
-        style={{ animationDelay: "165ms" }}
-      >
-        <InvoicingSettingsCard
-          canEdit={canManageOrg}
-          organizationId={profile!.organization_id}
-          initialPrefix={organization?.invoice_number_prefix ?? ""}
-          initialDueDays={organization?.invoice_due_days ?? 14}
-          initialAutoSend={organization?.invoice_auto_send ?? false}
-          initialReminderEnabled={organization?.invoice_reminder_enabled ?? true}
-          initialVatRateHigh={organization?.invoice_vat_rate_high ?? 21}
-          initialVatRateLow={organization?.invoice_vat_rate_low ?? 9}
-          initialExtraLogoUrls={organization?.invoice_extra_logo_urls ?? []}
-          maskedMollieKey={organization?.mollie_api_key ? `•••• ${organization.mollie_api_key.slice(-4)}` : null}
-          hasBtwOrKvk={Boolean(organization?.btw_number || organization?.kvk_number)}
-        />
-        <InvoiceEmailTemplatesCard
-          canEdit={canManageOrg}
-          initialSentSubject={organization?.invoice_sent_email_subject ?? ""}
-          initialSentBody={organization?.invoice_sent_email_body ?? ""}
-          initialReminderSubject={organization?.invoice_reminder_email_subject ?? ""}
-          initialReminderBody={organization?.invoice_reminder_email_body ?? ""}
-        />
-      </SettingsSection>
+      {invoicingEnabled && (
+        <SettingsSection
+          icon={<IconBox icon={Receipt} bg="bg-emerald-50" color="text-emerald-600" />}
+          title="Facturatie"
+          summary="Nummering, btw-tarieven, betaaltermijn, Mollie, e-mailteksten"
+          faqId="settings-facturatie"
+          style={{ animationDelay: "165ms" }}
+        >
+          <InvoicingSettingsCard
+            canEdit={canManageOrg}
+            organizationId={profile!.organization_id}
+            initialPrefix={organization?.invoice_number_prefix ?? ""}
+            initialDueDays={organization?.invoice_due_days ?? 14}
+            initialAutoSend={organization?.invoice_auto_send ?? false}
+            initialReminderEnabled={organization?.invoice_reminder_enabled ?? true}
+            initialVatRateHigh={organization?.invoice_vat_rate_high ?? 21}
+            initialVatRateLow={organization?.invoice_vat_rate_low ?? 9}
+            initialExtraLogoUrls={organization?.invoice_extra_logo_urls ?? []}
+            maskedMollieKey={organization?.mollie_api_key ? `•••• ${organization.mollie_api_key.slice(-4)}` : null}
+            hasBtwOrKvk={Boolean(organization?.btw_number || organization?.kvk_number)}
+          />
+          <InvoiceEmailTemplatesCard
+            canEdit={canManageOrg}
+            initialSentSubject={organization?.invoice_sent_email_subject ?? ""}
+            initialSentBody={organization?.invoice_sent_email_body ?? ""}
+            initialReminderSubject={organization?.invoice_reminder_email_subject ?? ""}
+            initialReminderBody={organization?.invoice_reminder_email_body ?? ""}
+          />
+        </SettingsSection>
+      )}
 
       <SettingsSection
         icon={<IconBox icon={Mail} bg="bg-purple-50" color="text-purple-600" />}

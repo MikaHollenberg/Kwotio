@@ -31,6 +31,7 @@ export function DashboardShell({
   email,
   showAdmin = false,
   canManageOrg = false,
+  invoicingEnabled = false,
   organizationName,
   termsUrl,
   newRequestCount = 0,
@@ -40,6 +41,7 @@ export function DashboardShell({
   email: string;
   showAdmin?: boolean;
   canManageOrg?: boolean;
+  invoicingEnabled?: boolean;
   organizationName?: string | null;
   termsUrl?: string | null;
   newRequestCount?: number;
@@ -78,6 +80,7 @@ export function DashboardShell({
         email={email}
         showAdmin={showAdmin}
         canManageOrg={canManageOrg}
+        invoicingEnabled={invoicingEnabled}
         newRequestCount={newRequestCount}
       />
       <ToastProvider>

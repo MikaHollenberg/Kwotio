@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSpotlightRect, getCalloutPosition } from "./use-spotlight-rect";
 
-export type TourStep = { href: string; title: string; description: string; adminOnly?: boolean };
+export type TourStep = {
+  href: string;
+  title: string;
+  description: string;
+  adminOnly?: boolean;
+  invoicingOnly?: boolean;
+};
 
 /** Eén stap per hoofdpagina uit de sidebar-navigatie, in dezelfde volgorde --
  * de rondleiding navigeert daadwerkelijk naar elke pagina (i.p.v. alleen een
@@ -50,6 +56,7 @@ export const ALL_TOUR_STEPS: TourStep[] = [
     description:
       "Zet een geaccepteerde offerte om in een factuur, of begin helemaal vanaf 0. Aanbetalingen, slotfacturen en online betalen via Mollie werken hier allemaal.",
     adminOnly: true,
+    invoicingOnly: true,
   },
   {
     href: "/dashboard/statistieken",

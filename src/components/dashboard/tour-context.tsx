@@ -28,6 +28,7 @@ export function TourProvider({
   children,
   canManageOrg,
   tourSeen,
+  invoicingEnabled = false,
 }: {
   children: React.ReactNode;
   /** Rol is owner/admin -- stappen naar Statistieken/Instellingen slaan we
@@ -36,9 +37,15 @@ export function TourProvider({
   /** profiles.onboarding_tour_seen_at !== null -- stuurt alleen de
    * automatische eerste-keer-prompt aan. */
   tourSeen: boolean;
+  /** Facturenmodule tijdelijk gepauzeerd voor deze organisatie (zie
+   * lib/invoicing/feature-flag.ts) -- slaat de Facturen-stap dan over. */
+  invoicingEnabled?: boolean;
 }) {
   const router = useRouter();
-  const steps = useMemo(() => ALL_TOUR_STEPS.filter((s) => !s.adminOnly || canManageOrg), [canManageOrg]);
+  const steps = useMemo(
+    () => ALL_TOUR_STEPS.filter((s) => (!s.adminOnly || canManageOrg) && (!s.invoicingOnly || invoicingEnabled)),
+    [canManageOrg, invoicingEnabled],
+  );
   const [phase, setPhase] = useState<TourPhase>(() => (tourSeen ? "closed" : "intro"));
   const [stepIndex, setStepIndex] = useState(0);
 

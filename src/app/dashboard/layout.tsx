@@ -7,6 +7,7 @@ import { TourProvider } from "@/components/dashboard/tour-context";
 import { InstallAppBanner } from "@/components/dashboard/install-app-banner";
 import { TestEnvironmentBanner } from "@/components/dashboard/test-environment-banner";
 import { TEST_ORGANIZATION_ID } from "@/lib/admin/testomgeving";
+import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
 
 // PWA-installatie is bewust alleen hier gekoppeld (dit segment zit al achter
 // de hierboven staande login-check) — nooit op de publieke klant-facing
@@ -51,6 +52,7 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
   const canManageOrg = profile?.role === "owner" || profile?.role === "admin";
+  const invoicingEnabled = isInvoicingEnabled(profile?.organization_id);
 
   const [{ data: organization }, { count: newRequestCount }] = await Promise.all([
     profile
@@ -70,7 +72,11 @@ export default async function DashboardLayout({
   ]);
 
   return (
-    <TourProvider canManageOrg={canManageOrg} tourSeen={Boolean(profile?.onboarding_tour_seen_at)}>
+    <TourProvider
+      canManageOrg={canManageOrg}
+      tourSeen={Boolean(profile?.onboarding_tour_seen_at)}
+      invoicingEnabled={invoicingEnabled}
+    >
       {/* React 19 hoist't losse <meta>-tags overal in de boom naar <head> —
           nodig naast appleWebApp.capable hierboven: sommige oudere iOS-Safari-
           versies herkennen alleen de legacy apple-*-naam, niet de standaard
@@ -82,6 +88,7 @@ export default async function DashboardLayout({
         <Sidebar
           showAdmin={profile?.is_super_admin ?? false}
           canManageOrg={canManageOrg}
+          invoicingEnabled={invoicingEnabled}
           logoUrl={organization?.logo_horizontal_url}
           organizationName={organization?.brand_name}
           newRequestCount={newRequestCount ?? 0}
@@ -92,6 +99,7 @@ export default async function DashboardLayout({
             email={profile?.email ?? user.email ?? ""}
             showAdmin={profile?.is_super_admin ?? false}
             canManageOrg={canManageOrg}
+            invoicingEnabled={invoicingEnabled}
             organizationName={organization?.brand_name ?? null}
             termsUrl={organization?.terms_url ?? null}
             newRequestCount={newRequestCount ?? 0}

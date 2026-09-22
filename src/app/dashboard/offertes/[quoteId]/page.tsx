@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { loadQuoteBlocks } from "@/lib/blocks/persistence";
 import { getQuoteEngagement } from "@/lib/stats/queries";
+import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
 import { QuoteEditor } from "./quote-editor";
 
 export default async function QuoteEditorPage({
@@ -91,6 +92,7 @@ export default async function QuoteEditorPage({
       teamMembers={(teamMembers ?? []).map((m) => ({ id: m.id, name: m.full_name || m.email }))}
       initialBlockTemplates={blockTemplates ?? []}
       hasSlotfactuur={(slotfactuurCount ?? 0) > 0}
+      invoicingEnabled={isInvoicingEnabled(organizationId)}
     />
   );
 }

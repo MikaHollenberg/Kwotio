@@ -73,6 +73,7 @@ export function QuoteEditor({
   teamMembers,
   initialBlockTemplates,
   hasSlotfactuur,
+  invoicingEnabled,
 }: {
   /** Server-berekende origin (protocol+host, via headers()) voor de
    * deel-link -- bewust NIET `window.location.origin` client-side, dat
@@ -92,6 +93,7 @@ export function QuoteEditor({
   teamMembers: TeamMember[];
   initialBlockTemplates: BlockTemplateSummary[];
   hasSlotfactuur: boolean;
+  invoicingEnabled: boolean;
 }) {
   const router = useRouter();
   const [title, setTitle] = useState(quote.title);
@@ -340,7 +342,7 @@ export function QuoteEditor({
         <SignatureInfoCard signature={signature} shareToken={quote.share_token} aantalPersonen={quote.aantal_personen} />
       )}
 
-      {status === "geaccepteerd" && (
+      {status === "geaccepteerd" && invoicingEnabled && (
         <CreateInvoiceCard
           quoteId={quote.id}
           depositInvoiceId={quote.deposit_invoice_id}

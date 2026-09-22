@@ -6,8 +6,18 @@ import { useState, type ReactNode } from "react";
  * datasets worden server-side al opgehaald (zie page.tsx) en als kant-en-
  * klare JSX doorgegeven; hier wordt alleen bepaald welke zichtbaar is, geen
  * page-navigatie nodig. */
-export function StatsViewSwitcher({ offertesView, facturenView }: { offertesView: ReactNode; facturenView: ReactNode }) {
+export function StatsViewSwitcher({
+  offertesView,
+  facturenView,
+}: {
+  offertesView: ReactNode;
+  /** `null` (facturenmodule uitgeschakeld, zie lib/invoicing/feature-flag.ts)
+   * laat de hele dropdown weg -- er is dan toch maar één weergave. */
+  facturenView: ReactNode | null;
+}) {
   const [view, setView] = useState<"offertes" | "facturen">("offertes");
+
+  if (!facturenView) return offertesView;
 
   return (
     <div className="flex flex-col gap-6">

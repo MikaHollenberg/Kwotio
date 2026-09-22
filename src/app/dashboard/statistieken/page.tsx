@@ -19,6 +19,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { STATUS_LABELS } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getInvoiceStats } from "@/lib/stats/invoice-queries";
+import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
 import { FacturenStatsView } from "./facturen-stats-view";
 import { StatsViewSwitcher } from "./stats-view-switcher";
 
@@ -34,6 +35,7 @@ export default async function StatistiekenPage() {
     .single();
   if (profile?.role !== "owner" && profile?.role !== "admin") redirect("/dashboard");
   const organizationId = profile!.organization_id;
+  const invoicingEnabled = isInvoicingEnabled(organizationId);
 
   const [pipeline, monthlySeries, templatePerformance, expectedGuests, popularPackage, busiestDay, publicPageStats, invoiceStats] =
     await Promise.all([
@@ -44,7 +46,7 @@ export default async function StatistiekenPage() {
       getPopularPackageThisMonth(supabase, organizationId),
       getBusiestDayThisMonth(supabase, organizationId),
       getPublicPageStatsThisMonth(supabase, organizationId),
-      getInvoiceStats(supabase, organizationId),
+      invoicingEnabled ? getInvoiceStats(supabase, organizationId) : Promise.resolve(null),
     ]);
 
   const busiestDayLabel = busiestDay
@@ -270,7 +272,7 @@ export default async function StatistiekenPage() {
   return (
     <StatsViewSwitcher
       offertesView={offertesView}
-      facturenView={<FacturenStatsView stats={invoiceStats} />}
+      facturenView={invoiceStats ? <FacturenStatsView stats={invoiceStats} /> : null}
     />
   );
 }

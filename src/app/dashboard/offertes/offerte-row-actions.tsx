@@ -14,11 +14,13 @@ export function OfferteRowActions({
   title,
   status,
   shareToken,
+  invoicingEnabled = false,
 }: {
   quoteId: string;
   title: string;
   status: QuoteStatus;
   shareToken: string;
+  invoicingEnabled?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -74,7 +76,7 @@ export function OfferteRowActions({
       >
         <Pencil className="size-4" />
       </OfferteEditLink>
-      {status === "geaccepteerd" && (
+      {status === "geaccepteerd" && invoicingEnabled && (
         <Button
           variant="ghost"
           size="sm"

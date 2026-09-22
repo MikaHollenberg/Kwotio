@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
 
 async function requireOwnerOrAdmin() {
   const supabase = await createClient();
@@ -17,6 +18,9 @@ async function requireOwnerOrAdmin() {
     .eq("id", user.id)
     .single();
   if (!profile) throw new Error("Geen organisatie gevonden voor deze gebruiker.");
+  if (!isInvoicingEnabled(profile.organization_id)) {
+    throw new Error("De facturenmodule is momenteel niet beschikbaar.");
+  }
   if (profile.role !== "owner" && profile.role !== "admin") {
     throw new Error("Alleen eigenaren en admins mogen dit aanpassen.");
   }

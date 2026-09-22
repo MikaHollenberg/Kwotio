@@ -1,8 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
+import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
 import { OffertesTable } from "./offertes-table";
 
 export default async function OffertesPage() {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { data: profile } = await supabase.from("profiles").select("organization_id").eq("id", user!.id).single();
+
   const [{ data: quotes }, { data: clients }] = await Promise.all([
     supabase
       .from("quotes")
@@ -19,5 +25,5 @@ export default async function OffertesPage() {
     clientName: (q.client_id && clientNameById.get(q.client_id)) ?? null,
   }));
 
-  return <OffertesTable quotes={rows} />;
+  return <OffertesTable quotes={rows} invoicingEnabled={isInvoicingEnabled(profile?.organization_id)} />;
 }
