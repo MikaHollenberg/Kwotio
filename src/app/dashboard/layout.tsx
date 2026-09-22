@@ -5,6 +5,8 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { TourProvider } from "@/components/dashboard/tour-context";
 import { InstallAppBanner } from "@/components/dashboard/install-app-banner";
+import { TestEnvironmentBanner } from "@/components/dashboard/test-environment-banner";
+import { TEST_ORGANIZATION_ID } from "@/lib/admin/testomgeving";
 
 // PWA-installatie is bewust alleen hier gekoppeld (dit segment zit al achter
 // de hierboven staande login-check) — nooit op de publieke klant-facing
@@ -75,6 +77,7 @@ export default async function DashboardLayout({
           "mobile-web-app-capable" die Next.js zelf al genereert. */}
       <meta name="apple-mobile-web-app-capable" content="yes" />
       <InstallAppBanner />
+      {profile?.organization_id === TEST_ORGANIZATION_ID && <TestEnvironmentBanner />}
       <div className="flex min-h-screen bg-sand-100">
         <Sidebar
           showAdmin={profile?.is_super_admin ?? false}
