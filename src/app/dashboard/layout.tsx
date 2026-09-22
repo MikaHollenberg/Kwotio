@@ -1,8 +1,26 @@
+import type { Metadata, Viewport } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { DashboardShell } from "@/components/dashboard/dashboard-shell";
 import { TourProvider } from "@/components/dashboard/tour-context";
+import { InstallAppBanner } from "@/components/dashboard/install-app-banner";
+
+// PWA-installatie is bewust alleen hier gekoppeld (dit segment zit al achter
+// de hierboven staande login-check) — nooit op de publieke klant-facing
+// pagina's (/offerte, /offertes, /embed) of het inlogscherm. `icons.icon`
+// wordt hier expliciet herhaald: Next.js' metadata-merge is shallow, dus
+// zonder deze regel zou het root-favicon (icoon-zon.png) hier vervangen
+// worden door alléén het apple-touch-icon i.p.v. ernaast te bestaan.
+export const metadata: Metadata = {
+  manifest: "/manifest.json",
+  icons: { icon: "/brand/icoon-zon.png", apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, statusBarStyle: "default", title: "Kwotio" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#fbf6ec",
+};
 
 export default async function DashboardLayout({
   children,
@@ -42,6 +60,12 @@ export default async function DashboardLayout({
 
   return (
     <TourProvider canManageOrg={canManageOrg} tourSeen={Boolean(profile?.onboarding_tour_seen_at)}>
+      {/* React 19 hoist't losse <meta>-tags overal in de boom naar <head> —
+          nodig naast appleWebApp.capable hierboven: sommige oudere iOS-Safari-
+          versies herkennen alleen de legacy apple-*-naam, niet de standaard
+          "mobile-web-app-capable" die Next.js zelf al genereert. */}
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <InstallAppBanner />
       <div className="flex min-h-screen bg-sand-100">
         <Sidebar
           showAdmin={profile?.is_super_admin ?? false}
