@@ -78,6 +78,22 @@
   --color-ink-800: #101c22;
   --color-ink-900: #0c161b;
 
+  /* Kwotio-goud — platformmerk (hoofdaccount/marketingsite), NIET de
+   * klant-facing huisstijl van een organisatie. Uitgebouwd vanaf het
+   * bestaande merkteken-goud (#B87F2A, kwotio-mark.tsx) — bewust een eigen
+   * kleurnaam ("gold"), geen hergebruik van "orange" (dat blijft Caribbean
+   * Bar's terracotta). Zie stijlgids op /admin/stijlgids. */
+  --color-gold-50: #fbf3e7;
+  --color-gold-100: #f5e2c4;
+  --color-gold-200: #ebc98d;
+  --color-gold-300: #dead5c;
+  --color-gold-400: #cc9640;
+  --color-gold-500: #b87f2a;
+  --color-gold-600: #9c6820;
+  --color-gold-700: #7d5119;
+  --color-gold-800: #5e3d14;
+  --color-gold-900: #402a0e;
+
   --radius-brand-sm: 16px;
   --radius-brand: 20px;
   --radius-brand-lg: 24px;

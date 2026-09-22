@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Building2, ArrowLeft, ShieldCheck, FlaskConical } from "lucide-react";
+import { BarChart3, Building2, ArrowLeft, ShieldCheck, FlaskConical, Palette } from "lucide-react";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { APP_NAME } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/admin", label: "Statistieken", icon: BarChart3 },
   { href: "/admin/organisaties", label: "Organisaties", icon: Building2 },
   { href: "/admin/testomgeving", label: "Testomgeving", icon: FlaskConical },
+  { href: "/admin/stijlgids", label: "Stijlgids", icon: Palette },
 ];
 
 export function AdminSidebar() {

@@ -10,6 +10,15 @@ export const tones = {
   yellow: "bg-yellow-50 text-yellow-800 border-yellow-200",
   green: "bg-emerald-50 text-emerald-700 border-emerald-200",
   red: "bg-red-50 text-red-700 border-red-200",
+  /** Kwotio-platformmerk (hoofdaccount/marketingsite), zie button.tsx. */
+  gold: "bg-gold-50 text-gold-700 border-gold-200",
+  /** Semantisch systeem voor het platform: succes = green (bestaand),
+   * fout = red (bestaand), waarschuwing = amber, info = sky — bewust
+   * Tailwind's eigen ongewijzigde schalen (dit project herdefinieert
+   * "yellow"/"blue" al naar Caribbean Bar's mosterdgeel/oceaanblauw, dus
+   * amber/sky i.p.v. yellow/blue voorkomt een botsing met die kleuren). */
+  amber: "bg-amber-50 text-amber-800 border-amber-200",
+  sky: "bg-sky-50 text-sky-700 border-sky-200",
 };
 
 export function Badge({

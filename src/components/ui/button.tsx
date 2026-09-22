@@ -15,6 +15,11 @@ const variants = {
   ghost: "text-ink-500 hover:bg-sand-200 focus-visible:ring-offset-sand-100",
   subtle:
     "bg-blue-50 text-blue-700 hover:bg-blue-100 focus-visible:ring-offset-sand-100",
+  /** Kwotio-platformmerk (hoofdaccount/marketingsite) i.p.v. een
+   * organisatie-huisstijl — zie de gold-schaal in globals.css. Secundair/
+   * tertiair binnen dit systeem: gewoon `outline`/`ghost` hierboven, die
+   * zijn al accentkleur-onafhankelijk. */
+  gold: "bg-gold-500 text-white shadow-sm hover:bg-gold-600 active:bg-gold-700 focus-visible:ring-offset-sand-100",
 };
 
 const sizes = {
