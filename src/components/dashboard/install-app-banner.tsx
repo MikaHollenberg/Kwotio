@@ -186,7 +186,7 @@ export function InstallAppBanner() {
           )}
 
           {variant === "ios-safari" && (
-            <Button variant="ghost" size="sm" onClick={sluiten} className="w-full">
+            <Button variant="primary" size="sm" onClick={sluiten} className="w-full">
               Begrepen
             </Button>
           )}
