@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, ExternalLink, Share, SquarePlus, TriangleAlert, X } from "lucide-react";
+import { ExternalLink, Share, TriangleAlert, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
@@ -132,11 +132,7 @@ export function InstallAppBanner() {
             <span className="flex size-11 flex-none items-center justify-center rounded-brand-sm border border-ink-200 bg-white">
               <KwotioMark size={22} />
             </span>
-            {variant === "ios-anders" ? (
-              <Badge tone="orange">Alleen via Safari</Badge>
-            ) : (
-              <Badge tone="blue">Aanbevolen · niet verplicht</Badge>
-            )}
+            <Badge tone="blue">Aanbevolen · niet verplicht</Badge>
           </div>
           <button
             type="button"
@@ -149,28 +145,21 @@ export function InstallAppBanner() {
         </div>
 
         <p className="font-display text-base font-semibold text-ink-500">
-          {variant === "ios-anders" ? "Installeren werkt hier niet" : "Zet Kwotio op je startscherm"}
+          {variant === "android" ? "Zet Kwotio op je startscherm" : "Zet dit portal op je beginscherm"}
         </p>
         <p className="mt-1 text-sm text-ink-400">
-          {variant === "android" && "Werk sneller met offertes en facturen, direct vanaf je startscherm."}
-          {variant === "ios-safari" && "In 3 tikken, via Safari zelf:"}
-          {variant === "ios-anders" && "Deze browser ondersteunt geen installatie. Open Kwotio in Safari om het toe te voegen."}
+          {variant === "android"
+            ? "Handig, maar zeker geen must: installeer het portal voor snelle toegang, niet als een gewone app."
+            : "Handig, maar zeker geen must — je opent het portal dan net zo snel als een gewone app, rechtstreeks vanaf je startscherm."}
         </p>
 
         {variant === "ios-safari" && (
-          <div className="mt-3.5 mb-1 flex flex-col gap-2 rounded-brand bg-blue-50 p-3.5">
-            <div className="flex items-center gap-2 text-sm text-ink-500">
-              <Share className="size-4 flex-none text-orange-500" strokeWidth={2} />
-              Tik op het deelicoon in de werkbalk van Safari
-            </div>
-            <div className="flex items-center gap-2 text-sm text-ink-500">
-              <SquarePlus className="size-4 flex-none text-orange-500" strokeWidth={2} />
-              Kies &ldquo;Zet op beginscherm&rdquo;
-            </div>
-            <div className="flex items-center gap-2 text-sm text-ink-500">
-              <Check className="size-4 flex-none text-orange-500" strokeWidth={2} />
-              Tik op &ldquo;Voeg toe&rdquo;
-            </div>
+          <div className="mt-3.5 mb-1 flex items-start gap-2.5 rounded-brand bg-blue-50 p-3.5">
+            <Share className="mt-0.5 size-4 flex-none text-blue-600" strokeWidth={2} />
+            <p className="text-sm text-ink-500">
+              Tik in <strong className="font-semibold">Safari</strong> op het deel-icoon in de werkbalk, en kies
+              daarna <strong className="font-semibold">&ldquo;Zet op beginscherm&rdquo;</strong>.
+            </p>
           </div>
         )}
 
@@ -178,7 +167,8 @@ export function InstallAppBanner() {
           <div className="mt-3.5 mb-1 flex items-start gap-2.5 rounded-brand border border-orange-200 bg-orange-50 p-3.5">
             <TriangleAlert className="mt-0.5 size-4 flex-none text-orange-600" strokeWidth={2} />
             <p className="text-sm text-orange-800">
-              Installeren als app kan alleen via Safari zelf, niet vanuit deze browser.
+              <strong className="font-semibold">Let op:</strong> dit werkt alleen via Safari. Open deze link in
+              Safari om er een webapp van te maken.
             </p>
           </div>
         )}
