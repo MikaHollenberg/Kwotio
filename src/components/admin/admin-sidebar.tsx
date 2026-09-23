@@ -18,7 +18,7 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-64 shrink-0 flex-col border-r border-ink-200/40 bg-white/60 px-4 py-6 lg:flex">
+    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col overflow-y-auto border-r border-ink-200/40 bg-white/60 px-4 py-6 lg:flex">
       <div className="mb-8 flex items-center gap-2 px-2">
         <KwotioMark size={28} />
         <span className="font-display text-lg font-semibold text-ink-500">{APP_NAME}</span>
