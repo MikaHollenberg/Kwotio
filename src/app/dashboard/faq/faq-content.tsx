@@ -332,6 +332,38 @@ const CATEGORIES: FaqCategory[] = [
     ],
   },
   {
+    title: "Klanten",
+    items: [
+      {
+        id: "manage-clients",
+        question: "Hoe beheer ik mijn klanten?",
+        answer:
+          "Ga naar Klanten voor je hele klantenbestand: contactgegevens, notities en per klant het aantal offertes en de geaccepteerde waarde. Nieuwe klanten hoef je meestal niet los aan te maken -- dat gebeurt automatisch zodra je voor iemand nieuws een offerte maakt.",
+        walkthrough: [
+          {
+            href: "/dashboard/klanten",
+            selector: '[data-faq-id="new-client-button"]',
+            title: "Nieuwe klant",
+            description: "Klik hier om handmatig een klant toe te voegen (met verplicht een naam en e-mailadres).",
+          },
+          {
+            href: "/dashboard/klanten",
+            selector: '[data-faq-id="klanten-list"]',
+            title: "Je klantenbestand",
+            description:
+              "Klik op een klant voor de details: contactgegevens, notities en de volledige offerte-geschiedenis.",
+          },
+        ],
+      },
+      {
+        id: "archive-client",
+        question: "Kan ik een klant archiveren of verwijderen?",
+        answer:
+          "Ja -- open een klant en kies archiveren (haalt 'm uit het standaardoverzicht, terug te draaien) of definitief verwijderen (kan niet ongedaan gemaakt worden). Gearchiveerde klanten vind je terug via 'Gearchiveerde klanten' boven de lijst.",
+      },
+    ],
+  },
+  {
     title: "Offerte-aanvragen",
     items: [
       {
@@ -421,6 +453,73 @@ const CATEGORIES: FaqCategory[] = [
               "Factuurnummer-voorvoegsel, vervaltermijn, btw-tarieven, automatisch versturen, Mollie-koppeling en extra logo's stel je hier allemaal in.",
           },
         ],
+      },
+    ],
+  },
+  {
+    title: "Statistieken",
+    items: [
+      {
+        id: "stats-overview",
+        question: "Welke cijfers vind ik op de statistiekenpagina?",
+        answer:
+          "Omzet geaccepteerd en omzet gemist (geweigerd/verlopen), hoeveel offertes in elke status staan, een periode-vergelijker (bv. deze maand vs. vorig jaar) en welke templates het beste converteren.",
+        adminOnly: true,
+        walkthrough: [
+          {
+            href: "/dashboard/statistieken",
+            selector: '[data-faq-id="stats-revenue-tiles"]',
+            title: "Omzet",
+            description: "Omzet geaccepteerd en omzet gemist (geweigerd/verlopen), in één oogopslag.",
+          },
+          {
+            href: "/dashboard/statistieken",
+            selector: '[data-faq-id="stats-pipeline-chart"]',
+            title: "Offertes per status",
+            description: "Hoeveel offertes in elke status staan -- verderop ook de periode-vergelijker en templateprestaties.",
+          },
+        ],
+      },
+      {
+        id: "stats-facturen-switch",
+        question: "Kan ik hier ook factuur-statistieken zien?",
+        answer:
+          "Ja, als facturatie voor je organisatie aan staat verschijnt bovenaan een keuzemenu om te wisselen tussen 'Statistieken: Offertes' en 'Statistieken: Facturen' (ontvangen bedrag, openstaand, te laat, btw-overzicht per tarief en meer).",
+        adminOnly: true,
+      },
+    ],
+  },
+  {
+    title: "Administratie",
+    invoicingOnly: true,
+    items: [
+      {
+        id: "vat-return",
+        question: "Hoe werkt de btw-aangifte per kwartaal?",
+        answer:
+          "Ga naar Administratie voor je omzet en btw per tarief (rubriek 1a hoog, 1b laag, 1e/overig), berekend over alle facturen van het gekozen kwartaal -- rechtstreeks bruikbaar bij je eigen aangifte. Let op: dit gaat alleen over verkoop-btw, er is geen inkoop-/kostenregistratie.",
+        adminOnly: true,
+        walkthrough: [
+          {
+            href: "/dashboard/administratie",
+            selector: '[data-faq-id="administratie-summary"]',
+            title: "Btw-rubrieken",
+            description: "Je omzet en btw-bedrag per tarief voor het huidige kwartaal.",
+          },
+          {
+            href: "/dashboard/administratie",
+            selector: '[data-faq-id="administratie-quarter-picker"]',
+            title: "Kwartaal wisselen",
+            description: "Blader door kwartalen/jaren, of exporteer het overzicht en de onderliggende facturen als CSV.",
+          },
+        ],
+      },
+      {
+        id: "vat-return-date-basis",
+        question: "Op basis van welke datum telt een factuur mee -- factuurdatum of betaaldatum?",
+        answer:
+          "De factuurdatum (factuurstelsel), niet de betaaldatum -- de gangbare basis voor de Nederlandse btw-aangifte. Creditnota's tellen mee met een omgekeerd teken, zodat het rubriek-totaal automatisch klopt.",
+        adminOnly: true,
       },
     ],
   },
