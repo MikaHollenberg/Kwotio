@@ -9,7 +9,9 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
   const [{ data: arrangement }, { data: tiers }, { data: seasons }, { data: availability }] = await Promise.all([
     supabase
       .from("arrangements")
-      .select("id, name, description, category, color_code, base_price, pricing_mode, archived_at")
+      .select(
+        "id, name, description, category, color_code, base_price, pricing_mode, archived_at, inclusief_sections, highlight_title, highlight_text, extras",
+      )
       .eq("id", id)
       .maybeSingle(),
     supabase
@@ -39,6 +41,10 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
         colorCode: arrangement.color_code,
         basePrice: Number(arrangement.base_price),
         pricingMode: arrangement.pricing_mode,
+        inclusiefSections: arrangement.inclusief_sections,
+        highlightTitle: arrangement.highlight_title ?? "",
+        highlightText: arrangement.highlight_text ?? "",
+        extras: arrangement.extras,
       }}
       initialTiers={(tiers ?? []).map((t) => ({ minGuests: t.min_guests, maxGuests: t.max_guests, price: Number(t.price) }))}
       initialSeasons={(seasons ?? []).map((s) => ({ label: s.label, startDate: s.start_date, endDate: s.end_date, price: Number(s.price) }))}

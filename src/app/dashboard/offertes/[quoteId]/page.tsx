@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadQuoteBlocks } from "@/lib/blocks/persistence";
 import { getQuoteEngagement } from "@/lib/stats/queries";
 import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
+import type { ArrangementPickerSummary } from "@/lib/arrangements/types";
 import { QuoteEditor } from "./quote-editor";
 
 export default async function QuoteEditorPage({
@@ -51,30 +52,83 @@ export default async function QuoteEditorPage({
       .order("full_name", { ascending: true }),
   ]);
 
-  const [blocks, { data: comments }, { data: contactLogs }, { data: signature }, engagement, { data: blockTemplates }, { count: slotfactuurCount }] =
-    await Promise.all([
-      loadQuoteBlocks(supabase, quoteId),
-      supabase.from("comments").select("*").eq("quote_id", quoteId).order("created_at", { ascending: true }),
-      supabase.from("quote_contact_logs").select("*").eq("quote_id", quoteId).order("created_at", { ascending: true }),
-      supabase
-        .from("signatures")
-        .select("*")
-        .eq("quote_id", quoteId)
-        .order("signed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-      getQuoteEngagement(supabase, quoteId),
-      supabase
-        .from("block_templates")
-        .select("id, type, name, content")
-        .eq("organization_id", organizationId)
-        .order("name", { ascending: true }),
-      supabase
-        .from("invoices")
-        .select("id", { count: "exact", head: true })
-        .eq("quote_id", quoteId)
-        .eq("type", "slotfactuur"),
-    ]);
+  const [
+    blocks,
+    { data: comments },
+    { data: contactLogs },
+    { data: signature },
+    engagement,
+    { data: blockTemplates },
+    { count: slotfactuurCount },
+    { data: arrangementRows },
+  ] = await Promise.all([
+    loadQuoteBlocks(supabase, quoteId),
+    supabase.from("comments").select("*").eq("quote_id", quoteId).order("created_at", { ascending: true }),
+    supabase.from("quote_contact_logs").select("*").eq("quote_id", quoteId).order("created_at", { ascending: true }),
+    supabase
+      .from("signatures")
+      .select("*")
+      .eq("quote_id", quoteId)
+      .order("signed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    getQuoteEngagement(supabase, quoteId),
+    supabase
+      .from("block_templates")
+      .select("id, type, name, content")
+      .eq("organization_id", organizationId)
+      .order("name", { ascending: true }),
+    supabase
+      .from("invoices")
+      .select("id", { count: "exact", head: true })
+      .eq("quote_id", quoteId)
+      .eq("type", "slotfactuur"),
+    supabase
+      .from("arrangements")
+      .select(
+        "id, name, description, category, color_code, base_price, pricing_mode, inclusief_sections, highlight_title, highlight_text, extras",
+      )
+      .eq("organization_id", organizationId)
+      .is("archived_at", null)
+      .order("sort_order", { ascending: true }),
+  ]);
+
+  const arrangementIds = (arrangementRows ?? []).map((a) => a.id);
+  const [{ data: tierRows }, { data: seasonRows }] =
+    arrangementIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("arrangement_price_tiers")
+            .select("id, arrangement_id, min_guests, max_guests, price")
+            .in("arrangement_id", arrangementIds)
+            .order("sort_order", { ascending: true }),
+          supabase
+            .from("arrangement_season_prices")
+            .select("id, arrangement_id, label, start_date, end_date, price")
+            .in("arrangement_id", arrangementIds)
+            .order("sort_order", { ascending: true }),
+        ])
+      : [{ data: [] }, { data: [] }];
+
+  const arrangements: ArrangementPickerSummary[] = (arrangementRows ?? []).map((a) => ({
+    id: a.id,
+    name: a.name,
+    description: a.description,
+    category: a.category,
+    colorCode: a.color_code,
+    pricingMode: a.pricing_mode,
+    basePrice: Number(a.base_price),
+    inclusiefSections: a.inclusief_sections,
+    highlightTitle: a.highlight_title,
+    highlightText: a.highlight_text,
+    extras: a.extras,
+    tiers: (tierRows ?? [])
+      .filter((t) => t.arrangement_id === a.id)
+      .map((t) => ({ id: t.id, minGuests: t.min_guests, maxGuests: t.max_guests, price: Number(t.price) })),
+    seasons: (seasonRows ?? [])
+      .filter((s) => s.arrangement_id === a.id)
+      .map((s) => ({ id: s.id, label: s.label, startDate: s.start_date, endDate: s.end_date, price: Number(s.price) })),
+  }));
 
   return (
     <QuoteEditor
@@ -91,6 +145,7 @@ export default async function QuoteEditorPage({
       organization={organization ?? null}
       teamMembers={(teamMembers ?? []).map((m) => ({ id: m.id, name: m.full_name || m.email }))}
       initialBlockTemplates={blockTemplates ?? []}
+      initialArrangements={arrangements}
       hasSlotfactuur={(slotfactuurCount ?? 0) > 0}
       invoicingEnabled={isInvoicingEnabled(organizationId)}
     />

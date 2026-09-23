@@ -7,14 +7,13 @@ import {
   calculateTotal,
   defaultSelections,
   normalizeSelectedPackages,
+  collectPricedBlocks,
   type Selections,
-  type PackagesBlockInput,
 } from "@/lib/blocks/pricing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
 import { renderQuotePdf, type QuotePdfSignatureData } from "@/lib/quote-pdf/quote-document";
 import { resolvePreferredLogo, toAbsoluteLogoUrl } from "@/lib/organization/logo";
 import { resolveAccentColor, DEFAULT_ACCENT_COLOR } from "@/lib/organization/theme";
-import type { PackagesBlockContent } from "@/lib/blocks/types";
 
 export async function GET(
   request: Request,
@@ -46,12 +45,7 @@ export async function GET(
     loadQuoteBlocks(supabase, quote.id),
   ]);
 
-  const packagesBlocksInput: PackagesBlockInput[] = blocks
-    .filter((b) => b.type === "packages")
-    .map((b) => {
-      const content = b.content as PackagesBlockContent;
-      return { blockId: b.id, packages: content.packages, addons: content.addons };
-    });
+  const packagesBlocksInput = collectPricedBlocks(blocks);
 
   const selectedPackages = normalizeSelectedPackages(quote.selected_packages as Record<string, unknown> | null);
   const hasPriorSelection = Object.keys(selectedPackages).length > 0 || Object.keys(quote.selected_addons ?? {}).length > 0;

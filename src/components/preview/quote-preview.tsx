@@ -12,6 +12,7 @@ import type {
   PackagesBlockContent,
   TimelineBlockContent,
   SignatureBlockContent,
+  ArrangementBlockContent,
 } from "@/lib/blocks/types";
 import { calculateTotal, type Selections } from "@/lib/blocks/pricing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
@@ -82,7 +83,7 @@ function QuotePreviewInner({
   mode: "desktop" | "mobile";
   headerData?: QuoteHeaderData;
 }) {
-  const { packagesBlocks, selections, setSelections, subtotal } = useQuoteSelections(blocks);
+  const { hasPricedBlocks, selections, setSelections, subtotal } = useQuoteSelections(blocks);
   const total = calculateTotal({ subtotal, discountAmount: meta.discountAmount });
   const { t } = useTranslation();
 
@@ -113,7 +114,7 @@ function QuotePreviewInner({
           </div>
         ))}
 
-        {packagesBlocks.length > 0 && (
+        {hasPricedBlocks && (
           <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t border-ink-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
             <div>
               <p className="text-xs text-ink-400">
@@ -226,6 +227,21 @@ export function BlockPreview({
       const c = activeContent as PackagesBlockContent;
       return (
         <PackagesBlockPreview
+          block={block}
+          content={c}
+          meta={meta}
+          selections={selections}
+          onSelectionsChange={onSelectionsChange}
+          readOnly={readOnly}
+          accentColor={accentColor}
+        />
+      );
+    }
+
+    case "arrangement": {
+      const c = activeContent as ArrangementBlockContent;
+      return (
+        <ArrangementBlockPreview
           block={block}
           content={c}
           meta={meta}
@@ -705,4 +721,116 @@ function PackagesBlockPreview({
           )}
         </div>
       );
+}
+
+/** Volledige inhoud van één arrangement uit de catalogus, als momentopname
+ * naar dit blok gekopieerd (zie newBlockFromArrangement) -- vakjes/tekst/
+ * actievak/extra's rechtstreeks gemodelleerd op de aangeleverde
+ * arrangement-PDF's. Extra's hergebruiken exact het addon-aanvink-patroon
+ * hierboven (PackagesBlockPreview) via `selections.addonQuantities`, want
+ * `collectPricedBlocks()` (lib/blocks/pricing.ts) zet ze al om naar
+ * PackageAddon-vorm voor de totaalberekening. */
+function ArrangementBlockPreview({
+  content: c,
+  meta,
+  selections,
+  onSelectionsChange,
+  readOnly,
+  accentColor,
+}: {
+  block: BlockDraft;
+  content: ArrangementBlockContent;
+  meta: QuoteMeta;
+  selections: Selections;
+  onSelectionsChange: (s: Selections) => void;
+  readOnly: boolean;
+  accentColor: string;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="px-6 py-10">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <SectionHeading>{c.heading || c.name}</SectionHeading>
+        <span className="font-display text-xl font-semibold whitespace-nowrap" style={{ color: accentColor }}>
+          {c.priceLabel ? t("from_price_prefix") : ""}
+          {priceLabel(c.basePrice, meta.currency, meta.pricePerPerson)}
+        </span>
+      </div>
+      {c.priceLabel && <p className="mt-0.5 text-xs text-ink-400">{c.priceLabel}</p>}
+      {c.description && <p className="mt-2 text-sm text-ink-400">{c.description}</p>}
+
+      {c.highlightTitle && (
+        <div
+          className="mt-4 rounded-brand-sm px-4 py-3 text-sm text-white"
+          style={{ backgroundColor: accentColor }}
+        >
+          <strong className="font-semibold">{c.highlightTitle}</strong>
+          {c.highlightText && <> {c.highlightText}</>}
+        </div>
+      )}
+
+      {c.inclusiefSections.length > 0 && (
+        <div className="mt-6">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">{t("included_label")}</p>
+          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {c.inclusiefSections.map((section) => (
+              <div key={section.id}>
+                <p className="text-sm font-semibold" style={{ color: accentColor }}>
+                  {section.title}
+                </p>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {section.items.map((item) => (
+                    <li key={item.id} className="text-sm text-ink-400">
+                      {item.text}
+                      {item.note && <span className="ml-1 text-xs text-ink-300">{item.note}</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {c.extras.length > 0 && (
+        <div className="mt-6 flex flex-col gap-2">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">{t("extra_options")}</p>
+          {c.extras.map((extra) => {
+            const qty = selections.addonQuantities[extra.id] ?? 0;
+            const checked = qty > 0;
+            return (
+              <div
+                key={extra.id}
+                className="flex items-center justify-between gap-3 rounded-brand-sm border border-ink-100 px-3.5 py-3"
+              >
+                <label className="flex flex-1 items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={readOnly}
+                    onChange={
+                      readOnly
+                        ? undefined
+                        : (e) =>
+                            onSelectionsChange({
+                              ...selections,
+                              addonQuantities: { ...selections.addonQuantities, [extra.id]: e.target.checked ? 1 : 0 },
+                            })
+                    }
+                    style={{ accentColor }}
+                    className="size-4 disabled:opacity-100"
+                  />
+                  <p className="text-sm font-medium text-ink-500">{extra.name}</p>
+                </label>
+                <span className="shrink-0 text-sm font-medium text-ink-500 whitespace-nowrap">
+                  +{priceLabel(extra.price, meta.currency, extra.unit === "p.p.")}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }

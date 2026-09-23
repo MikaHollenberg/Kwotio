@@ -4,21 +4,31 @@ import { useState, useRef, useEffect } from "react";
 import { Plus, ChevronLeft, FileStack } from "lucide-react";
 import type { BlockType } from "@/lib/types/database";
 import { BLOCK_LABELS, BLOCK_ICONS, BLOCK_ORDER, type BlockTemplateSummary } from "@/lib/blocks/types";
+import type { ArrangementPickerSummary } from "@/lib/arrangements/types";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
+
+const ARRANGEMENT_DRILL = "arrangement" as const;
 
 export function AddBlockMenu({
   onAdd,
   blockTemplates = [],
+  arrangements = [],
+  onAddArrangement,
 }: {
   onAdd: (type: BlockType, template?: BlockTemplateSummary) => void;
   /** Organisatie-brede blok-templates — als er voor het gekozen bloktype
    * templates bestaan, krijgt de gebruiker eerst de keuze tussen leeg
    * beginnen en een van die templates. */
   blockTemplates?: BlockTemplateSummary[];
+  /** Catalogusarrangementen van de organisatie — apart van BLOCK_ORDER
+   * omdat kiezen hier direct een gevuld blok toevoegt, geen "leeg
+   * beginnen"-optie. Leeg = geen "Arrangement"-item in het menu. */
+  arrangements?: ArrangementPickerSummary[];
+  onAddArrangement?: (arrangement: ArrangementPickerSummary) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [drillType, setDrillType] = useState<BlockType | null>(null);
+  const [drillType, setDrillType] = useState<BlockType | typeof ARRANGEMENT_DRILL | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -57,7 +67,46 @@ export function AddBlockMenu({
 
       {open && (
         <div className="absolute left-0 top-full z-20 mt-2 w-72 rounded-brand-sm border border-ink-200 bg-white p-1.5 shadow-lg">
-          {drillType ? (
+          {drillType === ARRANGEMENT_DRILL ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setDrillType(null)}
+                className="flex w-full items-center gap-2 rounded-brand-sm px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-400 hover:bg-sand-200"
+              >
+                <ChevronLeft className="size-3.5" /> Terug
+              </button>
+              {arrangements.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-ink-400">Nog geen arrangementen in je catalogus.</p>
+              ) : (
+                <div className="max-h-80 overflow-y-auto">
+                  {arrangements.map((arrangement) => (
+                    <button
+                      key={arrangement.id}
+                      type="button"
+                      onClick={() => {
+                        onAddArrangement?.(arrangement);
+                        close();
+                      }}
+                      className="flex w-full items-start gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200"
+                    >
+                      <span
+                        className="mt-1 size-2.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: arrangement.colorCode }}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-medium">{arrangement.name}</span>
+                        <span className="block text-xs text-ink-300">
+                          {arrangement.pricingMode !== "vast" && "vanaf "}
+                          {formatCurrency(arrangement.basePrice)}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : drillType ? (
             <>
               <button
                 type="button"
@@ -93,25 +142,43 @@ export function AddBlockMenu({
               ))}
             </>
           ) : (
-            BLOCK_ORDER.map((type) => {
-              const count = blockTemplates.filter((t) => t.type === type).length;
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => handlePickType(type)}
-                  className={cn(
-                    "flex w-full items-center justify-between gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200",
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <span className="text-base">{BLOCK_ICONS[type]}</span>
-                    {BLOCK_LABELS[type]}
-                  </span>
-                  {count > 0 && <span className="text-xs font-medium text-ink-300">{count}</span>}
-                </button>
-              );
-            })
+            <>
+              {arrangements.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setDrillType(ARRANGEMENT_DRILL)}
+                    className="flex w-full items-center justify-between gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-base">{BLOCK_ICONS.arrangement}</span>
+                      {BLOCK_LABELS.arrangement}
+                    </span>
+                    <span className="text-xs font-medium text-ink-300">{arrangements.length}</span>
+                  </button>
+                  <div className="my-1 border-t border-ink-100" />
+                </>
+              )}
+              {BLOCK_ORDER.map((type) => {
+                const count = blockTemplates.filter((t) => t.type === type).length;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => handlePickType(type)}
+                    className={cn(
+                      "flex w-full items-center justify-between gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200",
+                    )}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-base">{BLOCK_ICONS[type]}</span>
+                      {BLOCK_LABELS[type]}
+                    </span>
+                    {count > 0 && <span className="text-xs font-medium text-ink-300">{count}</span>}
+                  </button>
+                );
+              })}
+            </>
           )}
         </div>
       )}

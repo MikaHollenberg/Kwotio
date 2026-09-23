@@ -7,8 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getQuoteByToken } from "@/lib/public-quote/data";
 import { hashSnapshot } from "@/lib/signing/hash";
 import { renderCertificatePdf } from "@/lib/signing/pdf-certificate";
-import { calculateSubtotal, calculateTotal, type Selections, type PackagesBlockInput } from "@/lib/blocks/pricing";
-import type { PackagesBlockContent } from "@/lib/blocks/types";
+import { calculateSubtotal, calculateTotal, collectPricedBlocks, type Selections } from "@/lib/blocks/pricing";
 import { sendEmail } from "@/lib/email/client";
 import { signingConfirmationClientEmail, signingNotificationAgencyEmail } from "@/lib/email/templates/signing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
@@ -50,12 +49,7 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
   const ipAddress = h.get("x-forwarded-for") ?? "onbekend";
   const userAgent = h.get("user-agent") ?? "onbekend";
 
-  const packagesBlocksInput: PackagesBlockInput[] = blocks
-    .filter((b) => b.type === "packages")
-    .map((b) => {
-      const content = b.content as PackagesBlockContent;
-      return { blockId: b.id, packages: content.packages, addons: content.addons };
-    });
+  const packagesBlocksInput = collectPricedBlocks(blocks);
   const subtotal = calculateSubtotal(packagesBlocksInput, input.selections);
   const total = calculateTotal({ subtotal, discountAmount: Number(quote.discount_amount) });
   const selectedPackageNames = packagesBlocksInput.flatMap((b) =>

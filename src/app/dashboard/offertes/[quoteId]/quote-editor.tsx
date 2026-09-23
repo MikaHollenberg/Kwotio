@@ -5,7 +5,9 @@ import Link from "next/link";
 import { ArrowLeft, Trash2, Smartphone, Monitor, Link2, Send, Unlink, Copy, Check, Languages, MessageCircle } from "lucide-react";
 import type { Database, PriceDisplayMode } from "@/lib/types/database";
 import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
-import { newBlock, newBlockFromTemplate } from "@/lib/blocks/types";
+import { newBlock, newBlockFromTemplate, newBlockFromArrangement } from "@/lib/blocks/types";
+import type { ArrangementPickerSummary } from "@/lib/arrangements/types";
+import { calculateArrangementPrice } from "@/lib/arrangements/pricing";
 import {
   saveQuoteMeta,
   saveQuoteBlocksAction,
@@ -72,6 +74,7 @@ export function QuoteEditor({
   organization,
   teamMembers,
   initialBlockTemplates,
+  initialArrangements,
   hasSlotfactuur,
   invoicingEnabled,
 }: {
@@ -92,6 +95,7 @@ export function QuoteEditor({
   organization: OrganizationHeaderInfo;
   teamMembers: TeamMember[];
   initialBlockTemplates: BlockTemplateSummary[];
+  initialArrangements: ArrangementPickerSummary[];
   hasSlotfactuur: boolean;
   invoicingEnabled: boolean;
 }) {
@@ -522,6 +526,16 @@ export function QuoteEditor({
               onAdd={(type, template) =>
                 setBlocks([...blocks, template ? newBlockFromTemplate(template, blocks.length) : newBlock(type, blocks.length)])
               }
+              arrangements={initialArrangements}
+              onAddArrangement={(arrangement) => {
+                const priceInfo = calculateArrangementPrice(
+                  arrangement,
+                  arrangement.tiers,
+                  arrangement.seasons,
+                  { guestCount: null, eventDate: eventDate || null },
+                );
+                setBlocks([...blocks, newBlockFromArrangement(arrangement, priceInfo, blocks.length)]);
+              }}
             />
           </div>
         </div>

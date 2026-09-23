@@ -1,4 +1,5 @@
-import type { BlockType } from "@/lib/types/database";
+import type { BlockType, ArrangementPricingMode } from "@/lib/types/database";
+import type { ArrangementInclusiefSection, ArrangementExtra } from "@/lib/arrangements/types";
 
 export type CoverBlockContent = {
   heroImageUrl: string;
@@ -68,6 +69,31 @@ export type SignatureBlockContent = {
   intro: string;
 };
 
+/**
+ * Momentopname van één arrangement uit de catalogus (lib/arrangements/),
+ * gekopieerd naar de offerte op het moment dat het wordt toegevoegd — geen
+ * live koppeling, zelfde principe als een blok-template. `arrangementId`
+ * blijft staan als referentie (puur informatief, geen foreign key op
+ * blok-niveau). `basePrice`/`priceLabel` zijn de op importmoment berekende
+ * prijs (via calculateArrangementPrice(), o.b.v. de datum/het aantal
+ * personen van de offerte op dat moment) — verandert niet vanzelf mee als
+ * het arrangement of de offerte later wijzigt.
+ */
+export type ArrangementBlockContent = {
+  heading: string;
+  arrangementId: string;
+  name: string;
+  description: string;
+  colorCode: string;
+  pricingMode: ArrangementPricingMode;
+  basePrice: number;
+  priceLabel: string | null;
+  inclusiefSections: ArrangementInclusiefSection[];
+  highlightTitle: string;
+  highlightText: string;
+  extras: ArrangementExtra[];
+};
+
 export type BlockContent =
   | CoverBlockContent
   | TextBlockContent
@@ -75,7 +101,8 @@ export type BlockContent =
   | PackagesBlockContent
   | TimelineBlockContent
   | TermsBlockContent
-  | SignatureBlockContent;
+  | SignatureBlockContent
+  | ArrangementBlockContent;
 
 /** In-memory representatie van een blok, gebruikt door zowel de template- als
  * offerte-editor. `id` is een uuid (bestaand) of een client-side tijdelijke
@@ -98,6 +125,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   timeline: "Tijdlijn",
   terms: "Voorwaarden",
   signature: "Handtekening",
+  arrangement: "Arrangement",
 };
 
 export const BLOCK_ICONS: Record<BlockType, string> = {
@@ -108,6 +136,7 @@ export const BLOCK_ICONS: Record<BlockType, string> = {
   timeline: "🕒",
   terms: "📄",
   signature: "✍️",
+  arrangement: "🍹",
 };
 
 /**
@@ -167,6 +196,23 @@ export function defaultContentFor(type: BlockType): Record<string, unknown> {
         heading: "Akkoord & ondertekenen",
         intro: "Ga akkoord met deze offerte en onderteken direct digitaal.",
       } satisfies SignatureBlockContent;
+    case "arrangement":
+      // Nooit via de lege-blok-flow aangemaakt (zie newBlockFromArrangement)
+      // -- alleen hier voor een technisch volledige switch.
+      return {
+        heading: "",
+        arrangementId: "",
+        name: "",
+        description: "",
+        colorCode: "#B87F2A",
+        pricingMode: "vast",
+        basePrice: 0,
+        priceLabel: null,
+        inclusiefSections: [],
+        highlightTitle: "",
+        highlightText: "",
+        extras: [],
+      } satisfies ArrangementBlockContent;
   }
 }
 
@@ -223,6 +269,17 @@ function regenerateContentIds(type: BlockType, content: Record<string, unknown>)
     return cloned;
   }
 
+  if (type === "arrangement") {
+    const c = cloned as unknown as ArrangementBlockContent;
+    c.inclusiefSections = c.inclusiefSections.map((section) => ({
+      ...section,
+      id: uid(),
+      items: section.items.map((item) => ({ ...item, id: uid() })),
+    }));
+    c.extras = c.extras.map((extra) => ({ ...extra, id: uid() }));
+    return cloned;
+  }
+
   return cloned;
 }
 
@@ -232,6 +289,53 @@ export function newBlockFromTemplate(template: BlockTemplateSummary, position: n
     type: template.type,
     position,
     content: regenerateContentIds(template.type, template.content),
+    isNew: true,
+  };
+}
+
+/**
+ * Nieuw offerteblok vanuit een catalogusarrangement — momentopname, geen
+ * live koppeling (zie ArrangementBlockContent). `priceInfo` komt van
+ * `calculateArrangementPrice()`, berekend door de aanroeper met de op dat
+ * moment bekende datum/aantal personen van de offerte. Geneste id's
+ * (secties/items/extra's) worden vers gegenereerd via regenerateContentIds,
+ * zelfde reden als bij een blok-template: twee offertes met hetzelfde
+ * bron-arrangement mogen nooit dezelfde geneste id's delen.
+ */
+export function newBlockFromArrangement(
+  arrangement: {
+    id: string;
+    name: string;
+    description: string;
+    colorCode: string;
+    pricingMode: ArrangementPricingMode;
+    inclusiefSections: ArrangementInclusiefSection[];
+    highlightTitle: string | null;
+    highlightText: string | null;
+    extras: ArrangementExtra[];
+  },
+  priceInfo: { price: number; appliedLabel: string | null },
+  position: number,
+): BlockDraft {
+  const content: ArrangementBlockContent = {
+    heading: arrangement.name,
+    arrangementId: arrangement.id,
+    name: arrangement.name,
+    description: arrangement.description,
+    colorCode: arrangement.colorCode,
+    pricingMode: arrangement.pricingMode,
+    basePrice: priceInfo.price,
+    priceLabel: priceInfo.appliedLabel,
+    inclusiefSections: arrangement.inclusiefSections,
+    highlightTitle: arrangement.highlightTitle ?? "",
+    highlightText: arrangement.highlightText ?? "",
+    extras: arrangement.extras,
+  };
+  return {
+    id: uid(),
+    type: "arrangement",
+    position,
+    content: regenerateContentIds("arrangement", content as unknown as Record<string, unknown>),
     isNew: true,
   };
 }

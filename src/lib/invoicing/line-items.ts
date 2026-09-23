@@ -2,8 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database";
 import { loadQuoteBlocks } from "@/lib/blocks/persistence";
-import { normalizeSelectedPackages, type PackagesBlockInput } from "@/lib/blocks/pricing";
-import type { PackagesBlockContent } from "@/lib/blocks/types";
+import { normalizeSelectedPackages, collectPricedBlocks } from "@/lib/blocks/pricing";
 import { calculateInvoiceLineFromExcl, calculateInvoiceLineFromIncl, type InvoiceLineAmounts } from "./vat";
 
 export type InvoiceLineDraft = InvoiceLineAmounts & {
@@ -46,12 +45,7 @@ export async function buildInvoiceLinesFromQuote(
   vatRate: number,
 ): Promise<InvoiceLineDraft[]> {
   const blocks = await loadQuoteBlocks(supabase, quote.id);
-  const packagesBlocks: PackagesBlockInput[] = blocks
-    .filter((b) => b.type === "packages")
-    .map((b) => {
-      const content = b.content as PackagesBlockContent;
-      return { blockId: b.id, packages: content.packages, addons: content.addons };
-    });
+  const packagesBlocks = collectPricedBlocks(blocks);
 
   const selectedPackages = normalizeSelectedPackages(quote.selected_packages);
   const addonQuantities = quote.selected_addons ?? {};

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ArrangementAvailabilityStatus, ArrangementPricingMode } from "@/lib/types/database";
+import type { ArrangementInclusiefSection, ArrangementExtra } from "@/lib/arrangements/types";
 
 /** Arrangementen zijn een catalogus, geen geldbeweging op zich (dat gebeurt
  * pas in een offerte) -- zelfde soepele "!= 'readonly'"-patroon als
@@ -33,6 +34,10 @@ export type ArrangementFields = {
   colorCode: string;
   basePrice: number;
   pricingMode: ArrangementPricingMode;
+  inclusiefSections: ArrangementInclusiefSection[];
+  highlightTitle: string;
+  highlightText: string;
+  extras: ArrangementExtra[];
 };
 
 export async function createArrangement(fields: ArrangementFields) {
@@ -47,6 +52,10 @@ export async function createArrangement(fields: ArrangementFields) {
       color_code: fields.colorCode,
       base_price: fields.basePrice,
       pricing_mode: fields.pricingMode,
+      inclusief_sections: fields.inclusiefSections,
+      highlight_title: fields.highlightTitle.trim() || null,
+      highlight_text: fields.highlightText.trim() || null,
+      extras: fields.extras,
     })
     .select("id")
     .single();
@@ -66,6 +75,10 @@ export async function updateArrangement(id: string, fields: ArrangementFields) {
       color_code: fields.colorCode,
       base_price: fields.basePrice,
       pricing_mode: fields.pricingMode,
+      inclusief_sections: fields.inclusiefSections,
+      highlight_title: fields.highlightTitle.trim() || null,
+      highlight_text: fields.highlightText.trim() || null,
+      extras: fields.extras,
     })
     .eq("id", id);
   if (error) throw error;

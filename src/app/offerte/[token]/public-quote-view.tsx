@@ -103,7 +103,7 @@ function PublicQuoteViewInner({
   headerData: QuoteHeaderData;
 }) {
   const { t } = useTranslation();
-  const { packagesBlocks, selections, setSelections, subtotal } = useQuoteSelections(
+  const { packagesBlocks, hasPricedBlocks, selections, setSelections, subtotal } = useQuoteSelections(
     blocks,
     initialSelections,
   );
@@ -233,7 +233,7 @@ function PublicQuoteViewInner({
         </p>
       </main>
 
-      {packagesBlocks.length > 0 && (
+      {hasPricedBlocks && (
         <div className="fixed inset-x-0 bottom-0 z-10 border-t border-ink-100 bg-white/95 px-4 py-4 backdrop-blur-sm sm:px-8">
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
             <div>

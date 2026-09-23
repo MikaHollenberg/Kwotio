@@ -11,6 +11,7 @@ import { DecimalField } from "@/components/ui/decimal-field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ARRANGEMENT_COLOR_PRESETS } from "@/lib/arrangements/colors";
 import { calculateArrangementPrice } from "@/lib/arrangements/pricing";
+import type { ArrangementInclusiefSection, ArrangementExtra } from "@/lib/arrangements/types";
 import { formatCurrency, cn } from "@/lib/utils";
 import type { ArrangementPricingMode } from "@/lib/types/database";
 import {
@@ -31,6 +32,11 @@ type SeasonDraft = { key: string; label: string; startDate: string; endDate: str
 function makeKey() {
   return crypto.randomUUID();
 }
+
+const EXTRA_UNIT_OPTIONS: { value: ArrangementExtra["unit"]; label: string }[] = [
+  { value: "vast", label: "vast bedrag" },
+  { value: "p.p.", label: "per persoon" },
+];
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -69,6 +75,11 @@ export function ArrangementForm({
   const [pricingMode, setPricingMode] = useState<ArrangementPricingMode>(initial.pricingMode);
   const [tiers, setTiers] = useState<TierDraft[]>(initialTiers.map((t) => ({ ...t, key: makeKey() })));
   const [seasons, setSeasons] = useState<SeasonDraft[]>(initialSeasons.map((s) => ({ ...s, key: makeKey() })));
+  const [inclusiefSections, setInclusiefSections] = useState<ArrangementInclusiefSection[]>(initial.inclusiefSections);
+  const [highlightTitle, setHighlightTitle] = useState(initial.highlightTitle);
+  const [highlightText, setHighlightText] = useState(initial.highlightText);
+  const [showHighlight, setShowHighlight] = useState(Boolean(initial.highlightTitle));
+  const [extras, setExtras] = useState<ArrangementExtra[]>(initial.extras);
   const [previewGuests, setPreviewGuests] = useState(10);
   const [previewDate, setPreviewDate] = useState(todayIso());
   const [pending, startTransition] = useTransition();
@@ -95,9 +106,61 @@ export function ArrangementForm({
     setSeasons([...seasons, { key: makeKey(), label: "", startDate: todayIso(), endDate: todayIso(), price: basePrice }]);
   }
 
+  function addSection() {
+    setInclusiefSections([...inclusiefSections, { id: makeKey(), title: "", items: [] }]);
+  }
+  function removeSection(sectionId: string) {
+    setInclusiefSections(inclusiefSections.filter((s) => s.id !== sectionId));
+  }
+  function updateSectionTitle(sectionId: string, title: string) {
+    setInclusiefSections(inclusiefSections.map((s) => (s.id === sectionId ? { ...s, title } : s)));
+  }
+  function addItem(sectionId: string) {
+    setInclusiefSections(
+      inclusiefSections.map((s) =>
+        s.id === sectionId ? { ...s, items: [...s.items, { id: makeKey(), text: "", note: "" }] } : s,
+      ),
+    );
+  }
+  function updateItem(sectionId: string, itemId: string, patch: Partial<{ text: string; note: string }>) {
+    setInclusiefSections(
+      inclusiefSections.map((s) =>
+        s.id === sectionId
+          ? { ...s, items: s.items.map((it) => (it.id === itemId ? { ...it, ...patch } : it)) }
+          : s,
+      ),
+    );
+  }
+  function removeItem(sectionId: string, itemId: string) {
+    setInclusiefSections(
+      inclusiefSections.map((s) => (s.id === sectionId ? { ...s, items: s.items.filter((it) => it.id !== itemId) } : s)),
+    );
+  }
+
+  function addExtra() {
+    setExtras([...extras, { id: makeKey(), name: "", price: 0, unit: "vast" }]);
+  }
+  function removeExtra(extraId: string) {
+    setExtras(extras.filter((e) => e.id !== extraId));
+  }
+  function updateExtra(extraId: string, patch: Partial<ArrangementExtra>) {
+    setExtras(extras.map((e) => (e.id === extraId ? { ...e, ...patch } : e)));
+  }
+
   function handleSave() {
     startTransition(async () => {
-      const fields: ArrangementFields = { name, description, category, colorCode, basePrice, pricingMode };
+      const fields: ArrangementFields = {
+        name,
+        description,
+        category,
+        colorCode,
+        basePrice,
+        pricingMode,
+        inclusiefSections,
+        highlightTitle: showHighlight ? highlightTitle : "",
+        highlightText: showHighlight ? highlightText : "",
+        extras,
+      };
       let id = arrangementId;
       if (mode === "create") {
         const result = await createArrangement(fields);
@@ -167,6 +230,33 @@ export function ArrangementForm({
               className="rounded-brand-sm border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
             />
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-ink-500">
+            <input
+              type="checkbox"
+              checked={showHighlight}
+              onChange={(e) => setShowHighlight(e.target.checked)}
+              className="size-4"
+            />
+            Actievak tonen (bijv. &ldquo;Tropical Deal!&rdquo;)
+          </label>
+          {showHighlight && (
+            <div className="flex flex-col gap-2 rounded-brand-sm border border-dashed border-ink-200 p-3">
+              <input
+                value={highlightTitle}
+                onChange={(e) => setHighlightTitle(e.target.value)}
+                placeholder="Tropical Deal!"
+                className="h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
+              />
+              <input
+                value={highlightText}
+                onChange={(e) => setHighlightText(e.target.value)}
+                placeholder="50 cocktails voor maar €450,-"
+                className="h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-ink-500">Categorie (optioneel)</label>
@@ -343,6 +433,110 @@ export function ArrangementForm({
               </Button>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Inclusief</CardTitle>
+          <CardDescription>Categorie-vakjes zoals &ldquo;Bier&rdquo; of &ldquo;Wijn&rdquo;, elk met eigen regels.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {inclusiefSections.map((section) => (
+              <div key={section.id} className="rounded-brand-sm border border-ink-200 p-3">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <input
+                    value={section.title}
+                    onChange={(e) => updateSectionTitle(section.id, e.target.value)}
+                    placeholder="Categorienaam"
+                    className="h-9 flex-1 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm font-medium text-ink-500 outline-none focus:border-teal-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeSection(section.id)}
+                    className="flex size-8 shrink-0 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Trash2 className="size-4" />
+                  </button>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {section.items.map((item) => (
+                    <div key={item.id} className="flex items-center gap-1.5">
+                      <input
+                        value={item.text}
+                        onChange={(e) => updateItem(section.id, item.id, { text: e.target.value })}
+                        placeholder="Heineken tapbier"
+                        className="h-8 flex-1 rounded-brand-sm border border-ink-200 bg-white px-2 text-xs text-ink-500 outline-none focus:border-teal-500"
+                      />
+                      <input
+                        value={item.note}
+                        onChange={(e) => updateItem(section.id, item.id, { note: e.target.value })}
+                        placeholder="toelichting (optioneel)"
+                        className="h-8 w-32 rounded-brand-sm border border-ink-200 bg-white px-2 text-xs text-ink-400 outline-none focus:border-teal-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeItem(section.id, item.id)}
+                        className="flex size-7 shrink-0 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => addItem(section.id)}
+                  className="mt-2 text-xs font-semibold text-orange-600 hover:text-orange-700"
+                >
+                  + Item toevoegen
+                </button>
+              </div>
+            ))}
+          </div>
+          <Button variant="outline" size="sm" onClick={addSection} className="w-fit">
+            <Plus className="size-4" /> Categorie toevoegen
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Extra&rsquo;s</CardTitle>
+          <CardDescription>Optioneel bijboekbaar, zoals &ldquo;DJ inhuren&rdquo; of &ldquo;Mini-cocktail&rdquo;.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {extras.map((extra) => (
+            <div key={extra.id} className="flex flex-wrap items-center gap-2">
+              <input
+                value={extra.name}
+                onChange={(e) => updateExtra(extra.id, { name: e.target.value })}
+                placeholder="DJ inhuren"
+                className="h-10 flex-1 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
+              />
+              <DecimalField
+                value={extra.price}
+                onCommit={(v) => updateExtra(extra.id, { price: v })}
+                className="h-10 w-28 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
+              />
+              <SegmentedToggle
+                value={extra.unit}
+                options={EXTRA_UNIT_OPTIONS}
+                onChange={(unit) => updateExtra(extra.id, { unit })}
+              />
+              <button
+                type="button"
+                onClick={() => removeExtra(extra.id)}
+                className="flex size-8 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="size-4" />
+              </button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={addExtra} className="w-fit">
+            <Plus className="size-4" /> Extra toevoegen
+          </Button>
         </CardContent>
       </Card>
 

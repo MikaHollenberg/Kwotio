@@ -10,6 +10,7 @@ import type {
   PackagesBlockContent,
   TimelineBlockContent,
   SignatureBlockContent,
+  ArrangementBlockContent,
 } from "@/lib/blocks/types";
 import type { Selections } from "@/lib/blocks/pricing";
 
@@ -153,6 +154,13 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica",
     marginTop: 4,
   },
+  arrangementHighlight: { borderRadius: 6, padding: 10, marginTop: 6, marginBottom: 8 },
+  arrangementHighlightTitle: { fontSize: 9.5, fontWeight: 700, color: "#FFFFFF" },
+  arrangementHighlightText: { fontSize: 9, color: "#FFFFFF", marginTop: 2 },
+  inclusiefLabel: { fontSize: 8, fontWeight: 700, color: COLORS.muted, marginTop: 6, marginBottom: 4, textTransform: "uppercase" },
+  inclusiefGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  inclusiefColumn: { width: "30%", marginBottom: 6 },
+  inclusiefTitle: { fontSize: 9, fontWeight: 700, color: COLORS.ink, marginBottom: 3 },
 });
 
 export type QuotePdfSignatureData = {
@@ -436,6 +444,68 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                         {label ? `${label}: bekijk PDF` : arr.length > 1 ? `Bijlage ${i + 1}: bekijk PDF` : "Bijlage: bekijk PDF"}
                       </Link>
                     ))}
+                </View>
+              );
+            }
+
+            case "arrangement": {
+              const c = block.content as ArrangementBlockContent;
+              const selectedExtras = c.extras.filter((extra) => (data.selections.addonQuantities?.[extra.id] ?? 0) > 0);
+              return (
+                <View key={block.id}>
+                  <View style={styles.packageHeaderRow}>
+                    <Text style={styles.packageName}>{c.heading || c.name}</Text>
+                    <Text style={[styles.packagePrice, { color: data.accentColor }]}>
+                      {c.priceLabel ? "vanaf " : ""}
+                      {formatCurrency(c.basePrice, data.currency)}
+                      {data.pricePerPerson ? " p.p." : ""}
+                    </Text>
+                  </View>
+                  {c.description && <Text style={styles.paragraph}>{c.description}</Text>}
+
+                  {c.highlightTitle && (
+                    <View style={[styles.arrangementHighlight, { backgroundColor: data.accentColor }]}>
+                      <Text style={styles.arrangementHighlightTitle}>{c.highlightTitle}</Text>
+                      {c.highlightText && <Text style={styles.arrangementHighlightText}>{c.highlightText}</Text>}
+                    </View>
+                  )}
+
+                  {c.inclusiefSections.length > 0 && (
+                    <View>
+                      <Text style={styles.inclusiefLabel}>Inclusief</Text>
+                      <View style={styles.inclusiefGrid}>
+                        {c.inclusiefSections.map((section) => (
+                          <View key={section.id} style={styles.inclusiefColumn} wrap={false}>
+                            <Text style={styles.inclusiefTitle}>{section.title}</Text>
+                            {section.items.map((item) => (
+                              <View key={item.id} style={styles.listRow}>
+                                <Text style={styles.listBullet}>•</Text>
+                                <Text style={styles.listText}>
+                                  {item.text}
+                                  {item.note ? ` ${item.note}` : ""}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+
+                  {selectedExtras.length > 0 && (
+                    <View>
+                      <Text style={styles.addonsHeading}>EXTRA OPTIES</Text>
+                      {selectedExtras.map((extra) => (
+                        <View key={extra.id} style={styles.addonRow}>
+                          <Text style={styles.addonName}>{extra.name}</Text>
+                          <Text style={styles.addonPrice}>
+                            {formatCurrency(extra.price, data.currency)}
+                            {extra.unit === "p.p." ? " p.p." : ""}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
                 </View>
               );
             }

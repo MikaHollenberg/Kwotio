@@ -1,4 +1,5 @@
-import type { PackageAddon, PackageDraft } from "@/lib/blocks/types";
+import type { PackageAddon, PackageDraft, PackagesBlockContent, ArrangementBlockContent } from "@/lib/blocks/types";
+import type { BlockType } from "@/lib/types/database";
 
 /**
  * Gekozen pakket-id('s) per "Pakketten & prijzen"-blok (blockId -> array van
@@ -37,6 +38,56 @@ export function normalizeSelectedPackages(
     else if (typeof value === "string") result[blockId] = [value];
     else result[blockId] = [];
   }
+  return result;
+}
+
+/**
+ * Verzamelt alle blokken die aan het totaal bijdragen ("Pakketten & prijzen"
+ * én "Arrangement") en zet ze om naar één gemeenschappelijke
+ * `PackagesBlockInput`-vorm, zodat calculateSubtotal/defaultSelections/
+ * Selections ongewijzigd blijven werken voor beide bloktypes. Een
+ * arrangementblok heeft geen "keuze" (er is er maar één) — het wordt
+ * gemodelleerd als een blok met precies één, altijd standaard geselecteerd
+ * pakket (de momentopname-prijs van het arrangement); de extra's van dat
+ * arrangement worden de addons van dat blok, dus die tellen op dezelfde
+ * manier mee als optionele pakket-addons altijd al deden.
+ */
+export function collectPricedBlocks(
+  blocks: { id: string; type: BlockType; content: Record<string, unknown> }[],
+): PackagesBlockInput[] {
+  const result: PackagesBlockInput[] = [];
+
+  for (const block of blocks) {
+    if (block.type === "packages") {
+      const content = block.content as unknown as PackagesBlockContent;
+      result.push({ blockId: block.id, packages: content.packages, addons: content.addons });
+    } else if (block.type === "arrangement") {
+      const content = block.content as unknown as ArrangementBlockContent;
+      result.push({
+        blockId: block.id,
+        packages: [
+          {
+            id: `${block.id}-arrangement`,
+            name: content.name,
+            description: "",
+            photoUrl: "",
+            price: content.basePrice,
+            isDefaultSelected: true,
+          },
+        ],
+        addons: content.extras.map((extra) => ({
+          id: extra.id,
+          packageId: null,
+          name: extra.unit === "p.p." ? `${extra.name} (p.p.)` : extra.name,
+          description: "",
+          price: extra.price,
+          quantityEditable: false,
+          defaultQuantity: 0,
+        })),
+      });
+    }
+  }
+
   return result;
 }
 

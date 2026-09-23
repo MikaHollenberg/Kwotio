@@ -35,6 +35,8 @@ const dict = {
   total_label: { nl: "Totaal", en: "Total" },
   extra_options: { nl: "Extra opties", en: "Extra options" },
   per_item: { nl: "/ stuk", en: "/ item" },
+  from_price_prefix: { nl: "vanaf ", en: "from " },
+  included_label: { nl: "Inclusief", en: "Included" },
   most_chosen: { nl: "Meest gekozen", en: "Most popular" },
   no_photos: { nl: "Nog geen foto's toegevoegd.", en: "No photos added yet." },
   packages_pdf_attachment: { nl: "Download bijlage (PDF)", en: "Download attachment (PDF)" },
