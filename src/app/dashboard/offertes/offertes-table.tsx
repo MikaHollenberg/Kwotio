@@ -236,7 +236,7 @@ export function OffertesTable({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div data-faq-id="offertes-search-filter" className="flex flex-wrap items-center gap-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-300" />
           <input
@@ -282,12 +282,12 @@ export function OffertesTable({
       )}
 
       {visibleQuotes.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+        <Card data-faq-id="offertes-list" className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <FileText className="size-8 text-ink-300" />
           <p className="text-sm text-ink-400">Geen offertes gevonden voor deze zoekopdracht/filter.</p>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <Card data-faq-id="offertes-list" className="overflow-hidden">
           <div className="flex flex-col divide-y divide-ink-50 sm:hidden">
             {visibleQuotes.map((q) => (
               <div key={q.id} className="flex flex-col gap-2 p-4">

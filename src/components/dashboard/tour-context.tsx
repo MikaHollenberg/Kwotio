@@ -13,6 +13,10 @@ type TourContextValue = {
   beginSteps: () => void;
   closeTour: (markSeen: boolean) => void;
   goToStep: (index: number) => void;
+  /** True zodra de actieve stap een nav-stap is (spotlight op een menu-item)
+   * -- MobileNav gebruikt dit om zichzelf open te klappen, anders is er op
+   * mobiel niets te spotlighten (het menu is normaal gesloten). */
+  activeStepIsNav: boolean;
 };
 
 const TourContext = createContext<TourContextValue | null>(null);
@@ -69,8 +73,12 @@ export function TourProvider({
     goToStep(0);
   }
 
+  const activeStepIsNav = phase === "steps" && Boolean(steps[stepIndex]?.isNavStep);
+
   return (
-    <TourContext.Provider value={{ phase, stepIndex, steps, startTour, beginSteps, closeTour, goToStep }}>
+    <TourContext.Provider
+      value={{ phase, stepIndex, steps, startTour, beginSteps, closeTour, goToStep, activeStepIsNav }}
+    >
       {children}
     </TourContext.Provider>
   );

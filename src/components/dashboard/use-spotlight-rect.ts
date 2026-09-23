@@ -28,11 +28,18 @@ export function useSpotlightRect(selector: string | null) {
         setRect(null);
         return;
       }
-      const el = document.querySelector(selector) as HTMLElement | null;
+      // Sommige markers bestaan bewust dubbel -- bijv. eenzelfde
+      // `data-faq-id` op zowel de desktop-Sidebar-link als de mobiele
+      // hamburger-menu-link (zie sidebar.tsx/mobile-nav.tsx), waarvan er op
+      // elk schermformaat maar één zichtbaar is. `querySelector` geeft altijd
+      // de EERSTE match terug, ongeacht zichtbaarheid -- met `querySelectorAll`
+      // pakken we in plaats daarvan de eerste die ook echt zichtbaar is.
+      const candidates = document.querySelectorAll(selector) as NodeListOf<HTMLElement>;
+      const el = Array.from(candidates).find((c) => c.offsetParent !== null) ?? null;
       // offsetParent is null zodra het element (of een voorouder) display:none
       // heeft -- zo herkennen we betrouwbaar dat een element niet zichtbaar is
       // (bijv. de sidebar op mobiel) i.p.v. een zinloze nul-rect te gebruiken.
-      if (!el || el.offsetParent === null) {
+      if (!el) {
         setRect(null);
         return;
       }

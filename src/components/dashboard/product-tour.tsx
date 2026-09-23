@@ -9,100 +9,211 @@ import { SpotlightOverlay } from "./spotlight-overlay";
 export type TourStep = {
   href: string;
   /** `data-faq-id`-waarde van een écht onderdeel op die pagina (dezelfde
-   * markers als de FAQ-stappenplannen al gebruiken, zie faq-content.tsx) --
-   * geen sidebar-navigatie-item meer. Dat laatste was op mobiel altijd
-   * onzichtbaar (de desktop-Sidebar is daar `hidden`), dus de rondleiding
-   * "deed niks" op de telefoon; door een écht stuk pagina-inhoud te
-   * spotlighten werkt het overal hetzelfde én laat het meteen zien wat je
-   * er kan doen, in plaats van alleen het menu-item aan te wijzen. */
+   * markers als de FAQ-stappenplannen al gebruiken, zie faq-content.tsx). */
   target: string;
   title: string;
   description: string;
   adminOnly?: boolean;
   invoicingOnly?: boolean;
+  /** Deze stap spotlight't het menu-item van de pagina (i.p.v. inhoud op de
+   * pagina zelf) -- MobileNav klapt zichzelf dan open, zie tour-context.tsx.
+   * Elke pagina begint hiermee ("waar vind ik dit"), gevolgd door 2-3
+   * content-stappen ("wat kan ik hier doen"). */
+  isNavStep?: true;
 };
 
-/** Eén stap per hoofdpagina uit de sidebar-navigatie, in dezelfde volgorde.
- * De rondleiding navigeert daadwerkelijk naar elke pagina en spotlight't
- * daar een echt, betekenisvol onderdeel (zie `target` hierboven) -- Facturen/
- * Statistieken/Administratie/Instellingen zijn `adminOnly` en/of
- * `invoicingOnly`; de aanroeper (DashboardShell) filtert die eruit voor een
+type ContentStepDef = { target: string; title: string; description: string };
+
+/** Eén nav-stap + 2-3 content-stappen per hoofdpagina: eerst waar de pagina
+ * in het menu staat, dan een paar echte, betekenisvolle onderdelen erop --
+ * i.p.v. alleen het menu-item (te mager) of alleen pagina-inhoud (dan mis je
+ * "waar vind ik dit ook alweer"). Spotlight't overal een écht element op de
+ * pagina zelf (zie `TourStep.target`), nooit alleen de sidebar-link, dus
+ * werkt dit identiek op desktop en mobiel. */
+function pageSteps(
+  href: string,
+  navLabel: string,
+  contentSteps: ContentStepDef[],
+  flags?: { adminOnly?: true; invoicingOnly?: true },
+): TourStep[] {
+  const navStep: TourStep = {
+    href,
+    target: `nav-${href.split("/").pop()}`,
+    title: navLabel,
+    description: `Dit vind je in het menu onder '${navLabel}'.`,
+    isNavStep: true,
+    ...flags,
+  };
+  return [navStep, ...contentSteps.map((c) => ({ href, ...c, ...flags }))];
+}
+
+/** Facturen/Statistieken/Administratie/Instellingen zijn `adminOnly` en/of
+ * `invoicingOnly`; de aanroeper (TourProvider) filtert die eruit voor een
  * teamlid/alleen-lezen-rol of een organisatie zonder facturatie. */
 export const ALL_TOUR_STEPS: TourStep[] = [
-  {
-    href: "/dashboard",
-    target: "dashboard-kpis",
-    title: "Overzicht",
-    description:
-      "Je startpagina. Bovenaan je belangrijkste cijfers deze maand: aantal offertes, conversieratio, gemiddelde doorlooptijd en je populairste pakket. Daaronder je eerstvolgende acties, aankomende events en recente activiteit.",
-  },
-  {
-    href: "/dashboard/offertes",
-    target: "new-quote-button",
-    title: "Offertes",
-    description:
-      "Hier maak, bewerk en verstuur je al je offertes. Klik op 'Nieuwe offerte' om te starten -- kies een template (de inhoud staat dan al klaar) of begin leeg. Zoek, filter op status en exporteer de lijst als CSV.",
-  },
-  {
-    href: "/dashboard/facturen",
-    target: "new-invoice-button",
-    title: "Facturen",
-    description:
-      "Zet een geaccepteerde offerte om in een factuur, of begin hier helemaal vanaf 0. Aanbetalingen, slotfacturen en online betalen via Mollie werken allemaal.",
-    adminOnly: true,
-    invoicingOnly: true,
-  },
-  {
-    href: "/dashboard/klanten",
-    target: "new-client-button",
-    title: "Klanten",
-    description:
-      "Je klantenbestand: contactgegevens, notities en de offerte-geschiedenis per klant. Nieuwe klanten worden ook automatisch aangemaakt zodra je voor iemand nieuws een offerte maakt.",
-  },
-  {
-    href: "/dashboard/aanvragen",
-    target: "aanvragen-list",
-    title: "Offerte-aanvragen",
-    description:
-      "Aanvragen die binnenkomen via je publieke offertepagina verschijnen hier vanzelf. Zet er met één klik een echte offerte van, of zoek en filter op status.",
-  },
-  {
-    href: "/dashboard/templates",
-    target: "new-template-button",
-    title: "Templates",
-    description:
-      "Bouw herbruikbare offerte-templates, zodat je niet steeds van nul begint. Zet er eentje publiek zichtbaar om rechtstreeks aanvragen te ontvangen.",
-  },
-  {
-    href: "/dashboard/arrangementen",
-    target: "new-arrangement-button",
-    title: "Arrangementen",
-    description:
-      "Je vaste aanbod, met staffel- of seizoensprijzen, eigen categorieën/tekst/extra's/foto's per arrangement en een optionele PDF. Voeg zo'n arrangement als kant-en-klaar blok toe aan een offerte.",
-  },
-  {
-    href: "/dashboard/statistieken",
-    target: "stats-revenue-tiles",
-    title: "Statistieken",
-    description: "Omzet geaccepteerd/gemist, conversieratio's per periode, populairste pakketten en templateprestaties.",
-    adminOnly: true,
-  },
-  {
-    href: "/dashboard/administratie",
-    target: "administratie-summary",
-    title: "Administratie",
-    description:
-      "Je btw-aangifte per kwartaal (rubriek 1a/1b/5a), met de onderliggende facturen en een CSV-export -- rechtstreeks bruikbaar bij je boekhouding.",
-    adminOnly: true,
-    invoicingOnly: true,
-  },
-  {
-    href: "/dashboard/instellingen",
-    target: "settings-organisatie",
-    title: "Instellingen",
-    description: "Bedrijfsgegevens, huisstijl, team, e-mailautomatisering en je publieke offertepagina beheer je hier.",
-    adminOnly: true,
-  },
+  ...pageSteps("/dashboard", "Overzicht", [
+    {
+      target: "dashboard-kpis",
+      title: "Belangrijkste cijfers",
+      description:
+        "Aantal offertes deze maand, conversieratio, gemiddelde doorlooptijd en je populairste pakket -- in één oogopslag.",
+    },
+    {
+      target: "dashboard-events",
+      title: "Aankomende events",
+      description: "Je eerstvolgende evenementen in kalendervorm, met een gloed op elke dag waarop iets gepland staat.",
+    },
+    {
+      target: "dashboard-activity",
+      title: "Recente activiteit",
+      description:
+        "Live overzicht van wat er gebeurt: offertes bekeken, ondertekend, aanvragen binnengekomen, en meer.",
+    },
+  ]),
+  ...pageSteps("/dashboard/offertes", "Offertes", [
+    {
+      target: "new-quote-button",
+      title: "Nieuwe offerte",
+      description: "Klik hier om te starten -- kies een template (de inhoud staat dan al klaar) of begin leeg.",
+    },
+    {
+      target: "offertes-search-filter",
+      title: "Zoeken en filteren",
+      description: "Zoek op klantnaam of zet meerdere statussen tegelijk aan (concept, verzonden, geaccepteerd, etc.).",
+    },
+    {
+      target: "offertes-list",
+      title: "Je offertes",
+      description:
+        "Elke offerte met werkelijke waarde en laatste wijziging, plus snelle acties: bekijken, bewerken, dupliceren, verwijderen.",
+    },
+  ]),
+  ...pageSteps(
+    "/dashboard/facturen",
+    "Facturen",
+    [
+      {
+        target: "new-invoice-button",
+        title: "Nieuwe factuur",
+        description: "Klik hier om een losse factuur te starten, zonder gekoppelde offerte.",
+      },
+      {
+        target: "facturen-tabs",
+        title: "Facturen & artikelen",
+        description: "Wissel hier tussen je facturenlijst en je opgeslagen factuurartikelen (herbruikbare regels).",
+      },
+      {
+        target: "facturen-list",
+        title: "Je facturen",
+        description: "Type (aanbetaling/slotfactuur/creditnota), status en bedrag van elke factuur op een rij.",
+      },
+    ],
+    { adminOnly: true, invoicingOnly: true },
+  ),
+  ...pageSteps("/dashboard/klanten", "Klanten", [
+    {
+      target: "new-client-button",
+      title: "Nieuwe klant",
+      description:
+        "Meestal niet nodig -- een klant wordt automatisch aangemaakt zodra je voor iemand nieuws een offerte maakt.",
+    },
+    {
+      target: "klanten-list",
+      title: "Je klantenbestand",
+      description: "Aantal offertes, geaccepteerde waarde en klant-sinds-datum per klant, met notities en geschiedenis.",
+    },
+  ]),
+  ...pageSteps("/dashboard/aanvragen", "Offerte-aanvragen", [
+    {
+      target: "aanvragen-list",
+      title: "Zoeken en filteren",
+      description:
+        "Zoek op naam/e-mail of filter op status -- een oranje driehoekje betekent dat een aanvraag al langer dan 48 uur niet opgepakt is.",
+    },
+    {
+      target: "aanvragen-results",
+      title: "Omzetten naar offerte",
+      description: "Elke aanvraag zet je met één klik om naar een echte, al gedeeltelijk ingevulde offerte.",
+    },
+  ]),
+  ...pageSteps("/dashboard/templates", "Templates", [
+    {
+      target: "new-template-button",
+      title: "Nieuw template",
+      description: "Klik hier om te starten -- bouw 'm op met blokken, net als een offerte, maar herbruikbaar.",
+    },
+    {
+      target: "templates-tabs",
+      title: "Templates & blok-templates",
+      description:
+        "Wissel tussen je hele offerte-templates en losse blok-templates (bv. een vaste introtekst) voor sneller hergebruik.",
+    },
+  ]),
+  ...pageSteps("/dashboard/arrangementen", "Arrangementen", [
+    {
+      target: "new-arrangement-button",
+      title: "Nieuw arrangement",
+      description:
+        "Klik hier om te starten -- vaste, staffel- of seizoensprijs, met vrij samen te stellen tekst/categorieën/extra's/foto's.",
+    },
+    {
+      target: "arrangementen-grid",
+      title: "Je aanbod",
+      description: "Al je arrangementen op een rij -- versleep de kaarten om de volgorde in het overzicht te wijzigen.",
+    },
+  ]),
+  ...pageSteps(
+    "/dashboard/statistieken",
+    "Statistieken",
+    [
+      {
+        target: "stats-revenue-tiles",
+        title: "Omzet",
+        description: "Omzet geaccepteerd en omzet gemist (geweigerd/verlopen), in één oogopslag.",
+      },
+      {
+        target: "stats-pipeline-chart",
+        title: "Pipeline",
+        description:
+          "Hoeveel offertes in elke status staan -- verderop ook een periode-vergelijker en templateprestaties.",
+      },
+    ],
+    { adminOnly: true },
+  ),
+  ...pageSteps(
+    "/dashboard/administratie",
+    "Administratie",
+    [
+      {
+        target: "administratie-summary",
+        title: "Btw-rubrieken",
+        description: "Rubriek 1a/1b/5a voor het gekozen kwartaal, rechtstreeks bruikbaar bij je aangifte.",
+      },
+      {
+        target: "administratie-quarter-picker",
+        title: "Kwartaal wisselen",
+        description: "Blader door kwartalen/jaren, of exporteer het overzicht en de onderliggende facturen als CSV.",
+      },
+    ],
+    { adminOnly: true, invoicingOnly: true },
+  ),
+  ...pageSteps(
+    "/dashboard/instellingen",
+    "Instellingen",
+    [
+      {
+        target: "settings-organisatie",
+        title: "Organisatie",
+        description: "Bedrijfsgegevens, adres, contactgegevens en huisstijlkleuren stel je hier in.",
+      },
+      {
+        target: "settings-team",
+        title: "Team & rechten",
+        description: "Nodig teamleden uit en beheer hun rol (Eigenaar, Admin, Teamlid, Alleen-lezen).",
+      },
+    ],
+    { adminOnly: true },
+  ),
 ];
 
 export type TourPhase = "closed" | "intro" | "steps";

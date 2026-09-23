@@ -100,7 +100,7 @@ export default async function AdministratiePage({
           </p>
           <h1 className="font-display text-2xl font-semibold text-ink-500">Administratie</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div data-faq-id="administratie-quarter-picker" className="flex items-center gap-2">
           <Link
             href={`/dashboard/administratie?jaar=${prev.year}&kwartaal=${prev.quarter}`}
             className="flex size-9 items-center justify-center rounded-brand-sm border border-ink-200 text-ink-400 hover:bg-sand-200 hover:text-ink-500"

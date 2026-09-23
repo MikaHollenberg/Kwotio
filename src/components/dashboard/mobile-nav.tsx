@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X, ShieldCheck, HelpCircle, Compass } from "lucide-react";
-import { NAV_ITEMS } from "./sidebar";
+import { NAV_ITEMS, navFaqId } from "./sidebar";
 import { useTour } from "./tour-context";
 import { cn } from "@/lib/utils";
 
@@ -22,10 +22,15 @@ export function MobileNav({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const { startTour } = useTour();
+  const { startTour, activeStepIsNav } = useTour();
   const visibleNavItems = NAV_ITEMS.filter(
     (item) => (!item.adminOnly || canManageOrg) && (!item.invoicingOnly || invoicingEnabled),
   );
+  // Zodra de rondleiding een nav-stap toont (spotlight op het menu-item van
+  // de volgende pagina), klapt dit menu zichzelf open -- zonder dat zou de
+  // rondleiding op mobiel niets te spotlighten hebben, want dit menu is
+  // normaal gesloten totdat iemand zelf op het hamburger-icoon tikt.
+  const isOpen = open || activeStepIsNav;
 
   return (
     <>
@@ -37,7 +42,7 @@ export function MobileNav({
         <Menu className="size-5" />
       </button>
 
-      {open &&
+      {isOpen &&
         createPortal(
           <div className="fixed inset-0 z-50 flex lg:hidden">
             <div className="fixed inset-0 bg-ink-500/50" onClick={() => setOpen(false)} />
@@ -61,6 +66,7 @@ export function MobileNav({
                     <Link
                       key={href}
                       href={href}
+                      data-faq-id={navFaqId(href)}
                       onClick={() => setOpen(false)}
                       className={cn(
                         "flex items-center gap-3 rounded-brand-sm px-3 py-2.5 text-sm font-medium text-ink-400 transition-colors duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500",

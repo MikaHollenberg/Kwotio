@@ -171,7 +171,7 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
       </div>
 
       {visible.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+        <Card data-faq-id="arrangementen-grid" className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <Boxes className="kw-bob size-8 text-ink-300" />
           <p className="text-sm text-ink-400">
             Nog geen arrangementen. Bouw je eerste arrangement met groeps- of seizoensprijzen.
@@ -183,7 +183,7 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
       ) : (
         <DndContext id="arrangementen-list" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visible.map((a) => a.id)} strategy={rectSortingStrategy}>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div data-faq-id="arrangementen-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((arrangement) => (
                 <SortableCard key={arrangement.id} arrangement={arrangement} onArchive={() => handleArchive(arrangement.id)} />
               ))}

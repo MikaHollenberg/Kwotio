@@ -163,7 +163,7 @@ export default async function DashboardOverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1.4fr]">
-        <Card>
+        <Card data-faq-id="dashboard-events">
           <CardHeader>
             <CardTitle>Aankomende events</CardTitle>
           </CardHeader>
@@ -200,7 +200,7 @@ export default async function DashboardOverviewPage() {
         </Card>
       </div>
 
-      <Card>
+      <Card data-faq-id="dashboard-activity">
         <CardHeader>
           <CardTitle>Recente activiteit</CardTitle>
         </CardHeader>

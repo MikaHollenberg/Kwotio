@@ -32,7 +32,9 @@ export default async function TemplatesPage() {
         </div>
       </div>
 
-      <TemplatesTabs active="offertes" />
+      <div data-faq-id="templates-tabs">
+        <TemplatesTabs active="offertes" />
+      </div>
 
       {!templates || templates.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">

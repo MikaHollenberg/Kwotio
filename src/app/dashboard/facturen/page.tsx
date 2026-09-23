@@ -54,9 +54,11 @@ export default async function FacturenPage() {
         )}
       </div>
 
-      <FacturenTabs active="facturen" />
+      <div data-faq-id="facturen-tabs">
+        <FacturenTabs active="facturen" />
+      </div>
 
-      <Card>
+      <Card data-faq-id="facturen-list">
         <CardHeader>
           <CardTitle>Alle facturen</CardTitle>
         </CardHeader>

@@ -23,6 +23,15 @@ import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { useTour } from "./tour-context";
 import { cn } from "@/lib/utils";
 
+/** Gedeelde `data-faq-id` voor een nav-item, gebruikt door zowel deze
+ * desktop-Sidebar als MobileNav -- de rondleiding spotlight't hiermee eerst
+ * "waar in het menu" een pagina staat, vóór de inhoud van die pagina zelf.
+ * Beide plekken delen dezelfde marker (zie de dubbele-match-afhandeling in
+ * use-spotlight-rect.ts), zodat het overal werkt ongeacht schermformaat. */
+export function navFaqId(href: string) {
+  return `nav-${href.split("/").pop()}`;
+}
+
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Overzicht", icon: LayoutDashboard },
   { href: "/dashboard/offertes", label: "Offertes", icon: FileText },
@@ -113,6 +122,7 @@ export function Sidebar({
             <Link
               key={href}
               href={href}
+              data-faq-id={navFaqId(href)}
               ref={(el) => {
                 if (el) itemRefs.current.set(href, el);
                 else itemRefs.current.delete(href);

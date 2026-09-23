@@ -121,12 +121,12 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
       </div>
 
       {visibleRequests.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+        <Card data-faq-id="aanvragen-results" className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <Inbox className="kw-bob size-8 text-ink-300" />
           <p className="text-sm text-ink-400">Geen aanvragen gevonden voor deze zoekopdracht/filter.</p>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <Card data-faq-id="aanvragen-results" className="overflow-hidden">
           <div className="flex flex-col divide-y divide-ink-50 sm:hidden">
             {visibleRequests.map((r) => (
               <div key={r.id} className="flex flex-col gap-2 p-4">

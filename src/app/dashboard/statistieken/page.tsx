@@ -168,7 +168,7 @@ export default async function StatistiekenPage() {
         ))}
       </div>
 
-      <Card>
+      <Card data-faq-id="stats-pipeline-chart">
         <CardHeader>
           <CardTitle>Offertes per status</CardTitle>
         </CardHeader>

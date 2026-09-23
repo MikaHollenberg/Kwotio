@@ -44,7 +44,7 @@ export default async function KlantenPage() {
       </div>
 
       {!clients || clients.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+        <Card data-faq-id="klanten-list" className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <Users className="kw-bob size-8 text-ink-300" />
           <p className="text-sm text-ink-400">
             Nog geen klanten. Ze worden ook automatisch aangemaakt zodra je een offerte voor iemand nieuws maakt.
@@ -54,7 +54,7 @@ export default async function KlantenPage() {
           </ButtonLink>
         </Card>
       ) : (
-        <Card className="overflow-hidden">
+        <Card data-faq-id="klanten-list" className="overflow-hidden">
           <div className="flex flex-col divide-y divide-ink-50 sm:hidden">
             {clients.map((c) => {
               const stats = statsByClient.get(c.id) ?? { count: 0, value: 0 };
