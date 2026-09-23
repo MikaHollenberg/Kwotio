@@ -157,11 +157,25 @@ const styles = StyleSheet.create({
   arrangementHighlight: { borderRadius: 6, padding: 10, marginTop: 6, marginBottom: 8 },
   arrangementHighlightTitle: { fontSize: 9.5, fontWeight: 700, color: "#FFFFFF" },
   arrangementHighlightText: { fontSize: 9, color: "#FFFFFF", marginTop: 2 },
-  inclusiefLabel: { fontSize: 8, fontWeight: 700, color: COLORS.muted, marginTop: 6, marginBottom: 4, textTransform: "uppercase" },
-  inclusiefGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  inclusiefGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 6 },
   inclusiefColumn: { width: "30%", marginBottom: 6 },
   inclusiefTitle: { fontSize: 9, fontWeight: 700, color: COLORS.ink, marginBottom: 3 },
+  arrangementImage: { width: "100%", height: 70, borderRadius: 6, objectFit: "cover", marginBottom: 3 },
+  arrangementImageCaption: { fontSize: 8, color: COLORS.muted },
 });
+
+/** Iets krapper dan de exacte 25/50/75/100% -- react-pdf's flexbox-`gap`
+ * telt niet automatisch mee bij percentage-breedtes (zelfde reden waarom
+ * `inclusiefColumn` hierboven al "30%" i.p.v. 33.33% gebruikte voor een
+ * 3-koloms rij); zonder deze marge zou bijv. 1/4 + 1/4 + 2/4 op één rij
+ * (exact 100%) net over de beschikbare breedte gaan en voortijdig
+ * doorwikkelen naar de volgende regel. */
+const ARRANGEMENT_WIDTH_PERCENT: Record<1 | 2 | 3 | 4, string> = {
+  1: "23%",
+  2: "48%",
+  3: "73%",
+  4: "100%",
+};
 
 export type QuotePdfSignatureData = {
   signerName: string;
@@ -450,7 +464,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
 
             case "arrangement": {
               const c = block.content as ArrangementBlockContent;
-              const selectedExtras = c.extras.filter((extra) => (data.selections.addonQuantities?.[extra.id] ?? 0) > 0);
+              const arrangementColor = c.colorCode || data.accentColor;
               return (
                 <View key={block.id}>
                   <View style={styles.packageHeaderRow}>
@@ -463,48 +477,83 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                   </View>
                   {c.description && <Text style={styles.paragraph}>{c.description}</Text>}
 
-                  {c.highlightTitle && (
-                    <View style={[styles.arrangementHighlight, { backgroundColor: data.accentColor }]}>
-                      <Text style={styles.arrangementHighlightTitle}>{c.highlightTitle}</Text>
-                      {c.highlightText && <Text style={styles.arrangementHighlightText}>{c.highlightText}</Text>}
-                    </View>
-                  )}
+                  <View style={styles.inclusiefGrid}>
+                    {c.contentItems.map((item) => {
+                      const itemColor = item.color || arrangementColor;
+                      const widthStyle = { width: ARRANGEMENT_WIDTH_PERCENT[item.width] };
 
-                  {c.inclusiefSections.length > 0 && (
-                    <View>
-                      <Text style={styles.inclusiefLabel}>Inclusief</Text>
-                      <View style={styles.inclusiefGrid}>
-                        {c.inclusiefSections.map((section) => (
-                          <View key={section.id} style={styles.inclusiefColumn} wrap={false}>
-                            <Text style={styles.inclusiefTitle}>{section.title}</Text>
-                            {section.items.map((item) => (
-                              <View key={item.id} style={styles.listRow}>
+                      if (item.type === "text") {
+                        return (
+                          <View key={item.id} style={[styles.inclusiefColumn, widthStyle]} wrap={false}>
+                            {item.title && <Text style={[styles.inclusiefTitle, { color: itemColor }]}>{item.title}</Text>}
+                            {item.body && <Text style={styles.listText}>{item.body}</Text>}
+                          </View>
+                        );
+                      }
+                      if (item.type === "highlight") {
+                        return (
+                          <View key={item.id} style={widthStyle}>
+                            <View style={[styles.arrangementHighlight, { backgroundColor: itemColor, marginTop: 0 }]}>
+                              {item.title && <Text style={styles.arrangementHighlightTitle}>{item.title}</Text>}
+                              {item.body && <Text style={styles.arrangementHighlightText}>{item.body}</Text>}
+                            </View>
+                          </View>
+                        );
+                      }
+                      if (item.type === "category") {
+                        return (
+                          <View key={item.id} style={[styles.inclusiefColumn, widthStyle]} wrap={false}>
+                            {item.title && <Text style={[styles.inclusiefTitle, { color: itemColor }]}>{item.title}</Text>}
+                            {item.items.map((sub) => (
+                              <View key={sub.id} style={styles.listRow}>
                                 <Text style={styles.listBullet}>•</Text>
                                 <Text style={styles.listText}>
-                                  {item.text}
-                                  {item.note ? ` ${item.note}` : ""}
+                                  {sub.text}
+                                  {sub.note ? ` ${sub.note}` : ""}
                                 </Text>
                               </View>
                             ))}
                           </View>
-                        ))}
-                      </View>
-                    </View>
-                  )}
+                        );
+                      }
+                      if (item.type === "image") {
+                        return (
+                          <View key={item.id} style={widthStyle} wrap={false}>
+                            {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image is a PDF-renderprimitief, geen DOM-<img>; ImageProps kent geen alt (zie de andere Image-aanroepen in dit bestand). */}
+                            {item.imageUrl && <Image src={item.imageUrl} style={styles.arrangementImage} />}
+                            {item.caption && <Text style={styles.arrangementImageCaption}>{item.caption}</Text>}
+                          </View>
+                        );
+                      }
 
-                  {selectedExtras.length > 0 && (
-                    <View>
-                      <Text style={styles.addonsHeading}>EXTRA OPTIES</Text>
-                      {selectedExtras.map((extra) => (
-                        <View key={extra.id} style={styles.addonRow}>
-                          <Text style={styles.addonName}>{extra.name}</Text>
-                          <Text style={styles.addonPrice}>
-                            {formatCurrency(extra.price, data.currency)}
-                            {extra.unit === "p.p." ? " p.p." : ""}
-                          </Text>
+                      const selectedExtras = item.items.filter(
+                        (extra) => (data.selections.addonQuantities?.[extra.id] ?? 0) > 0,
+                      );
+                      if (selectedExtras.length === 0) return null;
+                      return (
+                        <View key={item.id} style={widthStyle}>
+                          <Text style={styles.addonsHeading}>{(item.title || "Extra opties").toUpperCase()}</Text>
+                          {selectedExtras.map((extra) => (
+                            <View key={extra.id} style={styles.addonRow}>
+                              <Text style={styles.addonName}>{extra.name}</Text>
+                              <Text style={styles.addonPrice}>
+                                {formatCurrency(extra.price, data.currency)}
+                                {extra.unit === "p.p." ? " p.p." : ""}
+                              </Text>
+                            </View>
+                          ))}
                         </View>
-                      ))}
-                    </View>
+                      );
+                    })}
+                  </View>
+
+                  {c.pdfUrl && (
+                    <Link
+                      src={c.pdfUrl}
+                      style={{ fontSize: 9.5, color: data.accentColor, textDecoration: "underline", marginTop: 8 }}
+                    >
+                      Bijlage: bekijk PDF
+                    </Link>
                   )}
                 </View>
               );

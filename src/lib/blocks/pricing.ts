@@ -75,15 +75,18 @@ export function collectPricedBlocks(
             isDefaultSelected: true,
           },
         ],
-        addons: content.extras.map((extra) => ({
-          id: extra.id,
-          packageId: null,
-          name: extra.unit === "p.p." ? `${extra.name} (p.p.)` : extra.name,
-          description: "",
-          price: extra.price,
-          quantityEditable: false,
-          defaultQuantity: 0,
-        })),
+        addons: content.contentItems
+          .filter((item) => item.type === "extras")
+          .flatMap((item) => item.items)
+          .map((extra) => ({
+            id: extra.id,
+            packageId: null,
+            name: extra.unit === "p.p." ? `${extra.name} (p.p.)` : extra.name,
+            description: "",
+            price: extra.price,
+            quantityEditable: false,
+            defaultQuantity: 0,
+          })),
       });
     }
   }

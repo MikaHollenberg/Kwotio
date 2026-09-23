@@ -1,5 +1,5 @@
 import type { BlockType, ArrangementPricingMode } from "@/lib/types/database";
-import type { ArrangementInclusiefSection, ArrangementExtra } from "@/lib/arrangements/types";
+import type { ArrangementContentItem } from "@/lib/arrangements/types";
 
 export type CoverBlockContent = {
   heroImageUrl: string;
@@ -88,10 +88,8 @@ export type ArrangementBlockContent = {
   pricingMode: ArrangementPricingMode;
   basePrice: number;
   priceLabel: string | null;
-  inclusiefSections: ArrangementInclusiefSection[];
-  highlightTitle: string;
-  highlightText: string;
-  extras: ArrangementExtra[];
+  contentItems: ArrangementContentItem[];
+  pdfUrl: string | null;
 };
 
 export type BlockContent =
@@ -208,10 +206,8 @@ export function defaultContentFor(type: BlockType): Record<string, unknown> {
         pricingMode: "vast",
         basePrice: 0,
         priceLabel: null,
-        inclusiefSections: [],
-        highlightTitle: "",
-        highlightText: "",
-        extras: [],
+        contentItems: [],
+        pdfUrl: null,
       } satisfies ArrangementBlockContent;
   }
 }
@@ -271,12 +267,15 @@ function regenerateContentIds(type: BlockType, content: Record<string, unknown>)
 
   if (type === "arrangement") {
     const c = cloned as unknown as ArrangementBlockContent;
-    c.inclusiefSections = c.inclusiefSections.map((section) => ({
-      ...section,
-      id: uid(),
-      items: section.items.map((item) => ({ ...item, id: uid() })),
-    }));
-    c.extras = c.extras.map((extra) => ({ ...extra, id: uid() }));
+    c.contentItems = c.contentItems.map((item) => {
+      if (item.type === "category") {
+        return { ...item, id: uid(), items: item.items.map((sub) => ({ ...sub, id: uid() })) };
+      }
+      if (item.type === "extras") {
+        return { ...item, id: uid(), items: item.items.map((sub) => ({ ...sub, id: uid() })) };
+      }
+      return { ...item, id: uid() };
+    });
     return cloned;
   }
 
@@ -309,10 +308,8 @@ export function newBlockFromArrangement(
     description: string;
     colorCode: string;
     pricingMode: ArrangementPricingMode;
-    inclusiefSections: ArrangementInclusiefSection[];
-    highlightTitle: string | null;
-    highlightText: string | null;
-    extras: ArrangementExtra[];
+    contentItems: ArrangementContentItem[];
+    pdfUrl: string | null;
   },
   priceInfo: { price: number; appliedLabel: string | null },
   position: number,
@@ -326,10 +323,8 @@ export function newBlockFromArrangement(
     pricingMode: arrangement.pricingMode,
     basePrice: priceInfo.price,
     priceLabel: priceInfo.appliedLabel,
-    inclusiefSections: arrangement.inclusiefSections,
-    highlightTitle: arrangement.highlightTitle ?? "",
-    highlightText: arrangement.highlightText ?? "",
-    extras: arrangement.extras,
+    contentItems: arrangement.contentItems,
+    pdfUrl: arrangement.pdfUrl,
   };
   return {
     id: uid(),

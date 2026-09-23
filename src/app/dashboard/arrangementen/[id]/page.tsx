@@ -10,7 +10,7 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
     supabase
       .from("arrangements")
       .select(
-        "id, name, description, category, color_code, base_price, pricing_mode, archived_at, inclusief_sections, highlight_title, highlight_text, extras",
+        "id, organization_id, name, description, category, color_code, base_price, pricing_mode, archived_at, content_items, pdf_url",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -33,6 +33,7 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
     <ArrangementForm
       mode="edit"
       arrangementId={arrangement.id}
+      organizationId={arrangement.organization_id}
       archivedAt={arrangement.archived_at}
       initial={{
         name: arrangement.name,
@@ -41,10 +42,8 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
         colorCode: arrangement.color_code,
         basePrice: Number(arrangement.base_price),
         pricingMode: arrangement.pricing_mode,
-        inclusiefSections: arrangement.inclusief_sections,
-        highlightTitle: arrangement.highlight_title ?? "",
-        highlightText: arrangement.highlight_text ?? "",
-        extras: arrangement.extras,
+        contentItems: arrangement.content_items,
+        pdfUrl: arrangement.pdf_url ?? "",
       }}
       initialTiers={(tiers ?? []).map((t) => ({ minGuests: t.min_guests, maxGuests: t.max_guests, price: Number(t.price) }))}
       initialSeasons={(seasons ?? []).map((s) => ({ label: s.label, startDate: s.start_date, endDate: s.end_date, price: Number(s.price) }))}

@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import type { PriceDisplayMode } from "@/lib/types/database";
 import { LanguageProvider, useTranslation } from "@/lib/i18n/language-context";
 import { sanitizeBlockHtml } from "@/lib/blocks/sanitize-html";
+import { ARRANGEMENT_ICON_MAP } from "@/lib/arrangements/icons";
 
 export { PRICE_DISPLAY_LABELS };
 
@@ -730,6 +731,138 @@ function PackagesBlockPreview({
  * hierboven (PackagesBlockPreview) via `selections.addonQuantities`, want
  * `collectPricedBlocks()` (lib/blocks/pricing.ts) zet ze al om naar
  * PackageAddon-vorm voor de totaalberekening. */
+/** Breedte (1-4 van de 4 kolommen) -> statische Tailwind-classes. Bewust een
+ * lookup-object i.p.v. een template-literal className: Tailwind's JIT-scanner
+ * vindt alleen letterlijk in de broncode voorkomende klassen, geen dynamisch
+ * samengestelde arbitrary-value-strings. */
+const CONTENT_ITEM_WIDTH_CLASSES: Record<1 | 2 | 3 | 4, string> = {
+  1: "sm:col-span-1 lg:col-span-1",
+  2: "sm:col-span-2 lg:col-span-2",
+  3: "sm:col-span-2 lg:col-span-3",
+  4: "sm:col-span-2 lg:col-span-4",
+};
+
+function ArrangementContentItemView({
+  item,
+  arrangementColor,
+  meta,
+  selections,
+  onSelectionsChange,
+  readOnly,
+}: {
+  item: ArrangementBlockContent["contentItems"][number];
+  arrangementColor: string;
+  meta: QuoteMeta;
+  selections: Selections;
+  onSelectionsChange: (s: Selections) => void;
+  readOnly: boolean;
+}) {
+  const itemColor = item.color ?? arrangementColor;
+  const Icon = item.icon ? ARRANGEMENT_ICON_MAP[item.icon] : undefined;
+
+  const header = item.type !== "image" && (item.title || Icon) && (
+    <div className="flex items-center gap-2">
+      {Icon && (
+        <span
+          className="flex size-7 shrink-0 items-center justify-center rounded-brand-sm"
+          style={{ backgroundColor: `${itemColor}1a`, color: itemColor }}
+        >
+          <Icon className="size-4" />
+        </span>
+      )}
+      {item.title && (
+        <p className="text-sm font-semibold" style={{ color: itemColor }}>
+          {item.title}
+        </p>
+      )}
+    </div>
+  );
+
+  return (
+    <div className={cn("flex flex-col gap-2", CONTENT_ITEM_WIDTH_CLASSES[item.width])}>
+      {item.type === "text" && (
+        <>
+          {header}
+          {item.body && <p className="whitespace-pre-line text-sm text-ink-400">{item.body}</p>}
+        </>
+      )}
+
+      {item.type === "highlight" && (
+        <div className="rounded-brand-sm px-4 py-3 text-sm text-white" style={{ backgroundColor: itemColor }}>
+          {item.title && <strong className="font-semibold">{item.title}</strong>}
+          {item.body && <> {item.body}</>}
+        </div>
+      )}
+
+      {item.type === "category" && (
+        <>
+          {header}
+          <ul className="flex flex-col gap-1">
+            {item.items.map((sub) => (
+              <li key={sub.id} className="text-sm text-ink-400">
+                {sub.text}
+                {sub.note && <span className="ml-1 text-xs text-ink-300">{sub.note}</span>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {item.type === "image" && (
+        <div className="flex flex-col gap-1.5">
+          {item.imageUrl && (
+            <div className="relative aspect-video w-full overflow-hidden rounded-brand-sm bg-sand-200">
+              <Image src={item.imageUrl} alt={item.caption || ""} fill className="object-cover" sizes="(min-width: 1024px) 25vw, 50vw" />
+            </div>
+          )}
+          {item.caption && <p className="text-xs text-ink-400">{item.caption}</p>}
+        </div>
+      )}
+
+      {item.type === "extras" && (
+        <>
+          {header}
+          <div className="flex flex-col gap-2">
+            {item.items.map((extra) => {
+              const qty = selections.addonQuantities[extra.id] ?? 0;
+              const checked = qty > 0;
+              return (
+                <div
+                  key={extra.id}
+                  className="flex items-center justify-between gap-3 rounded-brand-sm border border-ink-100 px-3.5 py-3"
+                >
+                  <label className="flex flex-1 items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={readOnly}
+                      onChange={
+                        readOnly
+                          ? undefined
+                          : (e) =>
+                              onSelectionsChange({
+                                ...selections,
+                                addonQuantities: { ...selections.addonQuantities, [extra.id]: e.target.checked ? 1 : 0 },
+                              })
+                      }
+                      style={{ accentColor: itemColor }}
+                      className="size-4 disabled:opacity-100"
+                    />
+                    <p className="text-sm font-medium text-ink-500">{extra.name}</p>
+                  </label>
+                  <span className="shrink-0 text-sm font-medium text-ink-500 whitespace-nowrap">
+                    +{priceLabel(extra.price, meta.currency, extra.unit === "p.p.")}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ArrangementBlockPreview({
   content: c,
   meta,
@@ -747,6 +880,7 @@ function ArrangementBlockPreview({
   accentColor: string;
 }) {
   const { t } = useTranslation();
+  const arrangementColor = c.colorCode || accentColor;
 
   return (
     <div className="px-6 py-10">
@@ -760,76 +894,33 @@ function ArrangementBlockPreview({
       {c.priceLabel && <p className="mt-0.5 text-xs text-ink-400">{c.priceLabel}</p>}
       {c.description && <p className="mt-2 text-sm text-ink-400">{c.description}</p>}
 
-      {c.highlightTitle && (
-        <div
-          className="mt-4 rounded-brand-sm px-4 py-3 text-sm text-white"
-          style={{ backgroundColor: accentColor }}
+      {c.contentItems.length > 0 && (
+        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {c.contentItems.map((item) => (
+            <ArrangementContentItemView
+              key={item.id}
+              item={item}
+              arrangementColor={arrangementColor}
+              meta={meta}
+              selections={selections}
+              onSelectionsChange={onSelectionsChange}
+              readOnly={readOnly}
+            />
+          ))}
+        </div>
+      )}
+
+      {c.pdfUrl && (
+        <a
+          href={c.pdfUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: accentColor }}
+          className="mt-6 inline-flex items-center gap-2 text-sm font-medium underline hover:opacity-80"
         >
-          <strong className="font-semibold">{c.highlightTitle}</strong>
-          {c.highlightText && <> {c.highlightText}</>}
-        </div>
-      )}
-
-      {c.inclusiefSections.length > 0 && (
-        <div className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">{t("included_label")}</p>
-          <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {c.inclusiefSections.map((section) => (
-              <div key={section.id}>
-                <p className="text-sm font-semibold" style={{ color: accentColor }}>
-                  {section.title}
-                </p>
-                <ul className="mt-1.5 flex flex-col gap-1">
-                  {section.items.map((item) => (
-                    <li key={item.id} className="text-sm text-ink-400">
-                      {item.text}
-                      {item.note && <span className="ml-1 text-xs text-ink-300">{item.note}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {c.extras.length > 0 && (
-        <div className="mt-6 flex flex-col gap-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-ink-400">{t("extra_options")}</p>
-          {c.extras.map((extra) => {
-            const qty = selections.addonQuantities[extra.id] ?? 0;
-            const checked = qty > 0;
-            return (
-              <div
-                key={extra.id}
-                className="flex items-center justify-between gap-3 rounded-brand-sm border border-ink-100 px-3.5 py-3"
-              >
-                <label className="flex flex-1 items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    disabled={readOnly}
-                    onChange={
-                      readOnly
-                        ? undefined
-                        : (e) =>
-                            onSelectionsChange({
-                              ...selections,
-                              addonQuantities: { ...selections.addonQuantities, [extra.id]: e.target.checked ? 1 : 0 },
-                            })
-                    }
-                    style={{ accentColor }}
-                    className="size-4 disabled:opacity-100"
-                  />
-                  <p className="text-sm font-medium text-ink-500">{extra.name}</p>
-                </label>
-                <span className="shrink-0 text-sm font-medium text-ink-500 whitespace-nowrap">
-                  +{priceLabel(extra.price, meta.currency, extra.unit === "p.p.")}
-                </span>
-              </div>
-            );
-          })}
-        </div>
+          <FileText className="size-4" />
+          {t("packages_pdf_attachment")}
+        </a>
       )}
     </div>
   );

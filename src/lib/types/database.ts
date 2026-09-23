@@ -3,7 +3,7 @@
  * Zodra `supabase` CLI met een gelinkt project beschikbaar is, kan dit bestand
  * vervangen worden door `supabase gen types typescript` — de vorm blijft gelijk.
  */
-import type { ArrangementInclusiefSection, ArrangementExtra } from "@/lib/arrangements/types";
+import type { ArrangementContentItem } from "@/lib/arrangements/types";
 
 export type UserRole = "owner" | "admin" | "member" | "readonly";
 export type PublicPageBackgroundStyle = "none" | "coastline" | "icons";
@@ -641,10 +641,8 @@ export interface Database {
           archived_at: string | null;
           created_at: string;
           updated_at: string;
-          inclusief_sections: ArrangementInclusiefSection[];
-          highlight_title: string | null;
-          highlight_text: string | null;
-          extras: ArrangementExtra[];
+          content_items: ArrangementContentItem[];
+          pdf_url: string | null;
         };
         Insert: Partial<Database["public"]["Tables"]["arrangements"]["Row"]> & {
           organization_id: string;
