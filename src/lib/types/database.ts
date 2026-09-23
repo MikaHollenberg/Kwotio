@@ -52,6 +52,8 @@ export type InvoiceStatus = "concept" | "open" | "deels_betaald" | "betaald" | "
 export type InvoiceType = "standaard" | "aanbetaling" | "slotfactuur" | "creditnota";
 export type InvoicePaymentMethod = "mollie" | "overboeking" | "pin" | "contant" | "sponsoring" | "overig";
 export type InvoiceVatRateType = "hoog" | "laag" | "nul" | "aangepast";
+export type ArrangementPricingMode = "vast" | "staffel" | "seizoen";
+export type ArrangementAvailabilityStatus = "beschikbaar" | "bijna_vol" | "vol";
 /** Basisregels van een PERCENTAGE-aanbetaling (offerte-pakketten, of zelf
  * ingevulde regels bij een losse factuur) -- alleen gevuld bij mode
  * "percentage", nooit bij een vast bedrag. Voedt de voorinvulling van de
@@ -621,6 +623,80 @@ export interface Database {
           name: string;
         };
         Update: Partial<Database["public"]["Tables"]["invoice_catalog_items"]["Row"]>;
+        Relationships: [];
+      };
+      arrangements: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          description: string;
+          category: string;
+          color_code: string;
+          base_price: number;
+          pricing_mode: ArrangementPricingMode;
+          sort_order: number;
+          archived_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["arrangements"]["Row"]> & {
+          organization_id: string;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["arrangements"]["Row"]>;
+        Relationships: [];
+      };
+      arrangement_price_tiers: {
+        Row: {
+          id: string;
+          arrangement_id: string;
+          min_guests: number;
+          max_guests: number | null;
+          price: number;
+          sort_order: number;
+        };
+        Insert: Partial<Database["public"]["Tables"]["arrangement_price_tiers"]["Row"]> & {
+          arrangement_id: string;
+          min_guests: number;
+          price: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["arrangement_price_tiers"]["Row"]>;
+        Relationships: [];
+      };
+      arrangement_season_prices: {
+        Row: {
+          id: string;
+          arrangement_id: string;
+          label: string;
+          start_date: string;
+          end_date: string;
+          price: number;
+          sort_order: number;
+        };
+        Insert: Partial<Database["public"]["Tables"]["arrangement_season_prices"]["Row"]> & {
+          arrangement_id: string;
+          label: string;
+          start_date: string;
+          end_date: string;
+          price: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["arrangement_season_prices"]["Row"]>;
+        Relationships: [];
+      };
+      arrangement_availability: {
+        Row: {
+          id: string;
+          arrangement_id: string;
+          date: string;
+          status: ArrangementAvailabilityStatus;
+        };
+        Insert: Partial<Database["public"]["Tables"]["arrangement_availability"]["Row"]> & {
+          arrangement_id: string;
+          date: string;
+          status: ArrangementAvailabilityStatus;
+        };
+        Update: Partial<Database["public"]["Tables"]["arrangement_availability"]["Row"]>;
         Relationships: [];
       };
     };

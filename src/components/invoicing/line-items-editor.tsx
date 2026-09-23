@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Plus, Trash2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DecimalField } from "@/components/ui/decimal-field";
 import { calculateInvoiceLineFromExcl, sumInvoiceLines, vatFromInclAmount } from "@/lib/invoicing/vat";
 import { groupLinesByVat } from "@/lib/invoice-pdf/group-lines-by-vat";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -81,41 +82,6 @@ const VAT_TYPE_LABELS: Record<InvoiceVatRateType, string> = {
  * berekeningen) volgt wat je typt. Geef een andere `resetKey` mee om 'm
  * bewust wel opnieuw te laten initialiseren (bv. bij het wisselen tussen
  * incl./excl.-weergave). */
-function DecimalField({
-  value,
-  onCommit,
-  className,
-  title,
-  placeholder,
-}: {
-  value: number;
-  onCommit: (n: number) => void;
-  className?: string;
-  title?: string;
-  placeholder?: string;
-}) {
-  const [text, setText] = useState(() => String(value).replace(".", ","));
-
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      value={text}
-      placeholder={placeholder}
-      title={title}
-      className={className}
-      onChange={(e) => {
-        const raw = e.target.value;
-        setText(raw);
-        const normalized = raw.replace(",", ".").trim();
-        if (normalized === "" || normalized === "-") return;
-        const parsed = Number(normalized);
-        if (Number.isFinite(parsed)) onCommit(parsed);
-      }}
-    />
-  );
-}
-
 /**
  * Gedeelde regel-editor: gebruikt zowel bij "nieuwe losse factuur" als bij
  * het bewerken van een bestaande conceptfactuur. Vrije regels, incl. een

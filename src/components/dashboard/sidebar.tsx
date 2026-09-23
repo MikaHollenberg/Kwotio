@@ -16,6 +16,7 @@ import {
   Compass,
   Receipt,
   Landmark,
+  Boxes,
 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
@@ -29,6 +30,7 @@ export const NAV_ITEMS = [
   { href: "/dashboard/klanten", label: "Klanten", icon: Users },
   { href: "/dashboard/aanvragen", label: "Offerte-aanvragen", icon: Inbox },
   { href: "/dashboard/templates", label: "Templates", icon: LayoutTemplate },
+  { href: "/dashboard/arrangementen", label: "Arrangementen", icon: Boxes },
   { href: "/dashboard/statistieken", label: "Statistieken", icon: BarChart3, adminOnly: true },
   {
     href: "/dashboard/administratie",
