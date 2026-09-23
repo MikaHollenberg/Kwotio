@@ -66,24 +66,29 @@ export function SpotlightOverlay({
       </div>
       <p className="text-sm text-ink-400">{description}</p>
 
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex gap-1">
-          {Array.from({ length: totalSteps }).map((_, i) => (
-            <span key={i} className={cn("size-1.5 rounded-full", i === stepIndex ? "bg-teal-600" : "bg-ink-200")} />
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          {stepIndex > 0 && (
-            <Button variant="ghost" size="sm" onClick={onPrev}>
-              <ArrowLeft className="size-3.5" />
-              Vorige
-            </Button>
-          )}
-          <Button size="sm" onClick={onNext}>
-            {isLast ? "Klaar" : "Volgende"}
-            {!isLast && <ArrowRight className="size-3.5" />}
+      {/* Dunne voortgangsbalk i.p.v. een stip per stap -- bij tientallen
+          stappen (elke pagina heeft nu een nav- + 2-3 content-stappen, zie
+          product-tour.tsx) paste een stip-per-stap-rij niet meer in de
+          kaart en duwde de knoppen zichtbaar erbuiten. Een balk schaalt
+          naar elk aantal stappen zonder ooit over te lopen. */}
+      <div className="h-1 w-full overflow-hidden rounded-full bg-ink-100">
+        <div
+          className="h-full rounded-full bg-teal-600 transition-all duration-300 ease-brand"
+          style={{ width: `${((stepIndex + 1) / totalSteps) * 100}%` }}
+        />
+      </div>
+
+      <div className="flex items-center justify-end gap-2">
+        {stepIndex > 0 && (
+          <Button variant="ghost" size="sm" onClick={onPrev}>
+            <ArrowLeft className="size-3.5" />
+            Vorige
           </Button>
-        </div>
+        )}
+        <Button size="sm" onClick={onNext}>
+          {isLast ? "Klaar" : "Volgende"}
+          {!isLast && <ArrowRight className="size-3.5" />}
+        </Button>
       </div>
     </>
   );
