@@ -12,7 +12,7 @@ export function TestomgevingActions() {
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <Button variant="primary" disabled={pending} onClick={() => startTransition(() => enterTestomgeving())}>
+      <Button variant="gold" disabled={pending} onClick={() => startTransition(() => enterTestomgeving())}>
         <LogIn className="size-4" /> Open testomgeving
       </Button>
       <Button

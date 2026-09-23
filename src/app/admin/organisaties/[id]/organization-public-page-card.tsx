@@ -56,7 +56,7 @@ export function OrganizationPublicPageCard({
               />
             </div>
           </label>
-          <Button type="submit" size="sm" disabled={pending}>
+          <Button type="submit" variant="gold" size="sm" disabled={pending}>
             {pending ? "Bezig met opslaan…" : "Opslaan"}
           </Button>
           {saved && !pending && <span className="text-sm text-emerald-600">Opgeslagen.</span>}

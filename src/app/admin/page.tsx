@@ -47,7 +47,7 @@ export default async function AdminStatsPage() {
         {kpiCards.map(({ label, icon: Icon, value, sub }) => (
           <Card key={label}>
             <CardContent className="flex items-start gap-4">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm bg-blue-50 text-blue-600">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm bg-gold-50 text-gold-700">
                 <Icon className="size-5" />
               </div>
               <div className="min-w-0">
@@ -94,10 +94,10 @@ export default async function AdminStatsPage() {
       </div>
 
       {atRiskOrganizations.length > 0 && (
-        <Card className="border-yellow-200 bg-yellow-50/50">
+        <Card className="border-amber-200 bg-amber-50/50">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <AlertTriangle className="size-4 text-yellow-700" />
+              <AlertTriangle className="size-4 text-amber-700" />
               <div>
                 <CardTitle>Organisaties met risico</CardTitle>
                 <CardDescription>Signalering, geen automatische actie -- zelf even naar kijken</CardDescription>
@@ -105,12 +105,12 @@ export default async function AdminStatsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col divide-y divide-yellow-100">
+            <div className="flex flex-col divide-y divide-amber-100">
               {atRiskOrganizations.map((org) => (
                 <Link
                   key={org.id}
                   href={`/admin/organisaties/${org.id}`}
-                  className="flex items-center justify-between gap-4 py-3 hover:bg-yellow-100/50"
+                  className="flex items-center justify-between gap-4 py-3 hover:bg-amber-100/50"
                 >
                   <p className="text-sm font-medium text-ink-500">{org.name}</p>
                   <span className="shrink-0 text-xs text-ink-400">{org.reason}</span>

@@ -33,7 +33,7 @@ export default async function AdminTestomgevingPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <FlaskConical className="size-4 text-blue-600" />
+            <FlaskConical className="size-4 text-gold-600" />
             <CardTitle>Vrij testen, zonder echte organisaties te raken</CardTitle>
           </div>
           <CardDescription>

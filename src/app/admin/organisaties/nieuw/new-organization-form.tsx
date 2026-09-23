@@ -56,7 +56,7 @@ export function NewOrganizationForm() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => router.push(`/admin/organisaties/${result.organizationId}`)}>
+            <Button variant="gold" onClick={() => router.push(`/admin/organisaties/${result.organizationId}`)}>
               Naar organisatie
             </Button>
             <Button variant="outline" onClick={() => router.push("/admin/organisaties")}>
@@ -212,7 +212,7 @@ export function NewOrganizationForm() {
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 
-          <Button type="submit" disabled={pending}>
+          <Button type="submit" variant="gold" disabled={pending}>
             {pending ? "Bezig met aanmaken…" : "Organisatie aanmaken"}
           </Button>
         </form>

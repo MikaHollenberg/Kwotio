@@ -8,7 +8,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { OrganizationRowActions } from "./organization-row-actions";
 
 const STATUS_LABELS = { proefperiode: "Proefperiode", actief: "Actief", opgezegd: "Opgezegd" } as const;
-const STATUS_TONES = { proefperiode: "yellow", actief: "green", opgezegd: "red" } as const;
+const STATUS_TONES = { proefperiode: "amber", actief: "green", opgezegd: "red" } as const;
 
 export default async function AdminOrganisatiesPage() {
   const organizations = await getOrganizationsList();
@@ -24,7 +24,7 @@ export default async function AdminOrganisatiesPage() {
           <ButtonLink href="/admin/organisaties/archief" variant="outline">
             <Archive className="size-4" /> Archief
           </ButtonLink>
-          <ButtonLink href="/admin/organisaties/nieuw" variant="primary">
+          <ButtonLink href="/admin/organisaties/nieuw" variant="gold">
             <Plus className="size-4" /> Nieuwe organisatie
           </ButtonLink>
         </div>

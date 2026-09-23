@@ -152,7 +152,7 @@ export function OrganizationEditForm({
           {error && <p className="text-sm text-red-600">{error}</p>}
 
           <div className="flex items-center gap-3">
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" variant="gold" disabled={pending}>
               {pending ? "Bezig met opslaan…" : "Opslaan"}
             </Button>
             {saved && <span className="text-sm text-emerald-600">Opgeslagen.</span>}

@@ -136,7 +136,7 @@ export function OrganizationMembersCard({ organizationId, members }: { organizat
             <option value="member">Teamlid</option>
             <option value="readonly">Alleen-lezen</option>
           </select>
-          <Button type="submit" size="md" disabled={pending}>
+          <Button type="submit" variant="gold" size="md" disabled={pending}>
             <UserPlus className="size-4" /> Toevoegen
           </Button>
         </form>
