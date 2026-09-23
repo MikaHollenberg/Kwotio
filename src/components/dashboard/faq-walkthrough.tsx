@@ -1,12 +1,9 @@
 "use client";
 
-import { createContext, useContext, useState, type CSSProperties, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { X, ArrowRight, ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useSpotlightRect, getCalloutPosition } from "./use-spotlight-rect";
+import { useSpotlightRect } from "./use-spotlight-rect";
+import { SpotlightOverlay } from "./spotlight-overlay";
 
 export type FaqStep = {
   /** Pagina om naartoe te navigeren -- weglaten als de stap op de huidige
@@ -130,87 +127,17 @@ function FaqWalkthroughOverlay({
   onClose: () => void;
 }) {
   const targetRect = useSpotlightRect(step.selector ?? null);
-  const isLast = stepIndex === totalSteps - 1;
 
-  const calloutStyle: CSSProperties | undefined = targetRect
-    ? { position: "fixed", ...getCalloutPosition(targetRect) }
-    : undefined;
-
-  return createPortal(
-    <div className="fixed inset-0 z-50">
-      {targetRect ? (
-        <>
-          <div
-            aria-hidden
-            className="pointer-events-none fixed rounded-brand-sm transition-all duration-300 ease-brand"
-            style={{
-              top: targetRect.top - 6,
-              left: targetRect.left - 6,
-              width: targetRect.width + 12,
-              height: targetRect.height + 12,
-              boxShadow: "0 0 0 3px #14b8a6, 0 0 0 9999px rgba(15, 23, 32, 0.65)",
-            }}
-          />
-          <div
-            aria-hidden
-            className="kw-ring-pulse pointer-events-none fixed rounded-brand-sm border-2 border-teal-400 transition-all duration-300 ease-brand"
-            style={{
-              top: targetRect.top - 6,
-              left: targetRect.left - 6,
-              width: targetRect.width + 12,
-              height: targetRect.height + 12,
-            }}
-          />
-        </>
-      ) : (
-        <div aria-hidden className="pointer-events-none fixed inset-0 bg-ink-500/60" />
-      )}
-
-      <div
-        className={cn(
-          "flex flex-col gap-3 rounded-brand-lg border border-ink-200/60 bg-white p-5 shadow-2xl",
-          targetRect ? "w-80" : "fixed inset-0 m-auto h-fit w-full max-w-md",
-        )}
-        style={calloutStyle}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold text-ink-400">
-              Stap {stepIndex + 1} van {totalSteps}
-            </p>
-            <h2 className="font-display text-base font-semibold text-ink-500">{step.title}</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-7 shrink-0 items-center justify-center rounded-brand-sm text-ink-400 hover:bg-sand-200"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        <p className="text-sm text-ink-400">{step.description}</p>
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex gap-1">
-            {Array.from({ length: totalSteps }).map((_, i) => (
-              <span key={i} className={cn("size-1.5 rounded-full", i === stepIndex ? "bg-teal-600" : "bg-ink-200")} />
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            {stepIndex > 0 && (
-              <Button variant="ghost" size="sm" onClick={onPrev}>
-                <ArrowLeft className="size-3.5" />
-                Vorige
-              </Button>
-            )}
-            <Button size="sm" onClick={onNext}>
-              {isLast ? "Klaar" : "Volgende"}
-              {!isLast && <ArrowRight className="size-3.5" />}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>,
-    document.body,
+  return (
+    <SpotlightOverlay
+      targetRect={targetRect}
+      title={step.title}
+      description={step.description}
+      stepIndex={stepIndex}
+      totalSteps={totalSteps}
+      onNext={onNext}
+      onPrev={onPrev}
+      onClose={onClose}
+    />
   );
 }

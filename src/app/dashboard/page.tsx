@@ -146,7 +146,7 @@ export default async function DashboardOverviewPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div data-faq-id="dashboard-kpis" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpiCards.map(({ label, icon: Icon, value }) => (
           <Card key={label}>
             <CardContent className="flex items-center gap-4">

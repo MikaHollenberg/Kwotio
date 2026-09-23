@@ -165,7 +165,7 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
           <p className="text-sm text-ink-400">Aanbod</p>
           <h2 className="font-display text-2xl font-semibold text-ink-500">Arrangementen</h2>
         </div>
-        <ButtonLink href="/dashboard/arrangementen/nieuw">
+        <ButtonLink href="/dashboard/arrangementen/nieuw" data-faq-id="new-arrangement-button">
           <Plus className="size-4" /> Nieuw arrangement
         </ButtonLink>
       </div>

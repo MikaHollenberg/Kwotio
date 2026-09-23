@@ -12,10 +12,13 @@ import { PRIVACYBELEID_URL } from "@/lib/legal";
 const TITLES: Record<string, string> = {
   "/dashboard": "Overzicht",
   "/dashboard/offertes": "Offertes",
+  "/dashboard/facturen": "Facturen",
   "/dashboard/klanten": "Klanten",
   "/dashboard/aanvragen": "Offerte-aanvragen",
   "/dashboard/templates": "Templates",
+  "/dashboard/arrangementen": "Arrangementen",
   "/dashboard/statistieken": "Statistieken",
+  "/dashboard/administratie": "Administratie",
   "/dashboard/instellingen": "Instellingen",
 };
 

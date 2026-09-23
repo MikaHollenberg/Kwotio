@@ -152,7 +152,7 @@ export default async function StatistiekenPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div data-faq-id="stats-revenue-tiles" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {revenueTiles.map(({ label, icon: Icon, value, accent }) => (
           <Card key={label}>
             <CardContent className="flex items-center gap-4">

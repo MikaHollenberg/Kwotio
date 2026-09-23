@@ -190,6 +190,22 @@ async function publicTemplateWalkthrough(): Promise<FaqWalkthroughPlan> {
   };
 }
 
+async function arrangementBlockWalkthrough(): Promise<FaqWalkthroughPlan> {
+  const quoteId = await createDemoQuoteForFaq();
+  return {
+    steps: [
+      {
+        href: `/dashboard/offertes/${quoteId}`,
+        selector: '[data-faq-id="quote-add-block-button"]',
+        title: "Arrangement toevoegen",
+        description:
+          "Klik op 'Blok toevoegen' en kies bovenaan 'Arrangement' -- je kiest dan uit je catalogus. De volledige inhoud (tekst, categorieën, extra's, foto's) wordt als momentopname naar dit offerteblok gekopieerd, met de op dat moment geldende prijs.",
+      },
+    ],
+    cleanup: () => deleteQuote(quoteId),
+  };
+}
+
 async function convertRequestWalkthrough(): Promise<FaqWalkthroughPlan> {
   const requestId = await createDemoRequestForFaq();
   return {
@@ -279,6 +295,39 @@ const CATEGORIES: FaqCategory[] = [
         answer:
           "Open een template en vink bovenin de editor 'Publiek zichtbaar' aan. De template verschijnt dan op je publieke offertepagina, waar bezoekers 'm kunnen bekijken en een aanvraag kunnen indienen.",
         walkthrough: publicTemplateWalkthrough,
+      },
+    ],
+  },
+  {
+    title: "Arrangementen",
+    items: [
+      {
+        id: "new-arrangement",
+        question: "Hoe maak ik een arrangement, en hoe bouw ik de inhoud op?",
+        answer:
+          "Ga naar Arrangementen en klik op 'Nieuw arrangement'. Naast naam, prijs en prijsmodel (vast/staffel/seizoen) bouw je de inhoud vrij op: tekst, categorieën, extra's, foto's en een actievak -- elk met een eigen breedte (1 t/m 4 van de 4 kolommen), kleur en icoon, in de volgorde die je zelf sleept. Optioneel voeg je ook een PDF toe (bv. een menukaart).",
+        walkthrough: [
+          {
+            href: "/dashboard/arrangementen",
+            selector: '[data-faq-id="new-arrangement-button"]',
+            title: "Nieuw arrangement",
+            description: "Klik hier om een nieuw arrangement te starten.",
+          },
+          {
+            href: "/dashboard/arrangementen/nieuw",
+            selector: '[data-faq-id="arrangement-content-editor"]',
+            title: "Inhoud & indeling",
+            description:
+              "Sleep onderdelen (tekst, categorie, extra's, afbeelding, actievak) in de volgorde die je wilt, en kies per onderdeel de breedte, kleur en icoon.",
+          },
+        ],
+      },
+      {
+        id: "arrangement-to-quote",
+        question: "Hoe voeg ik een arrangement toe aan een offerte?",
+        answer:
+          "Open een offerte, klik op 'Blok toevoegen' en kies bovenaan 'Arrangement'. Je kiest dan uit je catalogus -- de volledige inhoud wordt als momentopname gekopieerd naar dat offerteblok, dus latere wijzigingen aan het arrangement zelf werken niet automatisch door in een al verstuurde offerte.",
+        walkthrough: arrangementBlockWalkthrough,
       },
     ],
   },

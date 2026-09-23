@@ -1,71 +1,104 @@
 "use client";
 
-import { type CSSProperties } from "react";
 import { createPortal } from "react-dom";
-import { X, ArrowRight, ArrowLeft, Compass } from "lucide-react";
+import { Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useSpotlightRect, getCalloutPosition } from "./use-spotlight-rect";
+import { useSpotlightRect } from "./use-spotlight-rect";
+import { SpotlightOverlay } from "./spotlight-overlay";
 
 export type TourStep = {
   href: string;
+  /** `data-faq-id`-waarde van een écht onderdeel op die pagina (dezelfde
+   * markers als de FAQ-stappenplannen al gebruiken, zie faq-content.tsx) --
+   * geen sidebar-navigatie-item meer. Dat laatste was op mobiel altijd
+   * onzichtbaar (de desktop-Sidebar is daar `hidden`), dus de rondleiding
+   * "deed niks" op de telefoon; door een écht stuk pagina-inhoud te
+   * spotlighten werkt het overal hetzelfde én laat het meteen zien wat je
+   * er kan doen, in plaats van alleen het menu-item aan te wijzen. */
+  target: string;
   title: string;
   description: string;
   adminOnly?: boolean;
   invoicingOnly?: boolean;
 };
 
-/** Eén stap per hoofdpagina uit de sidebar-navigatie, in dezelfde volgorde --
- * de rondleiding navigeert daadwerkelijk naar elke pagina (i.p.v. alleen een
- * los venster te tonen) en spotlight't daarbij het bijbehorende nav-item
- * (via `[data-tour-id]` op de Sidebar-links, zie sidebar.tsx). Statistieken/
- * Instellingen zijn `adminOnly` -- de aanroeper (DashboardShell) filtert die
- * eruit voor een teamlid/alleen-lezen-rol, die daar toch niet mag komen. */
+/** Eén stap per hoofdpagina uit de sidebar-navigatie, in dezelfde volgorde.
+ * De rondleiding navigeert daadwerkelijk naar elke pagina en spotlight't
+ * daar een echt, betekenisvol onderdeel (zie `target` hierboven) -- Facturen/
+ * Statistieken/Administratie/Instellingen zijn `adminOnly` en/of
+ * `invoicingOnly`; de aanroeper (DashboardShell) filtert die eruit voor een
+ * teamlid/alleen-lezen-rol of een organisatie zonder facturatie. */
 export const ALL_TOUR_STEPS: TourStep[] = [
   {
     href: "/dashboard",
+    target: "dashboard-kpis",
     title: "Overzicht",
     description:
-      "Je startpagina: offertes deze maand, aankomende events en je recente activiteit in één oogopslag.",
+      "Je startpagina. Bovenaan je belangrijkste cijfers deze maand: aantal offertes, conversieratio, gemiddelde doorlooptijd en je populairste pakket. Daaronder je eerstvolgende acties, aankomende events en recente activiteit.",
   },
   {
     href: "/dashboard/offertes",
+    target: "new-quote-button",
     title: "Offertes",
-    description: "Hier maak, bewerk en verstuur je al je offertes. Zoek, filter op status en exporteer als CSV.",
-  },
-  {
-    href: "/dashboard/klanten",
-    title: "Klanten",
-    description: "Je klantenbestand: contactgegevens, notities en de offerte-geschiedenis per klant.",
-  },
-  {
-    href: "/dashboard/aanvragen",
-    title: "Offerte-aanvragen",
     description:
-      "Aanvragen die binnenkomen via je publieke offertepagina. Zet ze om naar een echte offerte of markeer ze als afgehandeld.",
-  },
-  {
-    href: "/dashboard/templates",
-    title: "Templates",
-    description:
-      "Bouw herbruikbare offerte-templates, zodat je niet steeds van nul begint. Zet er eentje publiek zichtbaar om aanvragen te ontvangen.",
+      "Hier maak, bewerk en verstuur je al je offertes. Klik op 'Nieuwe offerte' om te starten -- kies een template (de inhoud staat dan al klaar) of begin leeg. Zoek, filter op status en exporteer de lijst als CSV.",
   },
   {
     href: "/dashboard/facturen",
+    target: "new-invoice-button",
     title: "Facturen",
     description:
-      "Zet een geaccepteerde offerte om in een factuur, of begin helemaal vanaf 0. Aanbetalingen, slotfacturen en online betalen via Mollie werken hier allemaal.",
+      "Zet een geaccepteerde offerte om in een factuur, of begin hier helemaal vanaf 0. Aanbetalingen, slotfacturen en online betalen via Mollie werken allemaal.",
     adminOnly: true,
     invoicingOnly: true,
   },
   {
+    href: "/dashboard/klanten",
+    target: "new-client-button",
+    title: "Klanten",
+    description:
+      "Je klantenbestand: contactgegevens, notities en de offerte-geschiedenis per klant. Nieuwe klanten worden ook automatisch aangemaakt zodra je voor iemand nieuws een offerte maakt.",
+  },
+  {
+    href: "/dashboard/aanvragen",
+    target: "aanvragen-list",
+    title: "Offerte-aanvragen",
+    description:
+      "Aanvragen die binnenkomen via je publieke offertepagina verschijnen hier vanzelf. Zet er met één klik een echte offerte van, of zoek en filter op status.",
+  },
+  {
+    href: "/dashboard/templates",
+    target: "new-template-button",
+    title: "Templates",
+    description:
+      "Bouw herbruikbare offerte-templates, zodat je niet steeds van nul begint. Zet er eentje publiek zichtbaar om rechtstreeks aanvragen te ontvangen.",
+  },
+  {
+    href: "/dashboard/arrangementen",
+    target: "new-arrangement-button",
+    title: "Arrangementen",
+    description:
+      "Je vaste aanbod, met staffel- of seizoensprijzen, eigen categorieën/tekst/extra's/foto's per arrangement en een optionele PDF. Voeg zo'n arrangement als kant-en-klaar blok toe aan een offerte.",
+  },
+  {
     href: "/dashboard/statistieken",
+    target: "stats-revenue-tiles",
     title: "Statistieken",
-    description: "Conversieratio's, omzet per periode, populairste pakketten en meer.",
+    description: "Omzet geaccepteerd/gemist, conversieratio's per periode, populairste pakketten en templateprestaties.",
     adminOnly: true,
   },
   {
+    href: "/dashboard/administratie",
+    target: "administratie-summary",
+    title: "Administratie",
+    description:
+      "Je btw-aangifte per kwartaal (rubriek 1a/1b/5a), met de onderliggende facturen en een CSV-export -- rechtstreeks bruikbaar bij je boekhouding.",
+    adminOnly: true,
+    invoicingOnly: true,
+  },
+  {
     href: "/dashboard/instellingen",
+    target: "settings-organisatie",
     title: "Instellingen",
     description: "Bedrijfsgegevens, huisstijl, team, e-mailautomatisering en je publieke offertepagina beheer je hier.",
     adminOnly: true,
@@ -94,7 +127,7 @@ export function ProductTour({
   onClose: () => void;
 }) {
   const step = phase === "steps" ? steps[stepIndex] : null;
-  const targetRect = useSpotlightRect(step ? `[data-tour-id="${step.href}"]` : null);
+  const targetRect = useSpotlightRect(step ? `[data-faq-id="${step.target}"]` : null);
 
   if (phase === "closed" || (phase === "steps" && steps.length === 0)) return null;
 
@@ -124,90 +157,16 @@ export function ProductTour({
     );
   }
 
-  const isLast = stepIndex === steps.length - 1;
-
-  const calloutStyle: CSSProperties | undefined = targetRect
-    ? { position: "fixed", ...getCalloutPosition(targetRect) }
-    : undefined;
-
-  return createPortal(
-    <div className="fixed inset-0 z-50">
-      {targetRect ? (
-        <>
-          <div
-            aria-hidden
-            className="pointer-events-none fixed rounded-brand-sm transition-all duration-300 ease-brand"
-            style={{
-              top: targetRect.top - 6,
-              left: targetRect.left - 6,
-              width: targetRect.width + 12,
-              height: targetRect.height + 12,
-              boxShadow: "0 0 0 3px #14b8a6, 0 0 0 9999px rgba(15, 23, 32, 0.65)",
-            }}
-          />
-          {/* Zachte, ademende gloedring rond de spotlight zelf (Kwotio Motion
-              Concepts #19) -- los van de bovenstaande vaste rand, die de
-              cutout scherp begrenst. */}
-          <div
-            aria-hidden
-            className="kw-ring-pulse pointer-events-none fixed rounded-brand-sm border-2 border-teal-400 transition-all duration-300 ease-brand"
-            style={{
-              top: targetRect.top - 6,
-              left: targetRect.left - 6,
-              width: targetRect.width + 12,
-              height: targetRect.height + 12,
-            }}
-          />
-        </>
-      ) : (
-        <div aria-hidden className="pointer-events-none fixed inset-0 bg-ink-500/60" />
-      )}
-
-      <div
-        className={cn(
-          "flex flex-col gap-3 rounded-brand-lg border border-ink-200/60 bg-white p-5 shadow-2xl",
-          targetRect ? "w-80" : "fixed inset-0 m-auto h-fit w-full max-w-md",
-        )}
-        style={calloutStyle}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold text-ink-400">
-              Stap {stepIndex + 1} van {steps.length}
-            </p>
-            <h2 className="font-display text-base font-semibold text-ink-500">{step!.title}</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex size-7 shrink-0 items-center justify-center rounded-brand-sm text-ink-400 hover:bg-sand-200"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-        <p className="text-sm text-ink-400">{step!.description}</p>
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex gap-1">
-            {steps.map((_, i) => (
-              <span key={i} className={cn("size-1.5 rounded-full", i === stepIndex ? "bg-teal-600" : "bg-ink-200")} />
-            ))}
-          </div>
-          <div className="flex items-center gap-2">
-            {stepIndex > 0 && (
-              <Button variant="ghost" size="sm" onClick={onPrev}>
-                <ArrowLeft className="size-3.5" />
-                Vorige
-              </Button>
-            )}
-            <Button size="sm" onClick={onNext}>
-              {isLast ? "Klaar" : "Volgende"}
-              {!isLast && <ArrowRight className="size-3.5" />}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>,
-    document.body,
+  return (
+    <SpotlightOverlay
+      targetRect={targetRect}
+      title={step!.title}
+      description={step!.description}
+      stepIndex={stepIndex}
+      totalSteps={steps.length}
+      onNext={onNext}
+      onPrev={onPrev}
+      onClose={onClose}
+    />
   );
 }

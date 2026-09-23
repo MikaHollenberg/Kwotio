@@ -113,7 +113,6 @@ export function Sidebar({
             <Link
               key={href}
               href={href}
-              data-tour-id={href}
               ref={(el) => {
                 if (el) itemRefs.current.set(href, el);
                 else itemRefs.current.delete(href);

@@ -119,7 +119,7 @@ export default async function AdministratiePage({
         </div>
       </div>
 
-      <Card>
+      <Card data-faq-id="administratie-summary">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

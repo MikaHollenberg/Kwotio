@@ -363,7 +363,7 @@ export function ArrangementForm({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card data-faq-id="arrangement-content-editor">
         <CardHeader>
           <CardTitle>Inhoud &amp; indeling</CardTitle>
           <CardDescription>

@@ -88,7 +88,7 @@ export function AanvragenTable({ requests }: { requests: RequestRow[] }) {
         <h2 className="font-display text-2xl font-semibold text-ink-500">Offerte-aanvragen</h2>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div data-faq-id="aanvragen-list" className="flex flex-wrap items-center gap-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-300" />
           <input

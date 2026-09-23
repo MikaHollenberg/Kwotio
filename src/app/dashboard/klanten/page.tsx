@@ -37,7 +37,7 @@ export default async function KlantenPage() {
           <ButtonLink href="/dashboard/klanten/archief" variant="outline">
             <Archive className="size-4" /> Gearchiveerde klanten
           </ButtonLink>
-          <ButtonLink href="/dashboard/klanten/nieuw">
+          <ButtonLink href="/dashboard/klanten/nieuw" data-faq-id="new-client-button">
             <Plus className="size-4" /> Nieuwe klant
           </ButtonLink>
         </div>
