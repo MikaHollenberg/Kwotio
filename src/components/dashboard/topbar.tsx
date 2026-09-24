@@ -15,6 +15,7 @@ export function Topbar({
   canManageOrg = false,
   invoicingEnabled = false,
   newRequestCount = 0,
+  newLeadCount = 0,
 }: {
   title: string;
   fullName: string | null;
@@ -23,6 +24,7 @@ export function Topbar({
   canManageOrg?: boolean;
   invoicingEnabled?: boolean;
   newRequestCount?: number;
+  newLeadCount?: number;
 }) {
   const router = useRouter();
 
@@ -48,6 +50,7 @@ export function Topbar({
           canManageOrg={canManageOrg}
           invoicingEnabled={invoicingEnabled}
           newRequestCount={newRequestCount}
+          newLeadCount={newLeadCount}
         />
         <h1 className="font-display text-xl font-semibold text-ink-500">
           {title}

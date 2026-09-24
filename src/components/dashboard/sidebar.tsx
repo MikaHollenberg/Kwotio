@@ -8,6 +8,7 @@ import {
   FileText,
   Users,
   Inbox,
+  UserPlus,
   LayoutTemplate,
   BarChart3,
   Settings,
@@ -38,6 +39,7 @@ export const NAV_ITEMS = [
   { href: "/dashboard/facturen", label: "Facturen", icon: Receipt, invoicingOnly: true },
   { href: "/dashboard/klanten", label: "Klanten", icon: Users },
   { href: "/dashboard/aanvragen", label: "Offerte-aanvragen", icon: Inbox },
+  { href: "/dashboard/leads", label: "Leads", icon: UserPlus },
   { href: "/dashboard/templates", label: "Templates", icon: LayoutTemplate },
   { href: "/dashboard/arrangementen", label: "Arrangementen", icon: Boxes },
   { href: "/dashboard/statistieken", label: "Statistieken", icon: BarChart3, adminOnly: true },
@@ -58,6 +60,7 @@ export function Sidebar({
   logoUrl,
   organizationName,
   newRequestCount = 0,
+  newLeadCount = 0,
 }: {
   showAdmin?: boolean;
   /** Rol is owner/admin — bepaalt of Statistieken/Instellingen in de
@@ -76,6 +79,8 @@ export function Sidebar({
   organizationName?: string | null;
   /** Aantal offerte-aanvragen met status "nieuw" — badge naast dat nav-item. */
   newRequestCount?: number;
+  /** Aantal leads met status "nieuw" — badge naast dat nav-item. */
+  newLeadCount?: number;
 }) {
   const pathname = usePathname();
   const { startTour } = useTour();
@@ -142,6 +147,16 @@ export function Sidebar({
                   )}
                 >
                   {newRequestCount}
+                </span>
+              )}
+              {href === "/dashboard/leads" && newLeadCount > 0 && (
+                <span
+                  className={cn(
+                    "flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                    isActive ? "bg-white/20 text-white" : "bg-orange-500 text-white",
+                  )}
+                >
+                  {newLeadCount}
                 </span>
               )}
             </Link>

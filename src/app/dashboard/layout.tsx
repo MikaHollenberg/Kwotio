@@ -54,7 +54,7 @@ export default async function DashboardLayout({
   const canManageOrg = profile?.role === "owner" || profile?.role === "admin";
   const invoicingEnabled = isInvoicingEnabled(profile?.organization_id);
 
-  const [{ data: organization }, { count: newRequestCount }] = await Promise.all([
+  const [{ data: organization }, { count: newRequestCount }, { count: newLeadCount }] = await Promise.all([
     profile
       ? supabase
           .from("organizations")
@@ -65,6 +65,13 @@ export default async function DashboardLayout({
     profile
       ? supabase
           .from("quote_requests")
+          .select("id", { count: "exact", head: true })
+          .eq("organization_id", profile.organization_id)
+          .eq("status", "nieuw")
+      : Promise.resolve({ count: 0 }),
+    profile
+      ? supabase
+          .from("leads")
           .select("id", { count: "exact", head: true })
           .eq("organization_id", profile.organization_id)
           .eq("status", "nieuw")
@@ -92,6 +99,7 @@ export default async function DashboardLayout({
           logoUrl={organization?.logo_horizontal_url}
           organizationName={organization?.brand_name}
           newRequestCount={newRequestCount ?? 0}
+          newLeadCount={newLeadCount ?? 0}
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <DashboardShell
@@ -103,6 +111,7 @@ export default async function DashboardLayout({
             organizationName={organization?.brand_name ?? null}
             termsUrl={organization?.terms_url ?? null}
             newRequestCount={newRequestCount ?? 0}
+            newLeadCount={newLeadCount ?? 0}
           >
             {children}
           </DashboardShell>

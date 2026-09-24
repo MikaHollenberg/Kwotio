@@ -14,11 +14,13 @@ export function MobileNav({
   canManageOrg = false,
   invoicingEnabled = false,
   newRequestCount = 0,
+  newLeadCount = 0,
 }: {
   showAdmin?: boolean;
   canManageOrg?: boolean;
   invoicingEnabled?: boolean;
   newRequestCount?: number;
+  newLeadCount?: number;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -83,6 +85,16 @@ export function MobileNav({
                           )}
                         >
                           {newRequestCount}
+                        </span>
+                      )}
+                      {href === "/dashboard/leads" && newLeadCount > 0 && (
+                        <span
+                          className={cn(
+                            "flex min-w-5 items-center justify-center rounded-full px-1.5 text-xs font-semibold",
+                            isActive ? "bg-white/20 text-white" : "bg-orange-500 text-white",
+                          )}
+                        >
+                          {newLeadCount}
                         </span>
                       )}
                     </Link>

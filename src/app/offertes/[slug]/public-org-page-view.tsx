@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LayoutTemplate, Info } from "lucide-react";
+import { LayoutTemplate, Info, MessageCircleQuestion } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { WaveDivider } from "@/components/brand/wave-divider";
@@ -18,6 +18,7 @@ import { PUBLIC_PRICE_DISCLAIMER, PRIVACYBELEID_URL } from "@/lib/legal";
 import { cn } from "@/lib/utils";
 import type { PublicOrgPageData } from "./data";
 import { RequestFormModal } from "./request-form-modal";
+import { LeadFormModal } from "./lead-form-modal";
 import { logTemplateOpened, logRequestFormOpened } from "./analytics";
 
 const META: QuoteMeta = {
@@ -47,6 +48,7 @@ export function PublicOrgPageView({
   // bezoeker (of een gedeelde ?template=-link, zie het effect hieronder).
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
+  const [leadFormOpen, setLeadFormOpen] = useState(false);
 
   useEffect(() => {
     if (embed) return;
@@ -66,7 +68,8 @@ export function PublicOrgPageView({
     // in scrollHeight, en zou anders binnen een te lage iframe afgesneden
     // worden.
     function postHeight() {
-      const height = Math.max(document.documentElement.scrollHeight, formOpen ? window.innerHeight : 0);
+      const modalOpen = formOpen || leadFormOpen;
+      const height = Math.max(document.documentElement.scrollHeight, modalOpen ? window.innerHeight : 0);
       window.parent.postMessage({ type: "kwotio-embed-resize", height }, "*");
     }
     const observer = new ResizeObserver(postHeight);
@@ -77,7 +80,7 @@ export function PublicOrgPageView({
       observer.disconnect();
       window.removeEventListener("resize", postHeight);
     };
-  }, [embed, formOpen]);
+  }, [embed, formOpen, leadFormOpen]);
 
   useEffect(() => {
     // Eenmalige sync vanaf de URL bij het laden (deelbare ?template=-link) —
@@ -145,6 +148,27 @@ export function PublicOrgPageView({
           <div className="flex items-start gap-2.5 rounded-brand-sm border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
             <Info className="mt-0.5 size-4 shrink-0" />
             <p>{PUBLIC_PRICE_DISCLAIMER}</p>
+          </div>
+
+          <div className="flex items-center gap-4 rounded-brand-lg border border-ink-200/60 bg-white px-5 py-4">
+            <div
+              className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm"
+              style={{ backgroundColor: `${data.primaryColor}1a`, color: data.primaryColor }}
+            >
+              <MessageCircleQuestion className="size-5.5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-ink-500">Nog niet zeker wat je zoekt?</p>
+              <p className="mt-0.5 text-xs text-ink-400">Laat gewoon je gegevens achter, dan nemen wij contact met je op.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLeadFormOpen(true)}
+              style={{ borderColor: data.primaryColor, color: data.primaryColor }}
+              className="shrink-0 whitespace-nowrap rounded-brand-sm border px-4 py-2 text-sm font-semibold hover:opacity-80"
+            >
+              Neem contact op
+            </button>
           </div>
 
           {data.templates.length === 0 ? (
@@ -256,6 +280,15 @@ export function PublicOrgPageView({
           closedDates={data.closedDates}
           closedWeekdays={data.closedWeekdays}
           onClose={() => setFormOpen(false)}
+        />
+      )}
+      {leadFormOpen && (
+        <LeadFormModal
+          orgSlug={orgSlug}
+          closedDates={data.closedDates}
+          closedWeekdays={data.closedWeekdays}
+          accentColor={data.primaryColor}
+          onClose={() => setLeadFormOpen(false)}
         />
       )}
     </LanguageProvider>

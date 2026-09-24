@@ -16,6 +16,7 @@ import { useFaqWalkthrough, type FaqStep, type FaqWalkthroughPlan } from "@/comp
 import { createDemoQuoteForFaq, deleteQuote } from "@/app/dashboard/offertes/actions";
 import { createDemoTemplateForFaq, deleteTemplateFromList } from "@/app/dashboard/templates/actions";
 import { createDemoRequestForFaq, deleteQuoteRequest } from "@/app/dashboard/aanvragen/actions";
+import { createDemoLeadForFaq, deleteLead } from "@/app/dashboard/leads/actions";
 
 type FaqItem = {
   id: string;
@@ -206,6 +207,29 @@ async function arrangementBlockWalkthrough(): Promise<FaqWalkthroughPlan> {
   };
 }
 
+async function convertLeadWalkthrough(): Promise<FaqWalkthroughPlan> {
+  const leadId = await createDemoLeadForFaq();
+  return {
+    steps: [
+      {
+        href: "/dashboard/leads",
+        selector: `[data-faq-id="lead-card-${leadId}"]`,
+        title: "Een lead",
+        description:
+          "Naam, contactgegevens, waarvoor, geschat aantal personen, voorkeursdatum en een eventueel bericht -- alles wat iemand invulde staat direct zichtbaar.",
+      },
+      {
+        href: "/dashboard/leads",
+        selector: `[data-faq-id="lead-card-${leadId}"]`,
+        title: "Omzetten naar aanvraag",
+        description:
+          "Klik op 'Omzetten' -- alle gegevens worden overgenomen in een nieuwe offerte-aanvraag, waar je vervolgens zelf een template kiest.",
+      },
+    ],
+    cleanup: () => deleteLead(leadId),
+  };
+}
+
 async function convertRequestWalkthrough(): Promise<FaqWalkthroughPlan> {
   const requestId = await createDemoRequestForFaq();
   return {
@@ -377,6 +401,18 @@ const CATEGORIES: FaqCategory[] = [
         id: "request-icons",
         question: "Wat betekenen de gekleurde icoontjes bij een aanvraag?",
         answer: "request-icons-explainer",
+      },
+    ],
+  },
+  {
+    title: "Leads",
+    items: [
+      {
+        id: "what-is-a-lead",
+        question: "Wat is het verschil tussen een lead en een offerte-aanvraag?",
+        answer:
+          "Een lead is een lichter contactmoment: op de publieke offertepagina staat naast 'Vraag offerte aan' ook een 'Neem contact op'-knop voor bezoekers die nog niet precies weten wat ze zoeken. Die vraagt geen template, alleen contactgegevens, waarvoor het ongeveer is, een geschat aantal personen en een voorkeursdatum. Een lead is dus geen offerte-aanvraag -- je zet 'm zelf om zodra je contact hebt gehad.",
+        walkthrough: convertLeadWalkthrough,
       },
     ],
   },

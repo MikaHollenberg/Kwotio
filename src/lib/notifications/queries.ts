@@ -6,7 +6,7 @@ type Client = SupabaseClient<Database>;
 
 export type NotificationItem = {
   id: string;
-  type: "comment" | "declined" | "signed" | "quote_request";
+  type: "comment" | "declined" | "signed" | "quote_request" | "lead";
   title: string;
   detail: string;
   href: string;
@@ -31,7 +31,7 @@ export async function getRecentNotifications(
   const quoteIds = (quotes ?? []).map((q) => q.id);
   const titleById = new Map((quotes ?? []).map((q) => [q.id, q.title]));
 
-  const [{ data: comments }, { data: events }, { data: requests }] = await Promise.all([
+  const [{ data: comments }, { data: events }, { data: requests }, { data: leads }] = await Promise.all([
     quoteIds.length > 0
       ? supabase
           .from("comments")
@@ -55,6 +55,12 @@ export async function getRecentNotifications(
     supabase
       .from("quote_requests")
       .select("id, customer_name, created_at")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    supabase
+      .from("leads")
+      .select("id, name, created_at")
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
       .limit(limit),
@@ -105,6 +111,17 @@ export async function getRecentNotifications(
       detail: r.customer_name,
       href: `/dashboard/aanvragen/${r.id}`,
       createdAt: r.created_at,
+    });
+  }
+
+  for (const l of leads ?? []) {
+    items.push({
+      id: `lead-${l.id}`,
+      type: "lead",
+      title: "Nieuwe lead",
+      detail: l.name,
+      href: `/dashboard/leads`,
+      createdAt: l.created_at,
     });
   }
 

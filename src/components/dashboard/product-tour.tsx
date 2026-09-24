@@ -136,6 +136,19 @@ export const ALL_TOUR_STEPS: TourStep[] = [
       description: "Elke aanvraag zet je met één klik om naar een echte, al gedeeltelijk ingevulde offerte.",
     },
   ]),
+  ...pageSteps("/dashboard/leads", "Leads", [
+    {
+      target: "leads-search-filter",
+      title: "Zoeken en filteren",
+      description: "Zoek op naam, bedrijf of e-mail, of filter op status (nieuw, gecontacteerd, omgezet, afgewezen).",
+    },
+    {
+      target: "leads-list",
+      title: "Leads opvolgen",
+      description:
+        "Een lead is een lichter contactmoment dan een volledige aanvraag -- iemand die alleen zijn gegevens achterliet via 'Neem contact op' op je publieke pagina. Zet 'm met één klik om naar een echte offerte-aanvraag.",
+    },
+  ]),
   ...pageSteps("/dashboard/templates", "Templates", [
     {
       target: "new-template-button",

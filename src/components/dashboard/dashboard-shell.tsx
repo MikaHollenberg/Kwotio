@@ -15,6 +15,7 @@ const TITLES: Record<string, string> = {
   "/dashboard/facturen": "Facturen",
   "/dashboard/klanten": "Klanten",
   "/dashboard/aanvragen": "Offerte-aanvragen",
+  "/dashboard/leads": "Leads",
   "/dashboard/templates": "Templates",
   "/dashboard/arrangementen": "Arrangementen",
   "/dashboard/statistieken": "Statistieken",
@@ -38,6 +39,7 @@ export function DashboardShell({
   organizationName,
   termsUrl,
   newRequestCount = 0,
+  newLeadCount = 0,
 }: {
   children: React.ReactNode;
   fullName: string | null;
@@ -48,20 +50,23 @@ export function DashboardShell({
   organizationName?: string | null;
   termsUrl?: string | null;
   newRequestCount?: number;
+  newLeadCount?: number;
 }) {
   const pathname = usePathname();
   const pageTitle = titleFor(pathname, organizationName ?? "Kwotio");
   const { phase: tourPhase, stepIndex: tourStep, steps: tourSteps, beginSteps, closeTour, goToStep } = useTour();
 
   // Badge in de titel van het browsertabblad ("(2) Offertes") zodra er
-  // nieuwe, nog niet opgepakte aanvragen zijn -- zo valt het ook op als het
-  // tabblad niet actief is, zonder dat je steeds hoeft te controleren. Next
-  // zet de <title>-tag na hydratie soms terug naar de statische metadata-
-  // waarde, dus een eenmalige document.title-toewijzing wordt anders
-  // meteen weer overschreven -- een MutationObserver op de title-tag dwingt
-  // de badge steeds opnieuw af zodra iets anders 'm probeert te wijzigen.
+  // nieuwe, nog niet opgepakte aanvragen of leads zijn -- zo valt het ook op
+  // als het tabblad niet actief is, zonder dat je steeds hoeft te
+  // controleren. Next zet de <title>-tag na hydratie soms terug naar de
+  // statische metadata-waarde, dus een eenmalige document.title-toewijzing
+  // wordt anders meteen weer overschreven -- een MutationObserver op de
+  // title-tag dwingt de badge steeds opnieuw af zodra iets anders 'm
+  // probeert te wijzigen.
+  const badgeCount = newRequestCount + newLeadCount;
   useEffect(() => {
-    const badgedTitle = newRequestCount > 0 ? `(${newRequestCount}) ${pageTitle}` : pageTitle;
+    const badgedTitle = badgeCount > 0 ? `(${badgeCount}) ${pageTitle}` : pageTitle;
 
     function applyBadge() {
       if (document.title !== badgedTitle) document.title = badgedTitle;
@@ -73,7 +78,7 @@ export function DashboardShell({
     const observer = new MutationObserver(applyBadge);
     observer.observe(titleEl, { childList: true, characterData: true, subtree: true });
     return () => observer.disconnect();
-  }, [pageTitle, newRequestCount]);
+  }, [pageTitle, badgeCount]);
 
   return (
     <>
@@ -85,6 +90,7 @@ export function DashboardShell({
         canManageOrg={canManageOrg}
         invoicingEnabled={invoicingEnabled}
         newRequestCount={newRequestCount}
+        newLeadCount={newLeadCount}
       />
       <ToastProvider>
         <FaqWalkthroughProvider>

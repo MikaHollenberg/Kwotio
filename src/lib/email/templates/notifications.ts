@@ -98,6 +98,25 @@ export function quoteRequestReceivedEmail(input: {
   });
 }
 
+export function leadReceivedEmail(input: {
+  organizationName: string;
+  customerName: string;
+  dashboardUrl: string;
+}) {
+  return emailShell({
+    organizationName: input.organizationName,
+    preheader: `${input.customerName} wil dat jullie contact opnemen via je publieke pagina.`,
+    bodyHtml: `
+      <h1 style="font-size:20px;margin:0 0 12px;">Nieuwe lead 📥</h1>
+      <p style="font-size:14px;line-height:1.6;color:#46626E;margin:0 0 20px;">
+        <strong>${textToSafeHtml(input.customerName)}</strong> heeft via jullie publieke offertepagina laten weten dat
+        jullie contact mogen opnemen -- nog geen specifiek template gekozen, gewoon een eerste interesse.
+      </p>
+      ${emailButton("Bekijk lead", input.dashboardUrl)}
+    `,
+  });
+}
+
 export function newCommentAgencyEmail(input: {
   organizationName: string;
   quoteTitle: string;

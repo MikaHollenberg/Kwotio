@@ -49,6 +49,8 @@ export type PriceDisplayMode = "incl_btw" | "excl_btw";
 export type OrgStatus = "proefperiode" | "actief" | "opgezegd";
 export type LogoPreference = "horizontaal" | "vierkant";
 export type QuoteRequestStatus = "nieuw" | "in_behandeling" | "omgezet" | "genegeerd";
+export type LeadPurpose = "uitje" | "arrangement" | "overig";
+export type LeadStatus = "nieuw" | "gecontacteerd" | "omgezet" | "afgewezen";
 export type PublicPageEventType = "page_view" | "template_opened" | "request_form_opened";
 export type InvoiceStatus = "concept" | "open" | "deels_betaald" | "betaald" | "vervallen" | "geannuleerd";
 export type InvoiceType = "standaard" | "aanbetaling" | "slotfactuur" | "creditnota";
@@ -493,6 +495,35 @@ export interface Database {
           customer_phone: string;
         };
         Update: Partial<Database["public"]["Tables"]["quote_requests"]["Row"]>;
+        Relationships: [];
+      };
+      leads: {
+        Row: {
+          id: string;
+          organization_id: string;
+          name: string;
+          company_name: string | null;
+          email: string;
+          phone: string;
+          purpose: LeadPurpose;
+          guest_count: number;
+          preferred_date: string;
+          message: string | null;
+          status: LeadStatus;
+          converted_request_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["leads"]["Row"]> & {
+          organization_id: string;
+          name: string;
+          email: string;
+          phone: string;
+          purpose: LeadPurpose;
+          guest_count: number;
+          preferred_date: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["leads"]["Row"]>;
         Relationships: [];
       };
       public_page_events: {

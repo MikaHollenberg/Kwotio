@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { Bell, MessageCircle, ThumbsDown, CheckCircle2, Inbox, X } from "lucide-react";
+import { Bell, MessageCircle, ThumbsDown, CheckCircle2, Inbox, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   getNotifications,
@@ -22,6 +22,7 @@ const ICONS: Record<NotificationItem["type"], typeof MessageCircle> = {
   declined: ThumbsDown,
   signed: CheckCircle2,
   quote_request: Inbox,
+  lead: UserPlus,
 };
 
 const ICON_TONE: Record<NotificationItem["type"], string> = {
@@ -29,6 +30,7 @@ const ICON_TONE: Record<NotificationItem["type"], string> = {
   declined: "bg-red-50 text-red-700",
   signed: "bg-emerald-50 text-emerald-700",
   quote_request: "bg-blue-100 text-blue-800",
+  lead: "bg-amber-100 text-amber-800",
 };
 
 function timeAgo(iso: string) {
