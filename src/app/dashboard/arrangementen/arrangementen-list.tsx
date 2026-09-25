@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Archive, ArchiveRestore, Plus, Boxes, Gauge, CalendarRange } from "lucide-react";
+import { GripVertical, Pencil, Archive, ArchiveRestore, Plus, Boxes, Gauge, CalendarRange, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
@@ -27,6 +27,8 @@ type ArrangementRow = {
   color_code: string;
   base_price: number;
   pricing_mode: ArrangementPricingMode;
+  price_per_person: boolean;
+  is_publicly_visible: boolean;
   sort_order: number;
   archived_at: string | null;
 };
@@ -53,14 +55,21 @@ function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRo
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate font-display text-base font-semibold text-ink-500">{arrangement.name}</p>
-            {arrangement.category && (
-              <span
-                className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
-                style={{ backgroundColor: `${arrangement.color_code}1a`, color: arrangement.color_code }}
-              >
-                {arrangement.category}
-              </span>
-            )}
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              {arrangement.category && (
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                  style={{ backgroundColor: `${arrangement.color_code}1a`, color: arrangement.color_code }}
+                >
+                  {arrangement.category}
+                </span>
+              )}
+              {arrangement.is_publicly_visible && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-700">
+                  <Globe className="size-3" /> Publiek
+                </span>
+              )}
+            </div>
           </div>
         </div>
         {arrangement.description && <p className="line-clamp-2 text-xs text-ink-400">{arrangement.description}</p>}
@@ -71,6 +80,7 @@ function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRo
           <span className="font-display font-semibold text-ink-500">
             {arrangement.pricing_mode !== "vast" && "vanaf "}
             {formatCurrency(arrangement.base_price)}
+            {arrangement.price_per_person && " p.p."}
           </span>
         </div>
       </div>

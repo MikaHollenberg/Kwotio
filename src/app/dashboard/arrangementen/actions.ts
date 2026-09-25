@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { ArrangementAvailabilityStatus, ArrangementPricingMode } from "@/lib/types/database";
+import type { ArrangementAvailabilityStatus, ArrangementPricingMode, PriceDisplayMode } from "@/lib/types/database";
 import type { ArrangementContentItem } from "@/lib/arrangements/types";
 
 /** Arrangementen zijn een catalogus, geen geldbeweging op zich (dat gebeurt
@@ -34,6 +34,9 @@ export type ArrangementFields = {
   colorCode: string;
   basePrice: number;
   pricingMode: ArrangementPricingMode;
+  pricePerPerson: boolean;
+  priceDisplay: PriceDisplayMode;
+  isPubliclyVisible: boolean;
   contentItems: ArrangementContentItem[];
   pdfUrl: string;
 };
@@ -50,6 +53,9 @@ export async function createArrangement(fields: ArrangementFields) {
       color_code: fields.colorCode,
       base_price: fields.basePrice,
       pricing_mode: fields.pricingMode,
+      price_per_person: fields.pricePerPerson,
+      price_display: fields.priceDisplay,
+      is_publicly_visible: fields.isPubliclyVisible,
       content_items: fields.contentItems,
       pdf_url: fields.pdfUrl.trim() || null,
     })
@@ -71,6 +77,9 @@ export async function updateArrangement(id: string, fields: ArrangementFields) {
       color_code: fields.colorCode,
       base_price: fields.basePrice,
       pricing_mode: fields.pricingMode,
+      price_per_person: fields.pricePerPerson,
+      price_display: fields.priceDisplay,
+      is_publicly_visible: fields.isPubliclyVisible,
       content_items: fields.contentItems,
       pdf_url: fields.pdfUrl.trim() || null,
     })

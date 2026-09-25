@@ -244,6 +244,26 @@ export function PublicOrgPageView({
             </>
           )}
 
+          {data.arrangements.length > 0 && (
+            <div className="flex flex-col gap-3">
+              <h2 className="font-display text-lg font-semibold text-ink-500">Onze arrangementen</h2>
+              <div className="flex flex-col gap-3">
+                {data.arrangements.map((a) => (
+                  <div key={a.id} className="overflow-hidden rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
+                    <BlockPreview
+                      block={a.block}
+                      meta={META}
+                      selections={{ packageIdByBlock: {}, addonQuantities: {} }}
+                      onSelectionsChange={() => {}}
+                      readOnly
+                      accentColor={data.primaryColor}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {data.locationPhotoUrl && (
             <LocationSection
               photoUrl={data.locationPhotoUrl}

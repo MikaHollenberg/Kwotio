@@ -94,6 +94,7 @@ const dict = {
   sign_error_generic: { nl: "Teken je handtekening voordat je bevestigt.", en: "Please sign before confirming." },
   headcount_label: { nl: "Aantal personen", en: "Number of people" },
   headcount_placeholder: { nl: "bijv. 45", en: "e.g. 45" },
+  total_price: { nl: "Totaalprijs", en: "Total price" },
 
   request_changes: { nl: "Wijziging aanvragen", en: "Request changes" },
   request_changes_intro: {

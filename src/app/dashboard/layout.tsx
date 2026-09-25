@@ -8,16 +8,23 @@ import { InstallAppBanner } from "@/components/dashboard/install-app-banner";
 import { TestEnvironmentBanner } from "@/components/dashboard/test-environment-banner";
 import { TEST_ORGANIZATION_ID } from "@/lib/admin/testomgeving";
 import { isInvoicingEnabled } from "@/lib/invoicing/feature-flag";
+import { KWOTIO_FAVICON } from "@/lib/app-config";
 
 // PWA-installatie is bewust alleen hier gekoppeld (dit segment zit al achter
 // de hierboven staande login-check) — nooit op de publieke klant-facing
 // pagina's (/offerte, /offertes, /embed) of het inlogscherm. `icons.icon`
 // wordt hier expliciet herhaald: Next.js' metadata-merge is shallow, dus
-// zonder deze regel zou het root-favicon (icoon-zon.png) hier vervangen
-// worden door alléén het apple-touch-icon i.p.v. ernaast te bestaan.
+// zonder deze regel zou het root-favicon hier vervangen worden door alléén
+// het apple-touch-icon i.p.v. ernaast te bestaan.
+//
+// Bewust het neutrale Kwotio-merkicoon, niet Caribbean Bar's eigen zonnetje
+// (dat stond hier eerder hardcoded, voor élke organisatie) — het dashboard
+// heeft geen per-organisatie-favicon-opslag, dus valt terug op hetzelfde
+// neutrale icoon dat de publieke pagina's ook al gebruiken zolang een
+// organisatie geen eigen logo heeft (zie app-config.ts).
 export const metadata: Metadata = {
   manifest: "/manifest.json",
-  icons: { icon: "/brand/icoon-zon.png", apple: "/apple-touch-icon.png" },
+  icons: { icon: KWOTIO_FAVICON, apple: "/apple-touch-icon.png" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Kwotio" },
 };
 

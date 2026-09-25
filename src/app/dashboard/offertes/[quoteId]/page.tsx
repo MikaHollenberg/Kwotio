@@ -85,7 +85,9 @@ export default async function QuoteEditorPage({
       .eq("type", "slotfactuur"),
     supabase
       .from("arrangements")
-      .select("id, name, description, category, color_code, base_price, pricing_mode, content_items, pdf_url")
+      .select(
+        "id, name, description, category, color_code, base_price, pricing_mode, price_per_person, price_display, content_items, pdf_url",
+      )
       .eq("organization_id", organizationId)
       .is("archived_at", null)
       .order("sort_order", { ascending: true }),
@@ -116,6 +118,8 @@ export default async function QuoteEditorPage({
     colorCode: a.color_code,
     pricingMode: a.pricing_mode,
     basePrice: Number(a.base_price),
+    pricePerPerson: a.price_per_person,
+    priceDisplay: a.price_display,
     contentItems: a.content_items,
     pdfUrl: a.pdf_url,
     tiers: (tierRows ?? [])

@@ -33,12 +33,22 @@ const TYPE_LABELS: Record<ArrangementContentItemType, string> = {
   highlight: "Actievak",
 };
 
-const WIDTH_OPTIONS: { value: 1 | 2 | 3 | 4; label: string }[] = [
-  { value: 1, label: "1/4" },
-  { value: 2, label: "2/4" },
-  { value: 3, label: "3/4" },
-  { value: 4, label: "4/4" },
+/** Sneltoetsen voor veelgebruikte breuken, bovenop de losse -/+ stappen
+ * hieronder -- samen geven ze de volledige 1-12-vrijheid (elke twaalfde
+ * apart instelbaar) zonder dat je voor een gewone 1/3 of 3/4 eerst moet
+ * uitrekenen welk getal dat is. */
+const WIDTH_PRESETS: { value: number; label: string }[] = [
+  { value: 3, label: "1/4" },
+  { value: 4, label: "1/3" },
+  { value: 6, label: "1/2" },
+  { value: 8, label: "2/3" },
+  { value: 9, label: "3/4" },
+  { value: 12, label: "Vol" },
 ];
+
+function clampWidth(value: number) {
+  return Math.min(12, Math.max(1, Math.round(value)));
+}
 
 const EXTRA_UNIT_OPTIONS: { value: ArrangementExtra["unit"]; label: string }[] = [
   { value: "vast", label: "vast bedrag" },
@@ -46,7 +56,7 @@ const EXTRA_UNIT_OPTIONS: { value: ArrangementExtra["unit"]; label: string }[] =
 ];
 
 function defaultItemFor(type: ArrangementContentItemType): ArrangementContentItem {
-  const base = { id: uid(), width: 2 as const, color: null, icon: null };
+  const base = { id: uid(), width: 6, color: null, icon: null };
   switch (type) {
     case "text":
       return { ...base, type: "text", title: "Nieuw tekstblok", body: "" };
@@ -381,21 +391,44 @@ function ContentItemCard({
         ) : (
           <span />
         )}
-        <div className="flex items-center gap-1.5">
-          <span className="mr-1 text-[11px] text-ink-300">Breedte</span>
-          {WIDTH_OPTIONS.map((opt) => (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] text-ink-300">Breedte</span>
+          <div className="flex items-center gap-0.5 rounded-brand-sm border border-ink-200 bg-white">
             <button
-              key={opt.value}
               type="button"
-              onClick={() => onChange({ ...item, width: opt.value })}
-              className={cn(
-                "flex h-7 w-11 items-center justify-center rounded-brand-sm text-[11px] font-semibold transition-colors duration-150 ease-brand",
-                item.width === opt.value ? "bg-ink-500 text-white" : "border border-ink-200 bg-white text-ink-400 hover:border-ink-300",
-              )}
+              onClick={() => onChange({ ...item, width: clampWidth(item.width - 1) })}
+              disabled={item.width <= 1}
+              aria-label="Smaller"
+              className="flex h-7 w-6 items-center justify-center text-ink-400 hover:bg-sand-200 disabled:opacity-30"
             >
-              {opt.label}
+              −
             </button>
-          ))}
+            <span className="w-9 text-center text-[11px] font-semibold text-ink-500">{item.width}/12</span>
+            <button
+              type="button"
+              onClick={() => onChange({ ...item, width: clampWidth(item.width + 1) })}
+              disabled={item.width >= 12}
+              aria-label="Breder"
+              className="flex h-7 w-6 items-center justify-center text-ink-400 hover:bg-sand-200 disabled:opacity-30"
+            >
+              +
+            </button>
+          </div>
+          <div className="flex items-center gap-1">
+            {WIDTH_PRESETS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onChange({ ...item, width: opt.value })}
+                className={cn(
+                  "flex h-7 items-center justify-center rounded-brand-sm px-2 text-[11px] font-semibold transition-colors duration-150 ease-brand",
+                  item.width === opt.value ? "bg-ink-500 text-white" : "border border-ink-200 bg-white text-ink-400 hover:border-ink-300",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -674,6 +674,9 @@ export interface Database {
           updated_at: string;
           content_items: ArrangementContentItem[];
           pdf_url: string | null;
+          price_per_person: boolean;
+          price_display: PriceDisplayMode;
+          is_publicly_visible: boolean;
         };
         Insert: Partial<Database["public"]["Tables"]["arrangements"]["Row"]> & {
           organization_id: string;

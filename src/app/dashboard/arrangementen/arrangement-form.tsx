@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, Archive, ArchiveRestore } from "lucide-react";
@@ -14,8 +14,12 @@ import { calculateArrangementPrice } from "@/lib/arrangements/pricing";
 import type { ArrangementContentItem } from "@/lib/arrangements/types";
 import { PdfUploadField } from "@/components/builder/pdf-upload-field";
 import { ArrangementContentEditor } from "./content-editor";
-import { formatCurrency, cn } from "@/lib/utils";
-import type { ArrangementPricingMode } from "@/lib/types/database";
+import { cn } from "@/lib/utils";
+import type { ArrangementPricingMode, PriceDisplayMode } from "@/lib/types/database";
+import type { ArrangementBlockContent } from "@/lib/blocks/types";
+import { BlockPreview } from "@/components/preview/quote-preview";
+import type { Selections } from "@/lib/blocks/pricing";
+import { LanguageProvider } from "@/lib/i18n/language-context";
 import {
   createArrangement,
   updateArrangement,
@@ -26,7 +30,6 @@ import {
   deleteArrangement,
   type ArrangementFields,
 } from "./actions";
-import { AvailabilityCalendar } from "./availability-calendar";
 
 type TierDraft = { key: string; minGuests: number; maxGuests: number | null; price: number };
 type SeasonDraft = { key: string; label: string; startDate: string; endDate: string; price: number };
@@ -52,7 +55,6 @@ export function ArrangementForm({
   initial,
   initialTiers,
   initialSeasons,
-  initialAvailability,
   archivedAt,
 }: {
   mode: "create" | "edit";
@@ -61,7 +63,6 @@ export function ArrangementForm({
   initial: ArrangementFields;
   initialTiers: { minGuests: number; maxGuests: number | null; price: number }[];
   initialSeasons: { label: string; startDate: string; endDate: string; price: number }[];
-  initialAvailability?: { date: string; status: "beschikbaar" | "bijna_vol" | "vol" }[];
   archivedAt?: string | null;
 }) {
   const router = useRouter();
@@ -72,12 +73,16 @@ export function ArrangementForm({
   const [customColor, setCustomColor] = useState(!ARRANGEMENT_COLOR_PRESETS.includes(initial.colorCode as never));
   const [basePrice, setBasePrice] = useState(initial.basePrice);
   const [pricingMode, setPricingMode] = useState<ArrangementPricingMode>(initial.pricingMode);
+  const [pricePerPerson, setPricePerPerson] = useState(initial.pricePerPerson);
+  const [priceDisplay, setPriceDisplay] = useState<PriceDisplayMode>(initial.priceDisplay);
+  const [isPubliclyVisible, setIsPubliclyVisible] = useState(initial.isPubliclyVisible);
   const [tiers, setTiers] = useState<TierDraft[]>(initialTiers.map((t) => ({ ...t, key: makeKey() })));
   const [seasons, setSeasons] = useState<SeasonDraft[]>(initialSeasons.map((s) => ({ ...s, key: makeKey() })));
   const [contentItems, setContentItems] = useState<ArrangementContentItem[]>(initial.contentItems);
   const [pdfUrl, setPdfUrl] = useState(initial.pdfUrl);
   const [previewGuests, setPreviewGuests] = useState(10);
   const [previewDate, setPreviewDate] = useState(todayIso());
+  const [previewSelections, setPreviewSelections] = useState<Selections>({ packageIdByBlock: {}, addonQuantities: {} });
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -93,6 +98,37 @@ export function ArrangementForm({
       ),
     [basePrice, pricingMode, tiers, seasons, previewGuests, previewDate],
   );
+
+  // Zelfde momentopname-vorm als newBlockFromArrangement() bouwt zodra dit
+  // arrangement echt aan een offerte wordt toegevoegd -- door dezelfde
+  // BlockPreview te hergebruiken ziet de agency hier precies wat de klant
+  // straks te zien krijgt, in plaats van alleen een los prijsgetal.
+  const previewBlock = useMemo(
+    () => ({
+      id: "arrangement-preview",
+      type: "arrangement" as const,
+      position: 0,
+      content: {
+        heading: name || "Naam van het arrangement",
+        arrangementId: arrangementId ?? "",
+        name,
+        description,
+        colorCode,
+        pricingMode,
+        basePrice: preview.price,
+        priceLabel: preview.appliedLabel,
+        pricePerPerson,
+        priceDisplay,
+        contentItems,
+        pdfUrl: pdfUrl.trim() || null,
+      } satisfies ArrangementBlockContent,
+    }),
+    [name, arrangementId, description, colorCode, pricingMode, preview, pricePerPerson, priceDisplay, contentItems, pdfUrl],
+  );
+  // Laag prioriteit: het echte typen in Naam/Omschrijving/etc. mag nooit
+  // wachten op het herrenderen van de (soms best zware) preview -- vooral
+  // bij veel content-items kan dat anders voelbaar haperen tijdens typen.
+  const deferredPreviewBlock = useDeferredValue(previewBlock);
 
   function addTier() {
     const last = tiers[tiers.length - 1];
@@ -111,6 +147,9 @@ export function ArrangementForm({
         colorCode,
         basePrice,
         pricingMode,
+        pricePerPerson,
+        priceDisplay,
+        isPubliclyVisible,
         contentItems,
         pdfUrl,
       };
@@ -135,7 +174,7 @@ export function ArrangementForm({
   }
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
+    <div className="flex max-w-[1500px] flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link href="/dashboard/arrangementen" className="mb-1 flex items-center gap-1 text-sm text-ink-400 hover:text-ink-500">
@@ -159,6 +198,8 @@ export function ArrangementForm({
         </div>
       )}
 
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_680px]">
+      <div className="flex max-w-3xl flex-col gap-6">
       <Card>
         <CardHeader>
           <CardTitle>Basisgegevens</CardTitle>
@@ -183,6 +224,16 @@ export function ArrangementForm({
               className="rounded-brand-sm border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
             />
           </div>
+
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isPubliclyVisible}
+              onChange={(e) => setIsPubliclyVisible(e.target.checked)}
+              className="size-4 accent-teal-600"
+            />
+            <span className="text-sm text-ink-500">Publiek zichtbaar op de offertepagina</span>
+          </label>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
@@ -244,6 +295,31 @@ export function ArrangementForm({
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <SegmentedToggle value={pricingMode} options={PRICING_MODE_OPTIONS} onChange={setPricingMode} />
+
+          <div className="flex flex-wrap gap-6">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-ink-400">Weergave</label>
+              <SegmentedToggle
+                value={pricePerPerson ? "per_persoon" : "totaal"}
+                onChange={(v) => setPricePerPerson(v === "per_persoon")}
+                options={[
+                  { value: "totaal", label: "Totaalprijs" },
+                  { value: "per_persoon", label: "Per persoon" },
+                ]}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-ink-400">Btw</label>
+              <SegmentedToggle
+                value={priceDisplay}
+                onChange={setPriceDisplay}
+                options={[
+                  { value: "excl_btw", label: "Excl. btw" },
+                  { value: "incl_btw", label: "Incl. btw" },
+                ]}
+              />
+            </div>
+          </div>
 
           {pricingMode === "vast" && (
             <div className="flex flex-col gap-1.5 sm:w-48">
@@ -385,56 +461,8 @@ export function ArrangementForm({
         </CardContent>
       </Card>
 
-      <Card className="border-teal-200 bg-teal-50/40">
-        <CardHeader>
-          <CardTitle>Prijs testen</CardTitle>
-          <CardDescription>Live-preview -- zie meteen welke prijs een klant zou krijgen.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-4">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-ink-400">Aantal personen</label>
-            <input
-              type="number"
-              min={1}
-              value={previewGuests}
-              onChange={(e) => setPreviewGuests(Number(e.target.value))}
-              className="h-10 w-28 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-ink-400">Datum</label>
-            <input
-              type="date"
-              value={previewDate}
-              onChange={(e) => setPreviewDate(e.target.value)}
-              className="h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
-            />
-          </div>
-          <div className="ml-auto flex flex-col items-end">
-            <span className="font-display text-2xl font-semibold text-ink-500">{formatCurrency(preview.price)}</span>
-            <span className="text-xs text-ink-400">
-              {preview.source === "basis" && "Basisprijs"}
-              {preview.source === "staffel" && `Staffelprijs (${preview.appliedLabel})`}
-              {preview.source === "seizoen" && `Seizoensprijs "${preview.appliedLabel}"`}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-
       {mode === "edit" && arrangementId && (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Beschikbaarheid</CardTitle>
-              <CardDescription>
-                Zet een datum op &quot;bijna vol&quot; of &quot;vol&quot; ter ondersteuning bij het maken van een offerte -- geen boekingssysteem, puur een handmatig signaal.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AvailabilityCalendar arrangementId={arrangementId} initialAvailability={initialAvailability ?? []} />
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>Archiveren &amp; verwijderen</CardTitle>
@@ -492,6 +520,62 @@ export function ArrangementForm({
           />
         </>
       )}
+      </div>
+
+      <div className="xl:sticky xl:top-6 xl:self-start">
+        <p className="mb-3 text-sm font-semibold text-ink-500">Live preview</p>
+        <div className="mb-4 flex flex-wrap items-end gap-4 rounded-brand-lg border border-ink-200/60 bg-white px-4 py-3.5">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-ink-400">Aantal personen</label>
+            <input
+              type="number"
+              min={1}
+              value={previewGuests}
+              onChange={(e) => setPreviewGuests(Number(e.target.value))}
+              className="h-10 w-32 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-ink-400">Datum</label>
+            <input
+              type="date"
+              value={previewDate}
+              onChange={(e) => setPreviewDate(e.target.value)}
+              className="h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
+            />
+          </div>
+          <div className="ml-auto flex flex-col items-end">
+            <span className="text-xs text-ink-400">
+              {pricingMode === "vast" && "Vaste prijs"}
+              {pricingMode === "staffel" && `Staffelprijs${preview.source === "staffel" ? ` (${preview.appliedLabel})` : " -- terugval op basisprijs"}`}
+              {pricingMode === "seizoen" && `Seizoensprijs${preview.source === "seizoen" ? ` "${preview.appliedLabel}"` : " -- terugval op basisprijs"}`}
+            </span>
+          </div>
+        </div>
+        <div className="max-h-[calc(100vh-160px)] overflow-y-auto rounded-brand-lg bg-sand-200 p-4">
+          <div className="overflow-hidden rounded-brand-lg bg-white shadow-sm">
+            <LanguageProvider initialLang="nl">
+              <BlockPreview
+                block={deferredPreviewBlock}
+                meta={{
+                  title: name,
+                  clientName: "",
+                  eventDate: previewDate || null,
+                  currency: "EUR",
+                  priceDisplay,
+                  pricePerPerson,
+                  discountAmount: 0,
+                }}
+                selections={previewSelections}
+                onSelectionsChange={setPreviewSelections}
+                readOnly={false}
+                accentColor={colorCode}
+              />
+            </LanguageProvider>
+          </div>
+        </div>
+      </div>
+      </div>
     </div>
   );
 }

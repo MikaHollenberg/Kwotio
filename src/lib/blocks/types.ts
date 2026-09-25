@@ -1,4 +1,4 @@
-import type { BlockType, ArrangementPricingMode } from "@/lib/types/database";
+import type { BlockType, ArrangementPricingMode, PriceDisplayMode } from "@/lib/types/database";
 import type { ArrangementContentItem } from "@/lib/arrangements/types";
 
 export type CoverBlockContent = {
@@ -88,6 +88,8 @@ export type ArrangementBlockContent = {
   pricingMode: ArrangementPricingMode;
   basePrice: number;
   priceLabel: string | null;
+  pricePerPerson: boolean;
+  priceDisplay: PriceDisplayMode;
   contentItems: ArrangementContentItem[];
   pdfUrl: string | null;
 };
@@ -206,6 +208,8 @@ export function defaultContentFor(type: BlockType): Record<string, unknown> {
         pricingMode: "vast",
         basePrice: 0,
         priceLabel: null,
+        pricePerPerson: false,
+        priceDisplay: "excl_btw",
         contentItems: [],
         pdfUrl: null,
       } satisfies ArrangementBlockContent;
@@ -308,6 +312,8 @@ export function newBlockFromArrangement(
     description: string;
     colorCode: string;
     pricingMode: ArrangementPricingMode;
+    pricePerPerson: boolean;
+    priceDisplay: PriceDisplayMode;
     contentItems: ArrangementContentItem[];
     pdfUrl: string | null;
   },
@@ -323,6 +329,8 @@ export function newBlockFromArrangement(
     pricingMode: arrangement.pricingMode,
     basePrice: priceInfo.price,
     priceLabel: priceInfo.appliedLabel,
+    pricePerPerson: arrangement.pricePerPerson,
+    priceDisplay: arrangement.priceDisplay,
     contentItems: arrangement.contentItems,
     pdfUrl: arrangement.pdfUrl,
   };

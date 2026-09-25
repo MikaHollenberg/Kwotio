@@ -164,18 +164,19 @@ const styles = StyleSheet.create({
   arrangementImageCaption: { fontSize: 8, color: COLORS.muted },
 });
 
-/** Iets krapper dan de exacte 25/50/75/100% -- react-pdf's flexbox-`gap`
+/** Breedte (1-12 van de 12 kolommen, zie ArrangementContentItemBase) -> een
+ * percentage, iets krapper dan de exacte breuk -- react-pdf's flexbox-`gap`
  * telt niet automatisch mee bij percentage-breedtes (zelfde reden waarom
  * `inclusiefColumn` hierboven al "30%" i.p.v. 33.33% gebruikte voor een
- * 3-koloms rij); zonder deze marge zou bijv. 1/4 + 1/4 + 2/4 op één rij
- * (exact 100%) net over de beschikbare breedte gaan en voortijdig
- * doorwikkelen naar de volgende regel. */
-const ARRANGEMENT_WIDTH_PERCENT: Record<1 | 2 | 3 | 4, string> = {
-  1: "23%",
-  2: "48%",
-  3: "73%",
-  4: "100%",
-};
+ * 3-koloms rij); zonder deze marge zou bijv. drie items die samen precies
+ * 100% vormen net over de beschikbare breedte gaan en voortijdig
+ * doorwikkelen naar de volgende regel. Bij volledige breedte (12/12) is er
+ * geen buurman op dezelfde regel, dus daar blijft de volle 100% staan. */
+function arrangementWidthPercent(width: number): string {
+  const clamped = Math.min(12, Math.max(1, Math.round(width)));
+  if (clamped >= 12) return "100%";
+  return `${((clamped / 12) * 100 - 2).toFixed(2)}%`;
+}
 
 export type QuotePdfSignatureData = {
   signerName: string;
@@ -480,7 +481,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                   <View style={styles.inclusiefGrid}>
                     {c.contentItems.map((item) => {
                       const itemColor = item.color || arrangementColor;
-                      const widthStyle = { width: ARRANGEMENT_WIDTH_PERCENT[item.width] };
+                      const widthStyle = { width: arrangementWidthPercent(item.width) };
 
                       if (item.type === "text") {
                         return (

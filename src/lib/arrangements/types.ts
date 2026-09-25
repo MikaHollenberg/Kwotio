@@ -1,4 +1,4 @@
-import type { ArrangementPricingMode } from "@/lib/types/database";
+import type { ArrangementPricingMode, PriceDisplayMode } from "@/lib/types/database";
 import type { PriceTierInput, SeasonPriceInput } from "@/lib/arrangements/pricing";
 
 /** Eén regel binnen een "categorie"-onderdeel, bv. "Wit" met toelichting
@@ -19,11 +19,14 @@ export type ArrangementContentItemType = "text" | "category" | "extras" | "image
 
 /** Velden die elk onderdeel deelt, ongeacht type -- dit is precies wat de
  * vrije indeling instelbaar maakt: volgorde (array-positie, sleep-baar),
- * breedte (1-4 van de 4 kolommen), kleur (null = val terug op de
- * arrangementskleur) en icoon (null = geen icoon getoond). */
+ * breedte (1-12 van de 12 kolommen -- vóór de introductie van deze twaalfden
+ * was dit een vaste 1-4-keuze van de 4 kolommen; oude waarden zijn ×3
+ * omgerekend zodat bestaande arrangementen er identiek uitzien), kleur
+ * (null = val terug op de arrangementskleur) en icoon (null = geen icoon
+ * getoond). */
 type ArrangementContentItemBase = {
   id: string;
-  width: 1 | 2 | 3 | 4;
+  width: number;
   color: string | null;
   icon: string | null;
 };
@@ -78,6 +81,8 @@ export type ArrangementPickerSummary = {
   colorCode: string;
   pricingMode: ArrangementPricingMode;
   basePrice: number;
+  pricePerPerson: boolean;
+  priceDisplay: PriceDisplayMode;
   contentItems: ArrangementContentItem[];
   pdfUrl: string | null;
   tiers: PriceTierInput[];

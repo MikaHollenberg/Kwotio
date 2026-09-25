@@ -23,6 +23,9 @@ export default async function NieuwArrangementPage() {
         colorCode: "#B87F2A",
         basePrice: 0,
         pricingMode: "vast",
+        pricePerPerson: false,
+        priceDisplay: "excl_btw",
+        isPubliclyVisible: false,
         contentItems: [],
         pdfUrl: "",
       }}

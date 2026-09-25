@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { loadTemplateBlocks } from "@/lib/blocks/persistence";
 import { resolvePreferredLogo } from "@/lib/organization/logo";
 import { resolveAccentColor } from "@/lib/organization/theme";
+import { calculateArrangementPrice } from "@/lib/arrangements/pricing";
 import type { BlockDraft } from "@/lib/blocks/types";
 import type { PublicPageBackgroundStyle } from "@/lib/types/database";
 
@@ -12,6 +13,19 @@ export type PublicOrgTemplate = {
   description: string | null;
   thumbnailUrl: string | null;
   blocks: BlockDraft[];
+};
+
+/** Eén publiek zichtbaar arrangement, kant-en-klaar als offerteblok zodat de
+ * publieke pagina 'm rechtstreeks door BlockPreview kan laten renderen --
+ * zelfde momentopname-vorm als newBlockFromArrangement() voor een echte
+ * offerte bouwt. De prijs wordt hier berekend zonder specifieke
+ * datum/aantal personen (een bezoeker bekijkt het aanbod, boekt nog niets),
+ * dus staffel/seizoen vallen terug op de basisprijs -- bij een
+ * prijs-per-persoon-arrangement kan de bezoeker zelf een aantal invullen
+ * (zie ArrangementBlockPreview) om een indicatie te krijgen. */
+export type PublicOrgArrangement = {
+  id: string;
+  block: BlockDraft;
 };
 
 export type PublicOrgPageData = {
@@ -26,6 +40,10 @@ export type PublicOrgPageData = {
    * oranje als de organisatie nog geen eigen huisstijlkleur heeft ingesteld. */
   primaryColor: string;
   templates: PublicOrgTemplate[];
+  /** Publiek zichtbare arrangementen (arrangements.is_publicly_visible =
+   * true voor deze organisatie), los van de templates hierboven, zie
+   * migratie 0077. */
+  arrangements: PublicOrgArrangement[];
   /** ISO-datums (YYYY-MM-DD) waarop de organisatie gesloten is -- de klant
    * kan deze niet kiezen als gewenste datum. Alleen toekomstige datums,
    * begrensd op 2 jaar vooruit (een organisatie zet dit doorgaans maar een
@@ -93,6 +111,44 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     })),
   );
 
+  const { data: arrangementRows, error: arrangementError } = await supabase
+    .from("arrangements")
+    .select("id, name, description, color_code, pricing_mode, base_price, price_per_person, price_display, content_items, pdf_url")
+    .eq("organization_id", organization.id)
+    .eq("is_publicly_visible", true)
+    .is("archived_at", null)
+    .order("sort_order", { ascending: true });
+  if (arrangementError) throw arrangementError;
+
+  const arrangements: PublicOrgArrangement[] = (arrangementRows ?? []).map((a) => {
+    const priceInfo = calculateArrangementPrice({ basePrice: Number(a.base_price), pricingMode: a.pricing_mode }, [], [], {
+      guestCount: null,
+      eventDate: null,
+    });
+    return {
+      id: a.id,
+      block: {
+        id: a.id,
+        type: "arrangement",
+        position: 0,
+        content: {
+          heading: a.name,
+          arrangementId: a.id,
+          name: a.name,
+          description: a.description,
+          colorCode: a.color_code,
+          pricingMode: a.pricing_mode,
+          basePrice: priceInfo.price,
+          priceLabel: priceInfo.appliedLabel,
+          pricePerPerson: a.price_per_person,
+          priceDisplay: a.price_display,
+          contentItems: a.content_items,
+          pdfUrl: a.pdf_url,
+        },
+      },
+    };
+  });
+
   const todayKey = new Date().toISOString().slice(0, 10);
   const twoYearsOut = new Date();
   twoYearsOut.setFullYear(twoYearsOut.getFullYear() + 2);
@@ -113,6 +169,7 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     guestCountFieldLabel: organization.guest_count_field_label || "Aantal personen",
     primaryColor: resolveAccentColor(organization),
     templates,
+    arrangements,
     closedDates: (closedDateRows ?? []).map((r) => r.date),
     closedWeekdays: organization.closed_weekdays ?? [],
     backgroundStyle: organization.public_page_background_style ?? "none",

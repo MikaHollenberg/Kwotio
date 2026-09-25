@@ -731,15 +731,25 @@ function PackagesBlockPreview({
  * hierboven (PackagesBlockPreview) via `selections.addonQuantities`, want
  * `collectPricedBlocks()` (lib/blocks/pricing.ts) zet ze al om naar
  * PackageAddon-vorm voor de totaalberekening. */
-/** Breedte (1-4 van de 4 kolommen) -> statische Tailwind-classes. Bewust een
- * lookup-object i.p.v. een template-literal className: Tailwind's JIT-scanner
- * vindt alleen letterlijk in de broncode voorkomende klassen, geen dynamisch
- * samengestelde arbitrary-value-strings. */
-const CONTENT_ITEM_WIDTH_CLASSES: Record<1 | 2 | 3 | 4, string> = {
+/** Breedte (1-12 van de 12 kolommen) -> statische Tailwind-classes. Bewust
+ * een lookup-object i.p.v. een template-literal className: Tailwind's
+ * JIT-scanner vindt alleen letterlijk in de broncode voorkomende klassen,
+ * geen dynamisch samengestelde arbitrary-value-strings. Op tablet (sm, een
+ * 2-koloms grid) is er te weinig ruimte voor 12 aparte standen -- daar valt
+ * elke breedte terug op "half" (≤6/12) of "volledig" (>6/12). */
+const CONTENT_ITEM_WIDTH_CLASSES: Record<number, string> = {
   1: "sm:col-span-1 lg:col-span-1",
-  2: "sm:col-span-2 lg:col-span-2",
-  3: "sm:col-span-2 lg:col-span-3",
-  4: "sm:col-span-2 lg:col-span-4",
+  2: "sm:col-span-1 lg:col-span-2",
+  3: "sm:col-span-1 lg:col-span-3",
+  4: "sm:col-span-1 lg:col-span-4",
+  5: "sm:col-span-1 lg:col-span-5",
+  6: "sm:col-span-1 lg:col-span-6",
+  7: "sm:col-span-2 lg:col-span-7",
+  8: "sm:col-span-2 lg:col-span-8",
+  9: "sm:col-span-2 lg:col-span-9",
+  10: "sm:col-span-2 lg:col-span-10",
+  11: "sm:col-span-2 lg:col-span-11",
+  12: "sm:col-span-2 lg:col-span-12",
 };
 
 function ArrangementContentItemView({
@@ -779,7 +789,7 @@ function ArrangementContentItemView({
   );
 
   return (
-    <div className={cn("flex flex-col gap-2", CONTENT_ITEM_WIDTH_CLASSES[item.width])}>
+    <div className={cn("flex flex-col gap-2", CONTENT_ITEM_WIDTH_CLASSES[item.width] ?? CONTENT_ITEM_WIDTH_CLASSES[12])}>
       {item.type === "text" && (
         <>
           {header}
@@ -881,6 +891,10 @@ function ArrangementBlockPreview({
 }) {
   const { t } = useTranslation();
   const arrangementColor = c.colorCode || accentColor;
+  const [guestInput, setGuestInput] = useState("");
+  const guestCount = Number(guestInput);
+  const hasGuestCount = guestInput.trim() !== "" && guestCount > 0;
+  const btwLabel = c.priceDisplay === "incl_btw" ? t("price_incl_btw") : t("price_excl_btw");
 
   return (
     <div className="px-6 py-10">
@@ -888,14 +902,42 @@ function ArrangementBlockPreview({
         <SectionHeading>{c.heading || c.name}</SectionHeading>
         <span className="font-display text-xl font-semibold whitespace-nowrap" style={{ color: accentColor }}>
           {c.priceLabel ? t("from_price_prefix") : ""}
-          {priceLabel(c.basePrice, meta.currency, meta.pricePerPerson)}
+          {priceLabel(c.basePrice, meta.currency, c.pricePerPerson)}
         </span>
       </div>
-      {c.priceLabel && <p className="mt-0.5 text-xs text-ink-400">{c.priceLabel}</p>}
+      <p className="mt-0.5 text-xs text-ink-400">
+        {c.priceLabel && `${c.priceLabel} · `}
+        {btwLabel}
+      </p>
       {c.description && <p className="mt-2 text-sm text-ink-400">{c.description}</p>}
 
+      {c.pricePerPerson && (
+        <div className="mt-4 flex flex-wrap items-end gap-4 rounded-brand-sm border border-ink-100 bg-sand-50 px-4 py-3.5">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-ink-400">{t("headcount_label")}</label>
+            <input
+              type="number"
+              min={1}
+              value={guestInput}
+              onChange={(e) => setGuestInput(e.target.value)}
+              placeholder={t("headcount_placeholder")}
+              className="h-10 w-28 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+            />
+          </div>
+          {hasGuestCount && (
+            <div className="flex flex-col">
+              <span className="text-xs text-ink-400">{t("total_price")}</span>
+              <span className="font-display text-lg font-semibold" style={{ color: arrangementColor }}>
+                {formatCurrency(c.basePrice * guestCount, meta.currency)}
+                <span className="ml-1 text-xs font-normal text-ink-400">({btwLabel})</span>
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
       {c.contentItems.length > 0 && (
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
           {c.contentItems.map((item) => (
             <ArrangementContentItemView
               key={item.id}

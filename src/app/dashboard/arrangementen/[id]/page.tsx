@@ -6,11 +6,11 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: arrangement }, { data: tiers }, { data: seasons }, { data: availability }] = await Promise.all([
+  const [{ data: arrangement }, { data: tiers }, { data: seasons }] = await Promise.all([
     supabase
       .from("arrangements")
       .select(
-        "id, organization_id, name, description, category, color_code, base_price, pricing_mode, archived_at, content_items, pdf_url",
+        "id, organization_id, name, description, category, color_code, base_price, pricing_mode, price_per_person, price_display, is_publicly_visible, archived_at, content_items, pdf_url",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -24,7 +24,6 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
       .select("label, start_date, end_date, price")
       .eq("arrangement_id", id)
       .order("sort_order", { ascending: true }),
-    supabase.from("arrangement_availability").select("date, status").eq("arrangement_id", id),
   ]);
 
   if (!arrangement) notFound();
@@ -42,12 +41,14 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
         colorCode: arrangement.color_code,
         basePrice: Number(arrangement.base_price),
         pricingMode: arrangement.pricing_mode,
+        pricePerPerson: arrangement.price_per_person,
+        priceDisplay: arrangement.price_display,
+        isPubliclyVisible: arrangement.is_publicly_visible,
         contentItems: arrangement.content_items,
         pdfUrl: arrangement.pdf_url ?? "",
       }}
       initialTiers={(tiers ?? []).map((t) => ({ minGuests: t.min_guests, maxGuests: t.max_guests, price: Number(t.price) }))}
       initialSeasons={(seasons ?? []).map((s) => ({ label: s.label, startDate: s.start_date, endDate: s.end_date, price: Number(s.price) }))}
-      initialAvailability={availability ?? []}
     />
   );
 }
