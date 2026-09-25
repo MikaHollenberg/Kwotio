@@ -56,14 +56,12 @@ function ListingCard({
       style={selected ? { borderColor: accentColor, borderWidth: 1.5 } : undefined}
     >
       <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold text-ink-500">{title}</p>
-          {priceLabel && (
-            <span className="shrink-0 whitespace-nowrap text-sm font-semibold" style={{ color: accentColor }}>
-              {priceLabel}
-            </span>
-          )}
-        </div>
+        <p className="text-sm font-semibold text-ink-500">{title}</p>
+        {priceLabel && (
+          <span className="text-sm font-semibold" style={{ color: accentColor }}>
+            {priceLabel}
+          </span>
+        )}
         {description && <p className="line-clamp-2 flex-1 text-xs text-ink-400">{description}</p>}
         <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold" style={{ color: accentColor }}>
           {ctaLabel}
