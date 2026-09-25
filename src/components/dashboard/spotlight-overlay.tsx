@@ -94,7 +94,13 @@ export function SpotlightOverlay({
   );
 
   return createPortal(
-    <div className="fixed inset-0 z-50">
+    // z-[60] i.p.v. z-50: MobileNav's drawer (ook z-50) wordt bij elke
+    // nav-stap opnieuw aangemaakt als portal en belandt daardoor soms LATER
+    // in document.body dan deze overlay (portals stapelen op DOM-volgorde,
+    // niet op mount-tijdstip) -- bij gelijke z-index ving de drawer dan alle
+    // clicks af, ook op de "Volgende"-knop hier, zonder dat er iets zichtbaar
+    // veranderde ("de rondleiding stopt zodra die van pagina wisselt").
+    <div className="fixed inset-0 z-[60]">
       {targetRect ? (
         <>
           <div

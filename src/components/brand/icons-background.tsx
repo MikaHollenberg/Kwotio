@@ -122,16 +122,36 @@ export function IconsBackground() {
   const [cycles, setCycles] = useState(2);
 
   useEffect(() => {
-    function updateCycles() {
-      const height = document.documentElement.scrollHeight;
-      // +1 extra cyclus als marge, zodat de laatste iconen nooit precies op
-      // de rand van "net niet meer gemeten" staan.
-      setCycles(Math.max(2, Math.ceil(height / CYCLE_HEIGHT) + 1));
+    // ResizeObserver op documentElement reageert betrouwbaar op een echte
+    // viewport-resize, maar bleek LIVE getest géén nieuwe meting te geven
+    // zodra de paginahoogte puur door ingevoegde inhoud groeit (bv. een
+    // klant klikt een offerte/arrangement open) -- de iconen bleven dan op
+    // hun aantal van vóór die klik staan, "halverwege" de nu veel langere
+    // pagina. Een MutationObserver op <body> vangt precies dát geval wél
+    // altijd op (elke toegevoegde/verwijderde DOM-node), dus beide tellers
+    // draaien parallel; requestAnimationFrame bundelt snel opeenvolgende
+    // meldingen tot één herberekening per frame.
+    let frame: number | null = null;
+    function scheduleUpdate() {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        const height = document.documentElement.scrollHeight;
+        // +1 extra cyclus als marge, zodat de laatste iconen nooit precies op
+        // de rand van "net niet meer gemeten" staan.
+        setCycles(Math.max(2, Math.ceil(height / CYCLE_HEIGHT) + 1));
+      });
     }
-    const observer = new ResizeObserver(updateCycles);
-    observer.observe(document.documentElement);
-    updateCycles();
-    return () => observer.disconnect();
+    const resizeObserver = new ResizeObserver(scheduleUpdate);
+    resizeObserver.observe(document.documentElement);
+    const mutationObserver = new MutationObserver(scheduleUpdate);
+    mutationObserver.observe(document.body, { childList: true, subtree: true });
+    scheduleUpdate();
+    return () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (

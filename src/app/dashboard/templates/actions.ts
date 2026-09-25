@@ -71,7 +71,14 @@ export async function createDemoTemplateForFaq(): Promise<string> {
 
 export async function updateTemplateMeta(
   templateId: string,
-  input: { name: string; eventType: string; language: string; isActive: boolean; isPubliclyVisible: boolean },
+  input: {
+    name: string;
+    eventType: string;
+    language: string;
+    isActive: boolean;
+    isPubliclyVisible: boolean;
+    description: string;
+  },
 ) {
   const { supabase } = await requireOrganizationId();
 
@@ -83,6 +90,7 @@ export async function updateTemplateMeta(
       language: input.language,
       is_active: input.isActive,
       is_publicly_visible: input.isPubliclyVisible,
+      description: input.description.trim() || null,
     })
     .eq("id", templateId);
   if (error) throw error;

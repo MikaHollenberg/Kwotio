@@ -11,7 +11,6 @@ export type PublicOrgTemplate = {
   id: string;
   name: string;
   description: string | null;
-  thumbnailUrl: string | null;
   blocks: BlockDraft[];
 };
 
@@ -100,7 +99,7 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
 
   const { data: templateRows, error: templateError } = await supabase
     .from("templates")
-    .select("id, name, description, thumbnail_url")
+    .select("id, name, description")
     .eq("organization_id", organization.id)
     .eq("is_publicly_visible", true)
     .eq("is_active", true)
@@ -113,7 +112,6 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
       id: t.id,
       name: t.name,
       description: t.description,
-      thumbnailUrl: t.thumbnail_url,
       blocks: await loadTemplateBlocks(supabase, t.id),
     })),
   );

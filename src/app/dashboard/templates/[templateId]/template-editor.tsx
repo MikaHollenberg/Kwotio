@@ -39,6 +39,7 @@ export function TemplateEditor({
 }) {
   const router = useRouter();
   const [name, setName] = useState(template.name);
+  const [description, setDescription] = useState(template.description ?? "");
   const [eventType, setEventType] = useState(template.event_type);
   const [isActive, setIsActive] = useState(template.is_active);
   const [isPubliclyVisible, setIsPubliclyVisible] = useState(template.is_publicly_visible);
@@ -51,10 +52,11 @@ export function TemplateEditor({
   const [archivePending, startArchiveTransition] = useTransition();
   const isArchived = !!template.archived_at;
 
-  const status = useAutosave({ name, eventType, isActive, isPubliclyVisible, blocks }, async (value) => {
+  const status = useAutosave({ name, description, eventType, isActive, isPubliclyVisible, blocks }, async (value) => {
     await Promise.all([
       updateTemplateMeta(template.id, {
         name: value.name,
+        description: value.description,
         eventType: value.eventType,
         language: template.language,
         isActive: value.isActive,
@@ -178,6 +180,20 @@ export function TemplateEditor({
           gekozen worden bij nieuwe offertes.
         </div>
       )}
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-sm font-medium text-ink-500">Korte omschrijving (optioneel)</label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={2}
+          placeholder="Sloepenrace, borrel en een compleet verzorgde avond voor je team."
+          className="w-full rounded-brand-sm border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+        />
+        <p className="text-xs text-ink-400">
+          Zichtbaar op de publieke offertepagina, tussen de naam en de &quot;Bekijk offerte&quot;-knop.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">
         <div className="flex flex-col gap-3">

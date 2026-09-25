@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
-import { LayoutTemplate, Package, ChevronRight, Info, MessageCircleQuestion, type LucideIcon } from "lucide-react";
+import { LayoutTemplate, ChevronRight, Info, MessageCircleQuestion } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { WaveDivider } from "@/components/brand/wave-divider";
@@ -26,14 +25,14 @@ import { logTemplateOpened, logRequestFormOpened } from "./analytics";
  * één gedeeld component zodat beide secties er exact hetzelfde uitzien
  * (gevraagd: "Maak deze gelijk aan elkaar"), compact en duidelijk
  * aanklikbaar zonder het beeld te overheersen. Klikken wisselt de
- * uitgeklapte inhoud eronder, hetzelfde patroon als de offertes al hadden. */
+ * uitgeklapte inhoud eronder, hetzelfde patroon als de offertes al hadden.
+ * Bewust geen icoon/thumbnail-strip bovenaan (op verzoek verwijderd, eerst
+ * als mockup goedgekeurd) -- de kaart begint direct met de naam. */
 function ListingCard({
   title,
   description,
   priceLabel,
   accentColor,
-  icon: Icon,
-  thumbnailUrl,
   ctaLabel,
   selected,
   onClick,
@@ -42,8 +41,6 @@ function ListingCard({
   description: string | null;
   priceLabel?: string | null;
   accentColor: string;
-  icon: LucideIcon;
-  thumbnailUrl?: string | null;
   ctaLabel: string;
   selected: boolean;
   onClick: () => void;
@@ -58,15 +55,6 @@ function ListingCard({
       )}
       style={selected ? { borderColor: accentColor, borderWidth: 1.5 } : undefined}
     >
-      <div className="relative h-24 w-full shrink-0" style={{ backgroundColor: `${accentColor}14` }}>
-        {thumbnailUrl ? (
-          <Image src={thumbnailUrl} alt="" fill sizes="(min-width: 640px) 33vw, 100vw" className="object-cover" />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Icon className="size-7" style={{ color: accentColor }} />
-          </div>
-        )}
-      </div>
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-semibold text-ink-500">{title}</p>
@@ -241,8 +229,6 @@ export function PublicOrgPageView({
                     title={t.name}
                     description={t.description}
                     accentColor={data.primaryColor}
-                    icon={LayoutTemplate}
-                    thumbnailUrl={t.thumbnailUrl}
                     ctaLabel="Bekijk offerte"
                     selected={t.id === selectedId}
                     onClick={() => selectTemplate(t.id)}
@@ -306,7 +292,6 @@ export function PublicOrgPageView({
                     description={a.description}
                     priceLabel={`${formatCurrency(a.basePrice, "EUR")}${a.pricePerPerson ? " p.p." : ""}`}
                     accentColor={a.colorCode || data.primaryColor}
-                    icon={Package}
                     ctaLabel="Bekijk arrangement"
                     selected={a.id === selectedArrangementId}
                     onClick={() => selectArrangement(a.id)}

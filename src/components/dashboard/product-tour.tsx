@@ -256,8 +256,10 @@ export function ProductTour({
   if (phase === "closed" || (phase === "steps" && steps.length === 0)) return null;
 
   if (phase === "intro") {
+    // z-[60], zelfde reden als spotlight-overlay.tsx: altijd boven een
+    // eventueel open mobiel menu blijven, ongeacht portal-DOM-volgorde.
     return createPortal(
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink-500/60 px-4">
+      <div className="fixed inset-0 z-[60] flex items-center justify-center bg-ink-500/60 px-4">
         <div className="flex w-full max-w-md flex-col gap-4 rounded-brand-lg border border-ink-200/60 bg-white p-6 shadow-2xl">
           <div className="flex items-center gap-2">
             <Compass className="size-5 text-teal-600" />
