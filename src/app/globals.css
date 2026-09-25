@@ -231,6 +231,40 @@ h1, h2, h3, h4, .font-display {
   min-height: 0;
 }
 
+/* Arrangement-content-items (quote-preview.tsx, ArrangementBlockPreview):
+   een echt vrij 2D-canvas i.p.v. rijen. Elk onderdeel krijgt zijn eigen
+   --col-start/--col-span (via grid-column, dus de browser rekent de
+   kolombreedte + kolom-gap zelf correct uit -- geen handmatige
+   percentage/calc-wiskunde nodig) en --y-px (absolute verticale positie in
+   px, NOOIT aan een gedeelde rijhoogte gekoppeld, zie resolveCollisionY() in
+   arrangements/layout.ts). Alle onderdelen delen dezelfde grid-row (1): een
+   grid-item dat ZELF `position: absolute` is, positioneert zich volgens
+   spec relatief aan de rand van zijn eigen grid-area (dus incl. de
+   kolom-gap-correctie) -- `left:0; right:0` laat het onderdeel die hele
+   kolombreedte vullen, `top` plaatst het vrij verticaal daarbinnen. Onder de
+   lg-breakpoint (dezelfde 1024px als Tailwinds `lg:`) stapelt alles gewoon
+   normaal onder elkaar, voller-breedte -- een vrij canvas heeft op
+   telefoon-/tabletbreedte geen zin. */
+.arrangement-content-item {
+  grid-column: 1 / -1;
+}
+.arrangement-canvas {
+  position: relative;
+}
+@media (min-width: 1024px) {
+  .arrangement-content-item {
+    grid-column: var(--col-start) / span var(--col-span);
+    grid-row: 1;
+    position: absolute;
+    top: var(--y-px);
+    left: 0;
+    right: 0;
+  }
+  .arrangement-canvas {
+    grid-template-rows: minmax(var(--canvas-height, 0px), auto);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kw-shimmer::after,
   .kw-bob,

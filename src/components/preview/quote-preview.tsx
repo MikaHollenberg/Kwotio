@@ -27,6 +27,8 @@ import type { PriceDisplayMode } from "@/lib/types/database";
 import { LanguageProvider, useTranslation } from "@/lib/i18n/language-context";
 import { sanitizeBlockHtml } from "@/lib/blocks/sanitize-html";
 import { ARRANGEMENT_ICON_MAP } from "@/lib/arrangements/icons";
+import type { ArrangementContentItem } from "@/lib/arrangements/types";
+import { sortByLayout, resolveCollisionY } from "@/lib/arrangements/layout";
 
 export { PRICE_DISPLAY_LABELS };
 
@@ -148,6 +150,8 @@ export function BlockPreview({
   onSelectionsChange,
   readOnly = false,
   accentColor = DEFAULT_BLOCK_ACCENT,
+  arrangementLayoutEditable = false,
+  onArrangementLayoutChange,
 }: {
   block: BlockDraft;
   meta: QuoteMeta;
@@ -160,6 +164,14 @@ export function BlockPreview({
    * publieke aanvraagpagina) -- valt terug op het vaste bureau-teal in de
    * dashboard-builder, die nooit org-gebrand is. */
   accentColor?: string;
+  /** Alleen door de arrangement-editor (`arrangement-form.tsx`) gezet -- laat
+   * de categorieën van een "arrangement"-blok in DEZE live preview zelf
+   * versleept worden naar een precieze rij/kolom i.p.v. alleen leesbaar te
+   * zijn. Overal elders (offerte-builder, publieke pagina's) blijft dit
+   * `false`/`undefined` en verandert er niets aan het bestaande, puur
+   * read-only rendergedrag. */
+  arrangementLayoutEditable?: boolean;
+  onArrangementLayoutChange?: (blockId: string, items: ArrangementContentItem[]) => void;
 }) {
   const { t, lang } = useTranslation();
   const activeContent = lang === "en" && block.contentEn ? block.contentEn : block.content;
@@ -250,6 +262,8 @@ export function BlockPreview({
           onSelectionsChange={onSelectionsChange}
           readOnly={readOnly}
           accentColor={accentColor}
+          layoutEditable={arrangementLayoutEditable}
+          onLayoutChange={onArrangementLayoutChange ? (items) => onArrangementLayoutChange(block.id, items) : undefined}
         />
       );
     }
@@ -731,26 +745,65 @@ function PackagesBlockPreview({
  * hierboven (PackagesBlockPreview) via `selections.addonQuantities`, want
  * `collectPricedBlocks()` (lib/blocks/pricing.ts) zet ze al om naar
  * PackageAddon-vorm voor de totaalberekening. */
-/** Breedte (1-12 van de 12 kolommen) -> statische Tailwind-classes. Bewust
- * een lookup-object i.p.v. een template-literal className: Tailwind's
- * JIT-scanner vindt alleen letterlijk in de broncode voorkomende klassen,
- * geen dynamisch samengestelde arbitrary-value-strings. Op tablet (sm, een
- * 2-koloms grid) is er te weinig ruimte voor 12 aparte standen -- daar valt
- * elke breedte terug op "half" (≤6/12) of "volledig" (>6/12). */
-const CONTENT_ITEM_WIDTH_CLASSES: Record<number, string> = {
-  1: "sm:col-span-1 lg:col-span-1",
-  2: "sm:col-span-1 lg:col-span-2",
-  3: "sm:col-span-1 lg:col-span-3",
-  4: "sm:col-span-1 lg:col-span-4",
-  5: "sm:col-span-1 lg:col-span-5",
-  6: "sm:col-span-1 lg:col-span-6",
-  7: "sm:col-span-2 lg:col-span-7",
-  8: "sm:col-span-2 lg:col-span-8",
-  9: "sm:col-span-2 lg:col-span-9",
-  10: "sm:col-span-2 lg:col-span-10",
-  11: "sm:col-span-2 lg:col-span-11",
-  12: "sm:col-span-2 lg:col-span-12",
+/** Breedte/positie (1-12 van de 12 kolommen, plus een expliciete
+ * startkolom `x` en rijnummer `row`) -> CSS Grid-plaatsing via custom
+ * properties (`.arrangement-content-item` in globals.css). Bewust inline
+ * style i.p.v. een Tailwind-klasse: `x`/`row`/`width` zijn willekeurige,
+ * door de gebruiker versleepte getallen, geen vaste kleine enum -- daar is
+ * geen statische Tailwind-JIT-klasse voor te maken. */
+type PointerHandlers = {
+  onPointerDown: (e: React.PointerEvent) => void;
+  onPointerMove: (e: React.PointerEvent) => void;
+  onPointerUp: (e: React.PointerEvent) => void;
 };
+
+/** Kolom via grid-column (--col-start/--col-span, zie globals.css) -- de
+ * browser rekent de kolom-gap-correctie dan zelf correct uit, geen
+ * handmatige percentage/calc-wiskunde nodig. `y` is al een absolute
+ * px-waarde (geen breuk van iets), dus die gaat rechtstreeks door. */
+function itemLayoutStyle(item: { x: number; y: number; width: number }): React.CSSProperties {
+  return {
+    "--col-start": item.x + 1,
+    "--col-span": item.width,
+    "--y-px": `${item.y}px`,
+  } as React.CSSProperties;
+}
+
+/** Hoogte-inkorting zit op een APARTE binnenste wrapper, niet op het
+ * buitenste onderdeel-element zelf -- dat buitenste element draagt ook de
+ * sleep-/resize-grepen, die bewust net BUITEN de kaart uitsteken (zie
+ * hieronder); zaten hoogte + `overflow: hidden` op datzelfde element, dan
+ * kapte het element zijn eigen grepen zichtbaar af zodra er een vaste
+ * hoogte stond (live zo gevonden en gemeld). */
+function contentClipStyle(item: { height: number | null }): React.CSSProperties {
+  return item.height ? { height: item.height, overflow: "hidden" } : {};
+}
+
+/** Lettertype/-grootte/-gewicht/-stijl van een onderdeel -- alleen gezet als
+ * de gebruiker 'm expliciet aanpast (anders `undefined`, dus gewoon het
+ * bestaande standaarduiterlijk via de Tailwind-klassen op elk element; een
+ * inline style wint altijd van een class voor dezelfde eigenschap, dus dit
+ * overschrijft veilig zonder die klassen te hoeven verwijderen). */
+function contentTextStyle(item: {
+  fontFamily: ArrangementBlockContent["contentItems"][number]["fontFamily"];
+  fontSize: number | null;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+}): React.CSSProperties {
+  return {
+    fontFamily:
+      item.fontFamily === "serif"
+        ? "Georgia, 'Times New Roman', serif"
+        : item.fontFamily === "mono"
+          ? "'Courier New', Courier, monospace"
+          : undefined,
+    fontSize: item.fontSize ? `${item.fontSize}px` : undefined,
+    fontWeight: item.bold ? 700 : undefined,
+    fontStyle: item.italic ? "italic" : undefined,
+    textDecoration: item.underline ? "underline" : undefined,
+  };
+}
 
 function ArrangementContentItemView({
   item,
@@ -759,6 +812,12 @@ function ArrangementContentItemView({
   selections,
   onSelectionsChange,
   readOnly,
+  dragHandleProps,
+  resizeHandleProps,
+  heightHandleProps,
+  onResetHeight,
+  itemRef,
+  isActive,
 }: {
   item: ArrangementBlockContent["contentItems"][number];
   arrangementColor: string;
@@ -766,9 +825,23 @@ function ArrangementContentItemView({
   selections: Selections;
   onSelectionsChange: (s: Selections) => void;
   readOnly: boolean;
+  /** Alleen gezet vanuit de arrangement-editor's live preview -- toont een
+   * sleepgreep en maakt het onderdeel versleepbaar naar een precieze
+   * rij/kolom. Overal elders `undefined`, puur leesbaar zoals altijd. */
+  dragHandleProps?: PointerHandlers & { active: boolean };
+  /** Zelfde verhaal, maar dan de rechterrand om de breedte te verslepen. */
+  resizeHandleProps?: PointerHandlers & { active: boolean };
+  /** Zelfde verhaal, maar dan de onderrand om de hoogte ("lengte") te verslepen. */
+  heightHandleProps?: PointerHandlers & { active: boolean };
+  /** Zet een expliciet ingestelde hoogte terug naar automatisch. */
+  onResetHeight?: () => void;
+  itemRef?: (el: HTMLDivElement | null) => void;
+  /** Dit specifieke onderdeel wordt op dit moment versleept of geresized. */
+  isActive?: boolean;
 }) {
   const itemColor = item.color ?? arrangementColor;
   const Icon = item.icon ? ARRANGEMENT_ICON_MAP[item.icon] : undefined;
+  const textStyle = contentTextStyle(item);
 
   const header = item.type !== "image" && (item.title || Icon) && (
     <div className="flex items-center gap-2">
@@ -781,7 +854,7 @@ function ArrangementContentItemView({
         </span>
       )}
       {item.title && (
-        <p className="text-sm font-semibold" style={{ color: itemColor }}>
+        <p className="text-sm font-semibold" style={{ color: itemColor, ...textStyle }}>
           {item.title}
         </p>
       )}
@@ -789,89 +862,192 @@ function ArrangementContentItemView({
   );
 
   return (
-    <div className={cn("flex flex-col gap-2", CONTENT_ITEM_WIDTH_CLASSES[item.width] ?? CONTENT_ITEM_WIDTH_CLASSES[12])}>
-      {item.type === "text" && (
-        <>
-          {header}
-          {item.body && <p className="whitespace-pre-line text-sm text-ink-400">{item.body}</p>}
-        </>
+    <div
+      ref={itemRef}
+      style={itemLayoutStyle(item)}
+      className={cn(
+        "arrangement-content-item relative",
+        dragHandleProps && "rounded-brand-sm p-2 outline outline-1 outline-dashed outline-ink-200/60 transition-shadow duration-150 ease-brand",
+        isActive && "z-20 shadow-lg outline-2 outline-solid",
+        !isActive && dragHandleProps && "transition-[grid-column,top] duration-150 ease-brand",
       )}
-
-      {item.type === "highlight" && (
-        <div className="rounded-brand-sm px-4 py-3 text-sm text-white" style={{ backgroundColor: itemColor }}>
-          {item.title && <strong className="font-semibold">{item.title}</strong>}
-          {item.body && <> {item.body}</>}
-        </div>
-      )}
-
-      {item.type === "category" && (
-        <>
-          {header}
-          <ul className="flex flex-col gap-1">
-            {item.items.map((sub) => (
-              <li key={sub.id} className="text-sm text-ink-400">
-                {sub.text}
-                {sub.note && <span className="ml-1 text-xs text-ink-300">{sub.note}</span>}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {item.type === "image" && (
-        <div className="flex flex-col gap-1.5">
-          {item.imageUrl && (
-            <div className="relative aspect-video w-full overflow-hidden rounded-brand-sm bg-sand-200">
-              <Image src={item.imageUrl} alt={item.caption || ""} fill className="object-cover" sizes="(min-width: 1024px) 25vw, 50vw" />
-            </div>
+    >
+      {dragHandleProps && (
+        <button
+          type="button"
+          onPointerDown={dragHandleProps.onPointerDown}
+          onPointerMove={dragHandleProps.onPointerMove}
+          onPointerUp={dragHandleProps.onPointerUp}
+          aria-label="Sleep om te verplaatsen"
+          className={cn(
+            "absolute -left-2 -top-2 flex size-6 cursor-grab touch-none items-center justify-center rounded-full border border-ink-200 bg-white text-ink-400 shadow-sm hover:text-ink-600 active:cursor-grabbing",
+            dragHandleProps.active && "cursor-grabbing text-ink-600",
           )}
-          {item.caption && <p className="text-xs text-ink-400">{item.caption}</p>}
-        </div>
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+            <circle cx="8" cy="6" r="1" />
+            <circle cx="16" cy="6" r="1" />
+            <circle cx="8" cy="12" r="1" />
+            <circle cx="16" cy="12" r="1" />
+            <circle cx="8" cy="18" r="1" />
+            <circle cx="16" cy="18" r="1" />
+          </svg>
+        </button>
       )}
+      {resizeHandleProps && (
+        <button
+          type="button"
+          onPointerDown={resizeHandleProps.onPointerDown}
+          onPointerMove={resizeHandleProps.onPointerMove}
+          onPointerUp={resizeHandleProps.onPointerUp}
+          aria-label="Sleep om de breedte aan te passen"
+          className={cn(
+            "absolute -right-2 top-1/2 flex h-8 w-4 -translate-y-1/2 touch-none cursor-col-resize items-center justify-center rounded-full border border-ink-200 bg-white shadow-sm hover:border-ink-400",
+            resizeHandleProps.active && "border-ink-400",
+          )}
+        >
+          <span className="h-4 w-0.5 rounded-full bg-ink-300" />
+        </button>
+      )}
+      {heightHandleProps && (
+        <button
+          type="button"
+          onPointerDown={heightHandleProps.onPointerDown}
+          onPointerMove={heightHandleProps.onPointerMove}
+          onPointerUp={heightHandleProps.onPointerUp}
+          aria-label="Sleep om de hoogte aan te passen"
+          className={cn(
+            "absolute bottom-0 left-1/2 flex h-4 w-8 -translate-x-1/2 translate-y-1/2 touch-none cursor-row-resize items-center justify-center rounded-full border border-ink-200 bg-white shadow-sm hover:border-ink-400",
+            heightHandleProps.active && "border-ink-400",
+          )}
+        >
+          <span className="h-0.5 w-4 rounded-full bg-ink-300" />
+        </button>
+      )}
+      {dragHandleProps && item.height != null && (
+        <button
+          type="button"
+          onClick={onResetHeight}
+          aria-label="Hoogte herstellen naar automatisch"
+          title="Hoogte herstellen naar automatisch"
+          className="absolute -right-2 -top-2 flex size-6 items-center justify-center rounded-full border border-ink-200 bg-white text-[10px] text-ink-400 shadow-sm hover:text-ink-600"
+        >
+          ↺
+        </button>
+      )}
+      <div style={contentClipStyle(item)} className="flex flex-col gap-2">
+        {item.type === "text" && (
+          <>
+            {header}
+            {item.body && (
+              <p className="whitespace-pre-line text-sm text-ink-400" style={textStyle}>
+                {item.body}
+              </p>
+            )}
+          </>
+        )}
 
-      {item.type === "extras" && (
-        <>
-          {header}
-          <div className="flex flex-col gap-2">
-            {item.items.map((extra) => {
-              const qty = selections.addonQuantities[extra.id] ?? 0;
-              const checked = qty > 0;
-              return (
-                <div
-                  key={extra.id}
-                  className="flex items-center justify-between gap-3 rounded-brand-sm border border-ink-100 px-3.5 py-3"
-                >
-                  <label className="flex flex-1 items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      disabled={readOnly}
-                      onChange={
-                        readOnly
-                          ? undefined
-                          : (e) =>
-                              onSelectionsChange({
-                                ...selections,
-                                addonQuantities: { ...selections.addonQuantities, [extra.id]: e.target.checked ? 1 : 0 },
-                              })
-                      }
-                      style={{ accentColor: itemColor }}
-                      className="size-4 disabled:opacity-100"
-                    />
-                    <p className="text-sm font-medium text-ink-500">{extra.name}</p>
-                  </label>
-                  <span className="shrink-0 text-sm font-medium text-ink-500 whitespace-nowrap">
-                    +{priceLabel(extra.price, meta.currency, extra.unit === "p.p.")}
-                  </span>
-                </div>
-              );
-            })}
+        {item.type === "highlight" && (
+          <div className="rounded-brand-sm px-4 py-3 text-sm text-white" style={{ backgroundColor: itemColor }}>
+            {item.title && (
+              <strong className="font-semibold" style={textStyle}>
+                {item.title}
+              </strong>
+            )}
+            {item.body && (
+              <p className="mt-1 whitespace-pre-line" style={textStyle}>
+                {item.body}
+              </p>
+            )}
           </div>
-        </>
-      )}
+        )}
+
+        {item.type === "category" && (
+          <>
+            {header}
+            <ul className="flex flex-col gap-1">
+              {item.items.map((sub) => (
+                <li key={sub.id} className="text-sm text-ink-400" style={textStyle}>
+                  {sub.text}
+                  {sub.note && <span className="ml-1 text-xs text-ink-300">{sub.note}</span>}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+
+        {item.type === "image" && (
+          <div className="flex flex-col gap-1.5">
+            {item.imageUrl && (
+              <div className="relative aspect-video w-full overflow-hidden rounded-brand-sm bg-sand-200">
+                <Image src={item.imageUrl} alt={item.caption || ""} fill className="object-cover" sizes="(min-width: 1024px) 25vw, 50vw" />
+              </div>
+            )}
+            {item.caption && <p className="text-xs text-ink-400">{item.caption}</p>}
+          </div>
+        )}
+
+        {item.type === "extras" && (
+          <>
+            {header}
+            <div className="flex flex-col gap-2">
+              {item.items.map((extra) => {
+                const qty = selections.addonQuantities[extra.id] ?? 0;
+                const checked = qty > 0;
+                return (
+                  <div
+                    key={extra.id}
+                    className="flex items-center justify-between gap-3 rounded-brand-sm border border-ink-100 px-3.5 py-3"
+                  >
+                    <label className="flex flex-1 items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={readOnly}
+                        onChange={
+                          readOnly
+                            ? undefined
+                            : (e) =>
+                                onSelectionsChange({
+                                  ...selections,
+                                  addonQuantities: { ...selections.addonQuantities, [extra.id]: e.target.checked ? 1 : 0 },
+                                })
+                        }
+                        style={{ accentColor: itemColor }}
+                        className="size-4 disabled:opacity-100"
+                      />
+                      <p className="text-sm font-medium text-ink-500" style={textStyle}>
+                        {extra.name}
+                      </p>
+                    </label>
+                    <span className="shrink-0 text-sm font-medium text-ink-500 whitespace-nowrap">
+                      +{priceLabel(extra.price, meta.currency, extra.unit === "p.p.")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
+
+/** Eén slepende (verplaatsen) of resizende interactie tegelijk, alleen
+ * relevant als `layoutEditable` -- zie `handleMove*`/`handleResize*`
+ * hieronder. */
+const MIN_ARRANGEMENT_ITEM_HEIGHT = 48;
+/** Geschatte hoogte voor een onderdeel zonder eigen ref/meting (bv. tijdens
+ * de canvashoogte-schatting vóór de eerste render) -- ruim genoeg voor een
+ * gemiddeld tekst-/categorieblok, wordt zodra de echte DOM er is meteen
+ * vervangen door de daadwerkelijk gemeten hoogte. */
+const AUTO_HEIGHT_ESTIMATE = 120;
+
+type ArrangementDragState =
+  | { type: "move"; id: string; targetX: number; targetY: number }
+  | { type: "resize"; id: string; startClientX: number; startWidthPx: number; width: number }
+  | { type: "resizeHeight"; id: string; startClientY: number; startHeightPx: number; height: number };
 
 function ArrangementBlockPreview({
   content: c,
@@ -880,6 +1056,8 @@ function ArrangementBlockPreview({
   onSelectionsChange,
   readOnly,
   accentColor,
+  layoutEditable = false,
+  onLayoutChange,
 }: {
   block: BlockDraft;
   content: ArrangementBlockContent;
@@ -888,6 +1066,8 @@ function ArrangementBlockPreview({
   onSelectionsChange: (s: Selections) => void;
   readOnly: boolean;
   accentColor: string;
+  layoutEditable?: boolean;
+  onLayoutChange?: (items: ArrangementContentItem[]) => void;
 }) {
   const { t } = useTranslation();
   const arrangementColor = c.colorCode || accentColor;
@@ -895,6 +1075,194 @@ function ArrangementBlockPreview({
   const guestCount = Number(guestInput);
   const hasGuestCount = guestInput.trim() !== "" && guestCount > 0;
   const btwLabel = c.priceDisplay === "incl_btw" ? t("price_incl_btw") : t("price_excl_btw");
+
+  const canvasRef = useRef<HTMLDivElement | null>(null);
+  const itemElsRef = useRef(new Map<string, HTMLDivElement>());
+  const [drag, setDrag] = useState<ArrangementDragState | null>(null);
+  // Refs mogen niet tijdens het renderen gelezen worden (react-hooks/refs) --
+  // de daadwerkelijk gerenderde hoogte per onderdeel staat daarom in state,
+  // bijgewerkt via een effect ná elke commit. De allereerste render (zowel
+  // server als client, vóór hydratie) valt terug op AUTO_HEIGHT_ESTIMATE
+  // (er is dan nog geen DOM om te meten); dat verandert geen DOM-structuur
+  // (geen hydration-mismatch-risico), enkel een later bijgewerkt getal.
+  const [measuredHeights, setMeasuredHeights] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const next: Record<string, number> = {};
+      for (const it of c.contentItems) {
+        const el = itemElsRef.current.get(it.id);
+        if (el) next[it.id] = el.getBoundingClientRect().height;
+      }
+      setMeasuredHeights(next);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [c.contentItems]);
+
+  function colWidthPx() {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    return rect && rect.width > 0 ? rect.width / 12 : 0;
+  }
+
+  /** De echte, gerenderde hoogte van een onderdeel (via zijn ref), of --
+   * zolang dat element nog niet bestaat -- zijn eigen ingestelde hoogte, of
+   * anders de generieke schatting. Gebruikt voor botsingsdetectie, zodat een
+   * lang onderdeel (bv. Bier met 9 items) ook echt als lang meetelt. */
+  function measuredHeight(item: { id: string; height: number | null }) {
+    return itemElsRef.current.get(item.id)?.getBoundingClientRect().height ?? item.height ?? AUTO_HEIGHT_ESTIMATE;
+  }
+
+  function otherRects(excludeId: string, cw: number) {
+    return c.contentItems
+      .filter((it) => it.id !== excludeId)
+      .map((it) => ({
+        left: it.x * cw,
+        right: (it.x + it.width) * cw,
+        top: it.y,
+        bottom: it.y + measuredHeight(it),
+      }));
+  }
+
+  function handleMoveStart(id: string, e: React.PointerEvent) {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const item = c.contentItems.find((it) => it.id === id);
+    if (!item) return;
+    setDrag({ type: "move", id, targetX: item.x, targetY: item.y });
+  }
+
+  // Volgt de pointer volledig vrij (elke x/y), en zakt alleen zo ver als
+  // nodig is om geen ANDER onderdeel te overlappen -- "echt vrij beweegbaar,
+  // maar nooit overlappend": een kort onderdeel kan dus gewoon onder een
+  // ander kort onderdeel gezet worden, ook als een derde onderdeel ernaast
+  // veel langer is (geen gedeelde rijhoogte meer die dat blokkeert).
+  function handleMoveMove(e: React.PointerEvent) {
+    if (!drag || drag.type !== "move") return;
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || rect.width <= 0) return;
+    const cw = rect.width / 12;
+    const item = c.contentItems.find((it) => it.id === drag.id);
+    if (!item) return;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const targetX = Math.max(0, Math.min(12 - item.width, Math.round(mouseX / cw)));
+    const height = measuredHeight(item);
+    const targetY = resolveCollisionY(targetX * cw, Math.max(0, mouseY), item.width * cw, height, otherRects(drag.id, cw));
+    setDrag({ type: "move", id: drag.id, targetX, targetY });
+  }
+
+  function handleMoveEnd() {
+    if (!drag || drag.type !== "move") return;
+    const items = c.contentItems.map((it) => (it.id === drag.id ? { ...it, x: drag.targetX, y: drag.targetY } : it));
+    onLayoutChange?.(items);
+    setDrag(null);
+  }
+
+  function handleResizeStart(id: string, e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const item = c.contentItems.find((it) => it.id === id);
+    const cw = colWidthPx();
+    if (!item || cw <= 0) return;
+    setDrag({ type: "resize", id, startClientX: e.clientX, startWidthPx: item.width * cw, width: item.width });
+  }
+
+  function handleResizeMove(e: React.PointerEvent) {
+    if (!drag || drag.type !== "resize") return;
+    const item = c.contentItems.find((it) => it.id === drag.id);
+    const cw = colWidthPx();
+    if (!item || cw <= 0) return;
+    const widthPx = drag.startWidthPx + (e.clientX - drag.startClientX);
+    let width = Math.max(1, Math.min(12 - item.x, Math.round(widthPx / cw)));
+    // Niet verder groeien dan tot net vóór een buur waarvan het y-bereik
+    // overlapt en die rechts van dit onderdeel staat -- anders kan resizen
+    // zelf alsnog een overlap veroorzaken.
+    const height = measuredHeight(item);
+    const itemTop = item.y;
+    const itemBottom = item.y + height;
+    for (const other of otherRects(drag.id, cw)) {
+      const overlapsY = itemTop < other.bottom && itemBottom > other.top;
+      if (overlapsY && other.left >= item.x * cw) {
+        const maxWidthPx = other.left - item.x * cw;
+        width = Math.min(width, Math.max(1, Math.floor(maxWidthPx / cw)));
+      }
+    }
+    if (width !== drag.width) setDrag({ ...drag, width });
+  }
+
+  function handleResizeEnd() {
+    if (!drag || drag.type !== "resize") return;
+    const items = c.contentItems.map((it) => (it.id === drag.id ? { ...it, width: drag.width } : it));
+    onLayoutChange?.(items);
+    setDrag(null);
+  }
+
+  function handleHeightStart(id: string, e: React.PointerEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    // Startpunt is de HUIDIGE, echt gerenderde hoogte -- ook als het
+    // onderdeel nog geen expliciete hoogte heeft (automatisch, op basis van
+    // inhoud), zodat je vanaf daar kan inkorten zonder eerst te "springen".
+    const el = itemElsRef.current.get(id);
+    const rect = el?.getBoundingClientRect();
+    if (!rect) return;
+    setDrag({ type: "resizeHeight", id, startClientY: e.clientY, startHeightPx: rect.height, height: Math.round(rect.height) });
+  }
+
+  function handleHeightMove(e: React.PointerEvent) {
+    if (!drag || drag.type !== "resizeHeight") return;
+    const item = c.contentItems.find((it) => it.id === drag.id);
+    const cw = colWidthPx();
+    if (!item) return;
+    let height = Math.max(MIN_ARRANGEMENT_ITEM_HEIGHT, Math.round(drag.startHeightPx + (e.clientY - drag.startClientY)));
+    // Zelfde botsingsvangnet als bij breedte, nu verticaal: niet verder
+    // groeien dan tot net boven een buur waarvan het x-bereik overlapt en
+    // die onder dit onderdeel staat.
+    const itemLeft = item.x * cw;
+    const itemRight = itemLeft + item.width * cw;
+    for (const other of otherRects(drag.id, cw)) {
+      const overlapsX = itemLeft < other.right && itemRight > other.left;
+      if (overlapsX && other.top >= item.y) {
+        height = Math.min(height, Math.max(MIN_ARRANGEMENT_ITEM_HEIGHT, other.top - item.y));
+      }
+    }
+    if (height !== drag.height) setDrag({ ...drag, height });
+  }
+
+  function handleHeightEnd() {
+    if (!drag || drag.type !== "resizeHeight") return;
+    const items = c.contentItems.map((it) => (it.id === drag.id ? { ...it, height: drag.height } : it));
+    onLayoutChange?.(items);
+    setDrag(null);
+  }
+
+  function resetHeight(id: string) {
+    const items = c.contentItems.map((it) => (it.id === id ? { ...it, height: null } : it));
+    onLayoutChange?.(items);
+  }
+
+  const layoutItems = sortByLayout(c.contentItems).map((item) => {
+    if (drag?.id === item.id && drag.type === "move") {
+      return { ...item, x: drag.targetX, y: drag.targetY };
+    }
+    if (drag?.id === item.id && drag.type === "resize") {
+      return { ...item, width: drag.width };
+    }
+    if (drag?.id === item.id && drag.type === "resizeHeight") {
+      return { ...item, height: drag.height };
+    }
+    return item;
+  });
+
+  // Canvas moet expliciet hoog genoeg zijn om alle vrij-gepositioneerde
+  // (position: absolute) onderdelen te bevatten -- op basis van y + de
+  // gemeten hoogte per onderdeel (uit state, zie hierboven -- refs mogen
+  // niet tijdens het renderen gelezen worden), incl. het onderdeel dat nu
+  // actief versleept/geresized wordt.
+  const canvasHeight = layoutItems.length
+    ? Math.max(...layoutItems.map((it) => it.y + (measuredHeights[it.id] ?? it.height ?? AUTO_HEIGHT_ESTIMATE))) + 24
+    : 0;
 
   return (
     <div className="px-6 py-10">
@@ -909,7 +1277,7 @@ function ArrangementBlockPreview({
         {c.priceLabel && `${c.priceLabel} · `}
         {btwLabel}
       </p>
-      {c.description && <p className="mt-2 text-sm text-ink-400">{c.description}</p>}
+      {c.description && <p className="mt-2 whitespace-pre-line text-sm text-ink-400">{c.description}</p>}
 
       {c.pricePerPerson && (
         <div className="mt-4 flex flex-wrap items-end gap-4 rounded-brand-sm border border-ink-100 bg-sand-50 px-4 py-3.5">
@@ -937,8 +1305,12 @@ function ArrangementBlockPreview({
       )}
 
       {c.contentItems.length > 0 && (
-        <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
-          {c.contentItems.map((item) => (
+        <div
+          ref={canvasRef}
+          style={{ "--canvas-height": `${canvasHeight}px` } as React.CSSProperties}
+          className="arrangement-canvas mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12"
+        >
+          {layoutItems.map((item) => (
             <ArrangementContentItemView
               key={item.id}
               item={item}
@@ -947,6 +1319,46 @@ function ArrangementBlockPreview({
               selections={selections}
               onSelectionsChange={onSelectionsChange}
               readOnly={readOnly}
+              itemRef={
+                layoutEditable
+                  ? (el) => {
+                      if (el) itemElsRef.current.set(item.id, el);
+                      else itemElsRef.current.delete(item.id);
+                    }
+                  : undefined
+              }
+              isActive={drag?.id === item.id}
+              dragHandleProps={
+                layoutEditable
+                  ? {
+                      active: drag?.id === item.id && drag.type === "move",
+                      onPointerDown: (e) => handleMoveStart(item.id, e),
+                      onPointerMove: handleMoveMove,
+                      onPointerUp: handleMoveEnd,
+                    }
+                  : undefined
+              }
+              resizeHandleProps={
+                layoutEditable
+                  ? {
+                      active: drag?.id === item.id && drag.type === "resize",
+                      onPointerDown: (e) => handleResizeStart(item.id, e),
+                      onPointerMove: handleResizeMove,
+                      onPointerUp: handleResizeEnd,
+                    }
+                  : undefined
+              }
+              heightHandleProps={
+                layoutEditable
+                  ? {
+                      active: drag?.id === item.id && drag.type === "resizeHeight",
+                      onPointerDown: (e) => handleHeightStart(item.id, e),
+                      onPointerMove: handleHeightMove,
+                      onPointerUp: handleHeightEnd,
+                    }
+                  : undefined
+              }
+              onResetHeight={layoutEditable ? () => resetHeight(item.id) : undefined}
             />
           ))}
         </div>

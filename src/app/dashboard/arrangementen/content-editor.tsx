@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2, Plus, Palette } from "lucide-react";
+import { GripVertical, Trash2, Plus, Palette, Bold, Italic, Underline } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DecimalField } from "@/components/ui/decimal-field";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
@@ -19,7 +19,23 @@ import { ImageUploadField } from "@/components/builder/image-upload-field";
 import { ARRANGEMENT_COLOR_PRESETS } from "@/lib/arrangements/colors";
 import { ARRANGEMENT_ICON_GROUPS, ARRANGEMENT_ICON_MAP } from "@/lib/arrangements/icons";
 import { cn } from "@/lib/utils";
-import type { ArrangementContentItem, ArrangementContentItemType, ArrangementInclusiefItem, ArrangementExtra } from "@/lib/arrangements/types";
+import type {
+  ArrangementContentItem,
+  ArrangementContentItemType,
+  ArrangementInclusiefItem,
+  ArrangementExtra,
+  ArrangementFontFamily,
+} from "@/lib/arrangements/types";
+
+const FONT_FAMILY_OPTIONS: { value: ArrangementFontFamily; label: string; sample: string }[] = [
+  { value: "default", label: "Standaard", sample: "Manrope" },
+  { value: "serif", label: "Serif", sample: "Georgia, serif" },
+  { value: "mono", label: "Mono", sample: "'Courier New', monospace" },
+];
+
+const MIN_FONT_SIZE = 10;
+const MAX_FONT_SIZE = 32;
+const DEFAULT_FONT_SIZE = 14;
 
 function uid() {
   return crypto.randomUUID();
@@ -33,30 +49,29 @@ const TYPE_LABELS: Record<ArrangementContentItemType, string> = {
   highlight: "Actievak",
 };
 
-/** Sneltoetsen voor veelgebruikte breuken, bovenop de losse -/+ stappen
- * hieronder -- samen geven ze de volledige 1-12-vrijheid (elke twaalfde
- * apart instelbaar) zonder dat je voor een gewone 1/3 of 3/4 eerst moet
- * uitrekenen welk getal dat is. */
-const WIDTH_PRESETS: { value: number; label: string }[] = [
-  { value: 3, label: "1/4" },
-  { value: 4, label: "1/3" },
-  { value: 6, label: "1/2" },
-  { value: 8, label: "2/3" },
-  { value: 9, label: "3/4" },
-  { value: 12, label: "Vol" },
-];
-
-function clampWidth(value: number) {
-  return Math.min(12, Math.max(1, Math.round(value)));
-}
-
 const EXTRA_UNIT_OPTIONS: { value: ArrangementExtra["unit"]; label: string }[] = [
   { value: "vast", label: "vast bedrag" },
   { value: "p.p.", label: "per persoon" },
 ];
 
-function defaultItemFor(type: ArrangementContentItemType): ArrangementContentItem {
-  const base = { id: uid(), width: 6, color: null, icon: null };
+/** Nieuw onderdeel komt altijd onderaan te staan, op een lege plek -- de
+ * precieze plek/breedte/hoogte stel je daarna in door het te verslepen in de
+ * live preview hiernaast, niet hier in deze lijst. */
+function defaultItemFor(type: ArrangementContentItemType, nextY: number): ArrangementContentItem {
+  const base = {
+    id: uid(),
+    x: 0,
+    y: nextY,
+    width: 6,
+    height: null,
+    color: null,
+    icon: null,
+    fontFamily: "default" as ArrangementFontFamily,
+    fontSize: null,
+    bold: false,
+    italic: false,
+    underline: false,
+  };
   switch (type) {
     case "text":
       return { ...base, type: "text", title: "Nieuw tekstblok", body: "" };
@@ -191,6 +206,105 @@ function ColorPicker({
           className="size-6 cursor-pointer rounded-full border-0 bg-transparent"
         />
       )}
+    </div>
+  );
+}
+
+function TextStylePicker({
+  fontFamily,
+  fontSize,
+  bold,
+  italic,
+  underline,
+  onChange,
+}: {
+  fontFamily: ArrangementFontFamily;
+  fontSize: number | null;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+  onChange: (patch: {
+    fontFamily?: ArrangementFontFamily;
+    fontSize?: number | null;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
+  }) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {FONT_FAMILY_OPTIONS.map((opt) => (
+        <button
+          key={opt.value}
+          type="button"
+          onClick={() => onChange({ fontFamily: opt.value })}
+          title={opt.label}
+          style={{ fontFamily: opt.sample }}
+          className={cn(
+            "flex h-7 items-center justify-center rounded-brand-sm px-2 text-[11px] font-semibold transition-colors duration-150 ease-brand",
+            fontFamily === opt.value ? "bg-ink-500 text-white" : "border border-ink-200 bg-white text-ink-400 hover:border-ink-300",
+          )}
+        >
+          Aa
+        </button>
+      ))}
+      <div className="flex items-center gap-0.5 rounded-brand-sm border border-ink-200 bg-white">
+        <button
+          type="button"
+          onClick={() => onChange({ fontSize: Math.max(MIN_FONT_SIZE, (fontSize ?? DEFAULT_FONT_SIZE) - 1) })}
+          disabled={(fontSize ?? DEFAULT_FONT_SIZE) <= MIN_FONT_SIZE}
+          aria-label="Kleiner lettertype"
+          className="flex h-7 w-6 items-center justify-center text-ink-400 hover:bg-sand-200 disabled:opacity-30"
+        >
+          −
+        </button>
+        <span className="w-7 text-center text-[11px] font-semibold text-ink-500">{fontSize ?? DEFAULT_FONT_SIZE}</span>
+        <button
+          type="button"
+          onClick={() => onChange({ fontSize: Math.min(MAX_FONT_SIZE, (fontSize ?? DEFAULT_FONT_SIZE) + 1) })}
+          disabled={(fontSize ?? DEFAULT_FONT_SIZE) >= MAX_FONT_SIZE}
+          aria-label="Groter lettertype"
+          className="flex h-7 w-6 items-center justify-center text-ink-400 hover:bg-sand-200 disabled:opacity-30"
+        >
+          +
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={() => onChange({ bold: !bold })}
+        aria-label="Dikgedrukt"
+        aria-pressed={bold}
+        className={cn(
+          "flex size-7 items-center justify-center rounded-brand-sm transition-colors duration-150 ease-brand",
+          bold ? "bg-ink-500 text-white" : "border border-ink-200 bg-white text-ink-400 hover:border-ink-300",
+        )}
+      >
+        <Bold className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange({ italic: !italic })}
+        aria-label="Schuingedrukt"
+        aria-pressed={italic}
+        className={cn(
+          "flex size-7 items-center justify-center rounded-brand-sm transition-colors duration-150 ease-brand",
+          italic ? "bg-ink-500 text-white" : "border border-ink-200 bg-white text-ink-400 hover:border-ink-300",
+        )}
+      >
+        <Italic className="size-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange({ underline: !underline })}
+        aria-label="Onderstrepen"
+        aria-pressed={underline}
+        className={cn(
+          "flex size-7 items-center justify-center rounded-brand-sm transition-colors duration-150 ease-brand",
+          underline ? "bg-ink-500 text-white" : "border border-ink-200 bg-white text-ink-400 hover:border-ink-300",
+        )}
+      >
+        <Underline className="size-3.5" />
+      </button>
     </div>
   );
 }
@@ -391,45 +505,23 @@ function ContentItemCard({
         ) : (
           <span />
         )}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] text-ink-300">Breedte</span>
-          <div className="flex items-center gap-0.5 rounded-brand-sm border border-ink-200 bg-white">
-            <button
-              type="button"
-              onClick={() => onChange({ ...item, width: clampWidth(item.width - 1) })}
-              disabled={item.width <= 1}
-              aria-label="Smaller"
-              className="flex h-7 w-6 items-center justify-center text-ink-400 hover:bg-sand-200 disabled:opacity-30"
-            >
-              −
-            </button>
-            <span className="w-9 text-center text-[11px] font-semibold text-ink-500">{item.width}/12</span>
-            <button
-              type="button"
-              onClick={() => onChange({ ...item, width: clampWidth(item.width + 1) })}
-              disabled={item.width >= 12}
-              aria-label="Breder"
-              className="flex h-7 w-6 items-center justify-center text-ink-400 hover:bg-sand-200 disabled:opacity-30"
-            >
-              +
-            </button>
-          </div>
-          <div className="flex items-center gap-1">
-            {WIDTH_PRESETS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => onChange({ ...item, width: opt.value })}
-                className={cn(
-                  "flex h-7 items-center justify-center rounded-brand-sm px-2 text-[11px] font-semibold transition-colors duration-150 ease-brand",
-                  item.width === opt.value ? "bg-ink-500 text-white" : "border border-ink-200 bg-white text-ink-400 hover:border-ink-300",
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {item.type !== "image" && (
+          <TextStylePicker
+            fontFamily={item.fontFamily}
+            fontSize={item.fontSize}
+            bold={item.bold}
+            italic={item.italic}
+            underline={item.underline}
+            onChange={(patch) => onChange({ ...item, ...patch })}
+          />
+        )}
+      </div>
+
+      <div className="flex items-center gap-1.5 text-[11px] text-ink-400">
+        <span className="rounded-brand-sm bg-sand-100 px-2 py-1 font-semibold text-ink-500">
+          {item.width}/12{item.height ? ` · ${item.height}px hoog` : ""}
+        </span>
+        <span className="hidden sm:inline">Sleep in de live preview hiernaast om vrij te verplaatsen (nooit overlappend), of van breedte/hoogte te wisselen.</span>
       </div>
     </div>
   );
@@ -482,7 +574,15 @@ export function ArrangementContentEditor({
 
       <div className="flex flex-wrap gap-2">
         {(Object.keys(TYPE_LABELS) as ArrangementContentItemType[]).map((type) => (
-          <Button key={type} variant="outline" size="sm" onClick={() => onChange([...items, defaultItemFor(type)])}>
+          <Button
+            key={type}
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const nextY = items.reduce((max, it) => Math.max(max, it.y + (it.height ?? 120)), 0) + 20;
+              onChange([...items, defaultItemFor(type, nextY)]);
+            }}
+          >
             <Plus className="size-3.5" /> {TYPE_LABELS[type]}
           </Button>
         ))}

@@ -13,6 +13,7 @@ import type {
   ArrangementBlockContent,
 } from "@/lib/blocks/types";
 import type { Selections } from "@/lib/blocks/pricing";
+import { clusterIntoRows } from "@/lib/arrangements/layout";
 
 // Zelfde merkkleuren als het ondertekeningscertificaat
 // (src/lib/signing/pdf-certificate.tsx), voor visuele consistentie tussen
@@ -176,6 +177,27 @@ function arrangementWidthPercent(width: number): string {
   const clamped = Math.min(12, Math.max(1, Math.round(width)));
   if (clamped >= 12) return "100%";
   return `${((clamped / 12) * 100 - 2).toFixed(2)}%`;
+}
+
+/** Lettertype/-gewicht/-stijl van een onderdeel voor de PDF -- "serif"/"mono"
+ * wijzen naar de ingebouwde PDF-standaardfonts Times/Courier (geen eigen
+ * Font.register nodig, zie de notitie bij COLORS hierboven); react-pdf kiest
+ * zelf automatisch de juiste bold/italic-variant van zo'n standaardfont
+ * zodra `fontWeight`/`fontStyle` in de stijl staat (zelfde manier waarop de
+ * rest van dit document al overal `fontWeight: 700` gebruikt zonder een
+ * apart "Helvetica-Bold"-fontnaam op te geven). */
+function arrangementPdfTextStyle(item: {
+  fontFamily: ArrangementBlockContent["contentItems"][number]["fontFamily"];
+  fontSize: number | null;
+  bold: boolean;
+  italic: boolean;
+}) {
+  return {
+    fontFamily: item.fontFamily === "serif" ? "Times-Roman" : item.fontFamily === "mono" ? "Courier" : undefined,
+    fontSize: item.fontSize ?? undefined,
+    fontWeight: item.bold ? 700 : undefined,
+    fontStyle: item.italic ? "italic" : undefined,
+  } as const;
 }
 
 export type QuotePdfSignatureData = {
@@ -476,76 +498,99 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                       {data.pricePerPerson ? " p.p." : ""}
                     </Text>
                   </View>
-                  {c.description && <Text style={styles.paragraph}>{c.description}</Text>}
+                  {c.description &&
+                    c.description.split("\n").map((line, i) => (
+                      <Text key={i} style={styles.paragraph}>
+                        {line || " "}
+                      </Text>
+                    ))}
 
-                  <View style={styles.inclusiefGrid}>
-                    {c.contentItems.map((item) => {
-                      const itemColor = item.color || arrangementColor;
-                      const widthStyle = { width: arrangementWidthPercent(item.width) };
+                  <View style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 10 }}>
+                    {clusterIntoRows(c.contentItems).map((rowItems, rowIndex) => (
+                      <View key={rowIndex} style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                        {rowItems.map((item) => {
+                          const itemColor = item.color || arrangementColor;
+                          const textStyle = arrangementPdfTextStyle(item);
+                          const widthStyle = {
+                            width: arrangementWidthPercent(item.width),
+                            ...(item.height ? { height: item.height * 0.75, overflow: "hidden" as const } : null),
+                          };
 
-                      if (item.type === "text") {
-                        return (
-                          <View key={item.id} style={[styles.inclusiefColumn, widthStyle]} wrap={false}>
-                            {item.title && <Text style={[styles.inclusiefTitle, { color: itemColor }]}>{item.title}</Text>}
-                            {item.body && <Text style={styles.listText}>{item.body}</Text>}
-                          </View>
-                        );
-                      }
-                      if (item.type === "highlight") {
-                        return (
-                          <View key={item.id} style={widthStyle}>
-                            <View style={[styles.arrangementHighlight, { backgroundColor: itemColor, marginTop: 0 }]}>
-                              {item.title && <Text style={styles.arrangementHighlightTitle}>{item.title}</Text>}
-                              {item.body && <Text style={styles.arrangementHighlightText}>{item.body}</Text>}
-                            </View>
-                          </View>
-                        );
-                      }
-                      if (item.type === "category") {
-                        return (
-                          <View key={item.id} style={[styles.inclusiefColumn, widthStyle]} wrap={false}>
-                            {item.title && <Text style={[styles.inclusiefTitle, { color: itemColor }]}>{item.title}</Text>}
-                            {item.items.map((sub) => (
-                              <View key={sub.id} style={styles.listRow}>
-                                <Text style={styles.listBullet}>•</Text>
-                                <Text style={styles.listText}>
-                                  {sub.text}
-                                  {sub.note ? ` ${sub.note}` : ""}
-                                </Text>
+                          if (item.type === "text") {
+                            return (
+                              <View key={item.id} style={[styles.inclusiefColumn, widthStyle]} wrap={false}>
+                                {item.title && <Text style={[styles.inclusiefTitle, { color: itemColor }, textStyle]}>{item.title}</Text>}
+                                {item.body &&
+                                  item.body.split("\n").map((line, i) => (
+                                    <Text key={i} style={[styles.listText, textStyle]}>
+                                      {line || " "}
+                                    </Text>
+                                  ))}
                               </View>
-                            ))}
-                          </View>
-                        );
-                      }
-                      if (item.type === "image") {
-                        return (
-                          <View key={item.id} style={widthStyle} wrap={false}>
-                            {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image is a PDF-renderprimitief, geen DOM-<img>; ImageProps kent geen alt (zie de andere Image-aanroepen in dit bestand). */}
-                            {item.imageUrl && <Image src={item.imageUrl} style={styles.arrangementImage} />}
-                            {item.caption && <Text style={styles.arrangementImageCaption}>{item.caption}</Text>}
-                          </View>
-                        );
-                      }
+                            );
+                          }
+                          if (item.type === "highlight") {
+                            return (
+                              <View key={item.id} style={widthStyle}>
+                                <View style={[styles.arrangementHighlight, { backgroundColor: itemColor, marginTop: 0 }]}>
+                                  {item.title && <Text style={[styles.arrangementHighlightTitle, textStyle]}>{item.title}</Text>}
+                                  {item.body &&
+                                    item.body.split("\n").map((line, i) => (
+                                      <Text key={i} style={[styles.arrangementHighlightText, textStyle]}>
+                                        {line || " "}
+                                      </Text>
+                                    ))}
+                                </View>
+                              </View>
+                            );
+                          }
+                          if (item.type === "category") {
+                            return (
+                              <View key={item.id} style={[styles.inclusiefColumn, widthStyle]} wrap={false}>
+                                {item.title && <Text style={[styles.inclusiefTitle, { color: itemColor }, textStyle]}>{item.title}</Text>}
+                                {item.items.map((sub) => (
+                                  <View key={sub.id} style={styles.listRow}>
+                                    <Text style={styles.listBullet}>•</Text>
+                                    <Text style={[styles.listText, textStyle]}>
+                                      {sub.text}
+                                      {sub.note ? ` ${sub.note}` : ""}
+                                    </Text>
+                                  </View>
+                                ))}
+                              </View>
+                            );
+                          }
+                          if (item.type === "image") {
+                            return (
+                              <View key={item.id} style={widthStyle} wrap={false}>
+                                {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf's Image is a PDF-renderprimitief, geen DOM-<img>; ImageProps kent geen alt (zie de andere Image-aanroepen in dit bestand). */}
+                                {item.imageUrl && <Image src={item.imageUrl} style={styles.arrangementImage} />}
+                                {item.caption && <Text style={styles.arrangementImageCaption}>{item.caption}</Text>}
+                              </View>
+                            );
+                          }
 
-                      const selectedExtras = item.items.filter(
-                        (extra) => (data.selections.addonQuantities?.[extra.id] ?? 0) > 0,
-                      );
-                      if (selectedExtras.length === 0) return null;
-                      return (
-                        <View key={item.id} style={widthStyle}>
-                          <Text style={styles.addonsHeading}>{(item.title || "Extra opties").toUpperCase()}</Text>
-                          {selectedExtras.map((extra) => (
-                            <View key={extra.id} style={styles.addonRow}>
-                              <Text style={styles.addonName}>{extra.name}</Text>
-                              <Text style={styles.addonPrice}>
-                                {formatCurrency(extra.price, data.currency)}
-                                {extra.unit === "p.p." ? " p.p." : ""}
-                              </Text>
+                          const selectedExtras = item.items.filter(
+                            (extra) => (data.selections.addonQuantities?.[extra.id] ?? 0) > 0,
+                          );
+                          if (selectedExtras.length === 0) return null;
+                          return (
+                            <View key={item.id} style={widthStyle}>
+                              <Text style={styles.addonsHeading}>{(item.title || "Extra opties").toUpperCase()}</Text>
+                              {selectedExtras.map((extra) => (
+                                <View key={extra.id} style={styles.addonRow}>
+                                  <Text style={[styles.addonName, textStyle]}>{extra.name}</Text>
+                                  <Text style={styles.addonPrice}>
+                                    {formatCurrency(extra.price, data.currency)}
+                                    {extra.unit === "p.p." ? " p.p." : ""}
+                                  </Text>
+                                </View>
+                              ))}
                             </View>
-                          ))}
-                        </View>
-                      );
-                    })}
+                          );
+                        })}
+                      </View>
+                    ))}
                   </View>
 
                   {c.pdfUrl && (

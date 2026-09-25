@@ -80,8 +80,11 @@ export function ArrangementForm({
   const [seasons, setSeasons] = useState<SeasonDraft[]>(initialSeasons.map((s) => ({ ...s, key: makeKey() })));
   const [contentItems, setContentItems] = useState<ArrangementContentItem[]>(initial.contentItems);
   const [pdfUrl, setPdfUrl] = useState(initial.pdfUrl);
-  const [previewGuests, setPreviewGuests] = useState(10);
-  const [previewDate, setPreviewDate] = useState(todayIso());
+  // Vaste waarden i.p.v. instelbare velden -- de test-invoerbalk erboven de
+  // live preview is op verzoek verwijderd; de staffel-/seizoensprijs-preview
+  // rekent hier gewoon mee door op basis van deze aannames.
+  const previewGuests = 10;
+  const previewDate = todayIso();
   const [previewSelections, setPreviewSelections] = useState<Selections>({ packageIdByBlock: {}, addonQuantities: {} });
   const [pending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
@@ -443,8 +446,8 @@ export function ArrangementForm({
         <CardHeader>
           <CardTitle>Inhoud &amp; indeling</CardTitle>
           <CardDescription>
-            Sleep onderdelen in de volgorde die je wilt en kies per onderdeel de breedte, kleur en icoon -- precies
-            zoals je het zelf wilt opbouwen.
+            Vul hier de tekst, kleur en icoon per onderdeel in. Sleep de onderdelen daarna in de live preview
+            hiernaast naar precies de plek en breedte die je wilt -- ook tussen of naast elkaar.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -524,34 +527,6 @@ export function ArrangementForm({
 
       <div className="xl:sticky xl:top-6 xl:self-start">
         <p className="mb-3 text-sm font-semibold text-ink-500">Live preview</p>
-        <div className="mb-4 flex flex-wrap items-end gap-4 rounded-brand-lg border border-ink-200/60 bg-white px-4 py-3.5">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-ink-400">Aantal personen</label>
-            <input
-              type="number"
-              min={1}
-              value={previewGuests}
-              onChange={(e) => setPreviewGuests(Number(e.target.value))}
-              className="h-10 w-32 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-medium text-ink-400">Datum</label>
-            <input
-              type="date"
-              value={previewDate}
-              onChange={(e) => setPreviewDate(e.target.value)}
-              className="h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
-            />
-          </div>
-          <div className="ml-auto flex flex-col items-end">
-            <span className="text-xs text-ink-400">
-              {pricingMode === "vast" && "Vaste prijs"}
-              {pricingMode === "staffel" && `Staffelprijs${preview.source === "staffel" ? ` (${preview.appliedLabel})` : " -- terugval op basisprijs"}`}
-              {pricingMode === "seizoen" && `Seizoensprijs${preview.source === "seizoen" ? ` "${preview.appliedLabel}"` : " -- terugval op basisprijs"}`}
-            </span>
-          </div>
-        </div>
         <div className="max-h-[calc(100vh-160px)] overflow-y-auto rounded-brand-lg bg-sand-200 p-4">
           <div className="overflow-hidden rounded-brand-lg bg-white shadow-sm">
             <LanguageProvider initialLang="nl">
@@ -570,6 +545,8 @@ export function ArrangementForm({
                 onSelectionsChange={setPreviewSelections}
                 readOnly={false}
                 accentColor={colorCode}
+                arrangementLayoutEditable
+                onArrangementLayoutChange={(_blockId, items) => setContentItems(items)}
               />
             </LanguageProvider>
           </div>
