@@ -1,5 +1,6 @@
-import type { BlockType, ArrangementPricingMode, PriceDisplayMode } from "@/lib/types/database";
+import type { BlockType, PriceDisplayMode } from "@/lib/types/database";
 import type { ArrangementContentItem } from "@/lib/arrangements/types";
+import type { ArrangementPriceLineInput, ArrangementSurchargeInput } from "@/lib/arrangements/pricing";
 
 export type CoverBlockContent = {
   heroImageUrl: string;
@@ -26,6 +27,13 @@ export type PackageAddon = {
   price: number;
   quantityEditable: boolean;
   defaultQuantity: number;
+  /** Overschrijft de offerte-brede "per persoon"-instelling voor dit ene
+   * bedrag -- gewone pakket-addons zetten dit nooit (volgen gewoon de
+   * offerte-instelling, ongewijzigd gedrag); alleen arrangement-extra's
+   * zetten dit expliciet vanuit hun eigen vast/p.p.-keuze, zodat een vaste
+   * post (bv. een DJ) nooit als p.p. meetelt puur omdat de offerte dat
+   * globaal aan heeft staan. Zie calculateSplitSubtotal(). */
+  forcedUnit?: "vast" | "p.p.";
 };
 
 export type PackageDraft = {
@@ -74,10 +82,11 @@ export type SignatureBlockContent = {
  * gekopieerd naar de offerte op het moment dat het wordt toegevoegd — geen
  * live koppeling, zelfde principe als een blok-template. `arrangementId`
  * blijft staan als referentie (puur informatief, geen foreign key op
- * blok-niveau). `basePrice`/`priceLabel` zijn de op importmoment berekende
- * prijs (via calculateArrangementPrice(), o.b.v. de datum/het aantal
- * personen van de offerte op dat moment) — verandert niet vanzelf mee als
- * het arrangement of de offerte later wijzigt.
+ * blok-niveau). `prices`/`seasonLabel` zijn de op importmoment geldende
+ * prijsregels (via resolveArrangementPrices(), o.b.v. de datum van de
+ * offerte op dat moment — of de "altijd actieve" regels als er nog geen
+ * datum bekend is) — verandert niet vanzelf mee als het arrangement of de
+ * offerte later wijzigt.
  */
 export type ArrangementBlockContent = {
   heading: string;
@@ -85,10 +94,13 @@ export type ArrangementBlockContent = {
   name: string;
   description: string;
   colorCode: string;
-  pricingMode: ArrangementPricingMode;
-  basePrice: number;
-  priceLabel: string | null;
-  pricePerPerson: boolean;
+  prices: ArrangementPriceLineInput[];
+  /** Naam van het toegepaste seizoen, puur informatief -- null als de
+   * "altijd actieve" prijzen gelden. */
+  seasonLabel: string | null;
+  /** Leesbare toeslagregels (bv. "40-50 personen: +€2,50 p.p."), nooit
+   * automatisch verrekend -- zie pricing.ts. */
+  surcharges: ArrangementSurchargeInput[];
   priceDisplay: PriceDisplayMode;
   contentItems: ArrangementContentItem[];
   pdfUrl: string | null;
@@ -205,10 +217,9 @@ export function defaultContentFor(type: BlockType): Record<string, unknown> {
         name: "",
         description: "",
         colorCode: "#B87F2A",
-        pricingMode: "vast",
-        basePrice: 0,
-        priceLabel: null,
-        pricePerPerson: false,
+        prices: [],
+        seasonLabel: null,
+        surcharges: [],
         priceDisplay: "excl_btw",
         contentItems: [],
         pdfUrl: null,
@@ -280,6 +291,8 @@ function regenerateContentIds(type: BlockType, content: Record<string, unknown>)
       }
       return { ...item, id: uid() };
     });
+    c.prices = c.prices.map((p) => ({ ...p, id: uid() }));
+    c.surcharges = c.surcharges.map((s) => ({ ...s, id: uid() }));
     return cloned;
   }
 
@@ -298,11 +311,11 @@ export function newBlockFromTemplate(template: BlockTemplateSummary, position: n
 
 /**
  * Nieuw offerteblok vanuit een catalogusarrangement — momentopname, geen
- * live koppeling (zie ArrangementBlockContent). `priceInfo` komt van
- * `calculateArrangementPrice()`, berekend door de aanroeper met de op dat
- * moment bekende datum/aantal personen van de offerte. Geneste id's
- * (secties/items/extra's) worden vers gegenereerd via regenerateContentIds,
- * zelfde reden als bij een blok-template: twee offertes met hetzelfde
+ * live koppeling (zie ArrangementBlockContent). `resolvedPrices` komt van
+ * `resolveArrangementPrices()`, berekend door de aanroeper met de op dat
+ * moment bekende datum van de offerte. Geneste id's (secties/items/extra's/
+ * prijsregels) worden vers gegenereerd via regenerateContentIds, zelfde
+ * reden als bij een blok-template: twee offertes met hetzelfde
  * bron-arrangement mogen nooit dezelfde geneste id's delen.
  */
 export function newBlockFromArrangement(
@@ -311,13 +324,12 @@ export function newBlockFromArrangement(
     name: string;
     description: string;
     colorCode: string;
-    pricingMode: ArrangementPricingMode;
-    pricePerPerson: boolean;
     priceDisplay: PriceDisplayMode;
     contentItems: ArrangementContentItem[];
     pdfUrl: string | null;
+    surcharges: ArrangementSurchargeInput[];
   },
-  priceInfo: { price: number; appliedLabel: string | null },
+  resolvedPrices: { prices: ArrangementPriceLineInput[]; seasonLabel: string | null },
   position: number,
 ): BlockDraft {
   const content: ArrangementBlockContent = {
@@ -326,10 +338,9 @@ export function newBlockFromArrangement(
     name: arrangement.name,
     description: arrangement.description,
     colorCode: arrangement.colorCode,
-    pricingMode: arrangement.pricingMode,
-    basePrice: priceInfo.price,
-    priceLabel: priceInfo.appliedLabel,
-    pricePerPerson: arrangement.pricePerPerson,
+    prices: resolvedPrices.prices,
+    seasonLabel: resolvedPrices.seasonLabel,
+    surcharges: arrangement.surcharges,
     priceDisplay: arrangement.priceDisplay,
     contentItems: arrangement.contentItems,
     pdfUrl: arrangement.pdfUrl,

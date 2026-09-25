@@ -5,6 +5,7 @@ import { Plus, ChevronLeft, FileStack } from "lucide-react";
 import type { BlockType } from "@/lib/types/database";
 import { BLOCK_LABELS, BLOCK_ICONS, BLOCK_ORDER, type BlockTemplateSummary } from "@/lib/blocks/types";
 import type { ArrangementPickerSummary } from "@/lib/arrangements/types";
+import { calculateStartingPrice } from "@/lib/arrangements/pricing";
 import { Button } from "@/components/ui/button";
 import { cn, formatCurrency } from "@/lib/utils";
 
@@ -80,29 +81,36 @@ export function AddBlockMenu({
                 <p className="px-3 py-2 text-sm text-ink-400">Nog geen arrangementen in je catalogus.</p>
               ) : (
                 <div className="max-h-80 overflow-y-auto">
-                  {arrangements.map((arrangement) => (
-                    <button
-                      key={arrangement.id}
-                      type="button"
-                      onClick={() => {
-                        onAddArrangement?.(arrangement);
-                        close();
-                      }}
-                      className="flex w-full items-start gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200"
-                    >
-                      <span
-                        className="mt-1 size-2.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: arrangement.colorCode }}
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{arrangement.name}</span>
-                        <span className="block text-xs text-ink-300">
-                          {arrangement.pricingMode !== "vast" && "vanaf "}
-                          {formatCurrency(arrangement.basePrice)}
+                  {arrangements.map((arrangement) => {
+                    const startingPrice = calculateStartingPrice(arrangement.prices, arrangement.seasons);
+                    const isVariable =
+                      arrangement.prices.length > 1 || arrangement.seasons.length > 0 || arrangement.surcharges.length > 0;
+                    return (
+                      <button
+                        key={arrangement.id}
+                        type="button"
+                        onClick={() => {
+                          onAddArrangement?.(arrangement);
+                          close();
+                        }}
+                        className="flex w-full items-start gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200"
+                      >
+                        <span
+                          className="mt-1 size-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: arrangement.colorCode }}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{arrangement.name}</span>
+                          {startingPrice != null && (
+                            <span className="block text-xs text-ink-300">
+                              {isVariable && "vanaf "}
+                              {formatCurrency(startingPrice)}
+                            </span>
+                          )}
                         </span>
-                      </span>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </>

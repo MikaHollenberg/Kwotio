@@ -1,82 +1,50 @@
-import type { ArrangementPricingMode } from "@/lib/types/database";
-
-export type PriceTierInput = { id: string; minGuests: number; maxGuests: number | null; price: number };
-export type SeasonPriceInput = { id: string; label: string; startDate: string; endDate: string; price: number };
-
-export type ArrangementPriceResult = {
-  price: number;
-  /** Welk mechanisme de uiteindelijke prijs bepaalde -- "basis" als het
-   * ingestelde prijsmodel niet van toepassing was op deze invoer (bv.
-   * staffel-modus maar geen tier past bij het aantal personen). */
-  source: "basis" | "staffel" | "seizoen";
-  /** Mensleesbare toelichting, bv. "11-25 personen" of "Hoogseizoen". */
-  appliedLabel: string | null;
+export type ArrangementPriceLineInput = { id: string; label: string; unit: "vast" | "p.p."; amount: number };
+export type ArrangementSeasonInput = {
+  id: string;
+  label: string;
+  startDate: string;
+  endDate: string;
+  prices: ArrangementPriceLineInput[];
+};
+export type ArrangementSurchargeInput = {
+  id: string;
+  label: string;
+  minGuests: number;
+  maxGuests: number | null;
+  unit: "vast" | "p.p.";
+  amount: number;
 };
 
-/** Tiers zijn een aaneengesloten reeks (min_guests, max_guests) -- de eerste
- * tier waar `guestCount` binnen valt wint. `maxGuests: null` = geen
- * bovengrens ("26+"). */
-export function findApplicableTier(tiers: PriceTierInput[], guestCount: number): PriceTierInput | null {
-  return tiers.find((t) => guestCount >= t.minGuests && (t.maxGuests == null || guestCount <= t.maxGuests)) ?? null;
-}
-
-/** Eerste periode waar `isoDate` (YYYY-MM-DD) binnen valt -- overlappende
- * periodes zijn een instelfout van de organisatie zelf, geen technisch
- * probleem; we pakken gewoon de eerst gedefinieerde. */
-export function findApplicableSeason(seasons: SeasonPriceInput[], isoDate: string): SeasonPriceInput | null {
+/** Eerste seizoen waar `isoDate` (YYYY-MM-DD) binnen valt -- overlappende
+ * periodes zijn een instelfout van de organisatie zelf, we pakken gewoon de
+ * eerst gedefinieerde. `null` als er geen datum bekend is of geen seizoen
+ * past -- dan gelden de "altijd actieve" prijzen. */
+export function findApplicableSeason(seasons: ArrangementSeasonInput[], isoDate: string | null): ArrangementSeasonInput | null {
+  if (!isoDate) return null;
   return seasons.find((s) => isoDate >= s.startDate && isoDate <= s.endDate) ?? null;
 }
 
 /**
- * Berekent de prijs van een arrangement voor een concrete situatie
- * (aantal personen + datum). Eén prijsmodel per arrangement (vast/staffel/
- * seizoen, `arrangements.pricing_mode`) -- geen combinatie van staffel en
- * seizoen tegelijk, dat houdt zowel de rekenlogica als de uitleg in de UI
- * simpel. Valt terug op de basisprijs zodra het gekozen model geen
- * passende tier/periode vindt (bv. een datum buiten alle gedefinieerde
- * seizoenen).
+ * Welke prijsregels gelden voor een arrangement op een concrete datum (of
+ * geen datum, bv. de publieke catalogus waar een bezoeker nog niets
+ * gekozen heeft) -- het seizoen dat past vervangt de "altijd actieve"
+ * regels volledig, in plaats van ernaast op te tellen.
  */
-export function calculateArrangementPrice(
-  arrangement: { basePrice: number; pricingMode: ArrangementPricingMode },
-  tiers: PriceTierInput[],
-  seasons: SeasonPriceInput[],
-  input: { guestCount: number | null; eventDate: string | null },
-): ArrangementPriceResult {
-  if (arrangement.pricingMode === "staffel" && input.guestCount != null) {
-    const tier = findApplicableTier(tiers, input.guestCount);
-    if (tier) {
-      const label = tier.maxGuests == null ? `${tier.minGuests}+ personen` : `${tier.minGuests}-${tier.maxGuests} personen`;
-      return { price: tier.price, source: "staffel", appliedLabel: label };
-    }
-  }
-
-  if (arrangement.pricingMode === "seizoen" && input.eventDate) {
-    const season = findApplicableSeason(seasons, input.eventDate);
-    if (season) {
-      return { price: season.price, source: "seizoen", appliedLabel: season.label };
-    }
-  }
-
-  return { price: arrangement.basePrice, source: "basis", appliedLabel: null };
+export function resolveArrangementPrices(
+  prices: ArrangementPriceLineInput[],
+  seasons: ArrangementSeasonInput[],
+  eventDate: string | null,
+): { prices: ArrangementPriceLineInput[]; seasonLabel: string | null } {
+  const season = findApplicableSeason(seasons, eventDate);
+  if (season) return { prices: season.prices, seasonLabel: season.label };
+  return { prices, seasonLabel: null };
 }
 
-/**
- * Laagst mogelijke prijs van dit arrangement, voor plekken waar het aantal
- * personen/de datum van de bezoeker nog niet bekend is (de publieke
- * offertepagina) -- een "vanaf"-prijs i.p.v. altijd de basisprijs te tonen,
- * die bij staffel/seizoen vaak helemaal niet de prijs is die iemand
- * uiteindelijk betaalt.
- */
-export function calculateStartingPrice(
-  arrangement: { basePrice: number; pricingMode: ArrangementPricingMode },
-  tiers: PriceTierInput[],
-  seasons: SeasonPriceInput[],
-): number {
-  if (arrangement.pricingMode === "staffel" && tiers.length > 0) {
-    return Math.min(arrangement.basePrice, ...tiers.map((t) => t.price));
-  }
-  if (arrangement.pricingMode === "seizoen" && seasons.length > 0) {
-    return Math.min(arrangement.basePrice, ...seasons.map((s) => s.price));
-  }
-  return arrangement.basePrice;
+/** Laagst mogelijke prijs over alle prijsregels heen (ongeacht vast/p.p.),
+ * voor plekken waar geen datum bekend is en gewoon een "vanaf"-indicatie
+ * getoond moet worden (de publieke catalogus). Kijkt ook naar elk seizoen
+ * afzonderlijk, zodat een goedkoper seizoenstarief ook meetelt. */
+export function calculateStartingPrice(prices: ArrangementPriceLineInput[], seasons: ArrangementSeasonInput[]): number | null {
+  const allAmounts = [...prices, ...seasons.flatMap((s) => s.prices)].map((p) => p.amount);
+  return allAmounts.length > 0 ? Math.min(...allAmounts) : null;
 }

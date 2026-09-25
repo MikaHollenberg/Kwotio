@@ -40,7 +40,7 @@ export function BlockTemplateEditor({
   });
 
   const block: BlockDraft = { id: blockTemplate.id, type: blockTemplate.type, position: 0, content };
-  const { selections, setSelections } = useQuoteSelections([block]);
+  const { selections, setSelections } = useQuoteSelections([block], false);
 
   return (
     <div className="flex flex-col gap-6">

@@ -7,7 +7,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getQuoteByToken } from "@/lib/public-quote/data";
 import { hashSnapshot } from "@/lib/signing/hash";
 import { renderCertificatePdf } from "@/lib/signing/pdf-certificate";
-import { calculateSubtotal, calculateTotal, collectPricedBlocks, type Selections } from "@/lib/blocks/pricing";
+import {
+  calculateSubtotal,
+  calculateSplitSubtotal,
+  calculateTotal,
+  collectPricedBlocks,
+  type Selections,
+} from "@/lib/blocks/pricing";
 import { sendEmail } from "@/lib/email/client";
 import { signingConfirmationClientEmail, signingNotificationAgencyEmail } from "@/lib/email/templates/signing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
@@ -50,8 +56,15 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
   const userAgent = h.get("user-agent") ?? "onbekend";
 
   const packagesBlocksInput = collectPricedBlocks(blocks);
-  const subtotal = calculateSubtotal(packagesBlocksInput, input.selections);
+  const arrangementBlocks = blocks.filter((b) => b.type === "arrangement");
+  const subtotal = calculateSubtotal(packagesBlocksInput, input.selections, arrangementBlocks);
   const total = calculateTotal({ subtotal, discountAmount: Number(quote.discount_amount) });
+  const rawSplit = calculateSplitSubtotal(packagesBlocksInput, input.selections, quote.price_per_person, arrangementBlocks);
+  const discountRatio = subtotal > 0 ? total / subtotal : 1;
+  const splitTotal = {
+    fixedAmount: rawSplit.fixedAmount * discountRatio,
+    perPersonAmount: rawSplit.perPersonAmount * discountRatio,
+  };
   const selectedPackageNames = packagesBlocksInput.flatMap((b) =>
     b.packages
       .filter((p) => (input.selections.packageIdByBlock[b.blockId] ?? []).includes(p.id))
@@ -121,9 +134,9 @@ export async function signQuote(token: string, input: SignQuoteInput): Promise<S
     clientName: client?.name ?? input.signerName,
     selectedPackageName: selectedPackageNames.length > 0 ? selectedPackageNames.join(", ") : null,
     total,
+    splitTotal,
     currency: quote.currency,
     priceDisplayLabel: PRICE_DISPLAY_LABELS[quote.price_display],
-    pricePerPerson: quote.price_per_person,
     signerName: input.signerName.trim(),
     signerEmail: input.signerEmail.trim(),
     method: "canvas",

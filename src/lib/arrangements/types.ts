@@ -1,5 +1,5 @@
-import type { ArrangementPricingMode, PriceDisplayMode } from "@/lib/types/database";
-import type { PriceTierInput, SeasonPriceInput } from "@/lib/arrangements/pricing";
+import type { PriceDisplayMode } from "@/lib/types/database";
+import type { ArrangementPriceLineInput, ArrangementSeasonInput, ArrangementSurchargeInput } from "@/lib/arrangements/pricing";
 
 /** Eén regel binnen een "categorie"-onderdeel, bv. "Wit" met toelichting
  * "(Chardonnay, Sauvignon Blanc & Moscato)" -- rechtstreeks gemodelleerd op
@@ -110,12 +110,12 @@ export type ArrangementPickerSummary = {
   description: string;
   category: string;
   colorCode: string;
-  pricingMode: ArrangementPricingMode;
-  basePrice: number;
-  pricePerPerson: boolean;
   priceDisplay: PriceDisplayMode;
   contentItems: ArrangementContentItem[];
   pdfUrl: string | null;
-  tiers: PriceTierInput[];
-  seasons: SeasonPriceInput[];
+  /** Altijd-actieve prijsregels (gelden zolang geen seizoen van toepassing is). */
+  prices: ArrangementPriceLineInput[];
+  seasons: ArrangementSeasonInput[];
+  /** Puur informatief, nooit automatisch verrekend -- zie pricing.ts. */
+  surcharges: ArrangementSurchargeInput[];
 };

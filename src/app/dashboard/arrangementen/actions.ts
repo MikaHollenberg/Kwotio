@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { ArrangementAvailabilityStatus, ArrangementPricingMode, PriceDisplayMode } from "@/lib/types/database";
+import type { ArrangementAvailabilityStatus, ArrangementPriceUnit, PriceDisplayMode } from "@/lib/types/database";
 import type { ArrangementContentItem } from "@/lib/arrangements/types";
 
 /** Arrangementen zijn een catalogus, geen geldbeweging op zich (dat gebeurt
@@ -33,9 +33,6 @@ export type ArrangementFields = {
   publicDescription: string;
   category: string;
   colorCode: string;
-  basePrice: number;
-  pricingMode: ArrangementPricingMode;
-  pricePerPerson: boolean;
   priceDisplay: PriceDisplayMode;
   isPubliclyVisible: boolean;
   contentItems: ArrangementContentItem[];
@@ -53,9 +50,6 @@ export async function createArrangement(fields: ArrangementFields) {
       public_description: fields.publicDescription.trim(),
       category: fields.category.trim(),
       color_code: fields.colorCode,
-      base_price: fields.basePrice,
-      pricing_mode: fields.pricingMode,
-      price_per_person: fields.pricePerPerson,
       price_display: fields.priceDisplay,
       is_publicly_visible: fields.isPubliclyVisible,
       content_items: fields.contentItems,
@@ -78,9 +72,6 @@ export async function updateArrangement(id: string, fields: ArrangementFields) {
       public_description: fields.publicDescription.trim(),
       category: fields.category.trim(),
       color_code: fields.colorCode,
-      base_price: fields.basePrice,
-      pricing_mode: fields.pricingMode,
-      price_per_person: fields.pricePerPerson,
       price_display: fields.priceDisplay,
       is_publicly_visible: fields.isPubliclyVisible,
       content_items: fields.contentItems,
@@ -123,27 +114,28 @@ export async function reorderArrangements(orderedIds: string[]) {
   revalidatePath("/dashboard/arrangementen");
 }
 
-export type PriceTierInput = { minGuests: number; maxGuests: number | null; price: number };
+export type ArrangementPriceInput = { label: string; unit: ArrangementPriceUnit; amount: number };
 
-/** Vervangt alle staffelprijzen van dit arrangement in één keer -- er is
- * geen klant-facing selectiestabiliteit zoals bij offerte-pakketten om te
- * bewaren, dus delete-en-opnieuw-invoegen is hier prima (zelfde aanpak als
- * updateInvoiceLines). */
-export async function updatePriceTiers(arrangementId: string, tiers: PriceTierInput[]) {
+/** Vervangt de "altijd actieve" prijsregels (die niet bij een seizoen horen)
+ * van dit arrangement in één keer -- er is geen klant-facing selectie-
+ * stabiliteit zoals bij offerte-pakketten om te bewaren, dus delete-en-
+ * opnieuw-invoegen is hier prima (zelfde aanpak als updateInvoiceLines). */
+export async function updateArrangementPrices(arrangementId: string, prices: ArrangementPriceInput[]) {
   const { supabase } = await requireNotReadonly();
   const { error: deleteError } = await supabase
-    .from("arrangement_price_tiers")
+    .from("arrangement_prices")
     .delete()
-    .eq("arrangement_id", arrangementId);
+    .eq("arrangement_id", arrangementId)
+    .is("season_id", null);
   if (deleteError) throw deleteError;
 
-  if (tiers.length > 0) {
-    const { error: insertError } = await supabase.from("arrangement_price_tiers").insert(
-      tiers.map((t, index) => ({
+  if (prices.length > 0) {
+    const { error: insertError } = await supabase.from("arrangement_prices").insert(
+      prices.map((p, index) => ({
         arrangement_id: arrangementId,
-        min_guests: t.minGuests,
-        max_guests: t.maxGuests,
-        price: t.price,
+        label: p.label.trim(),
+        unit: p.unit,
+        amount: p.amount,
         sort_order: index,
       })),
     );
@@ -152,24 +144,77 @@ export async function updatePriceTiers(arrangementId: string, tiers: PriceTierIn
   revalidatePath(`/dashboard/arrangementen/${arrangementId}`);
 }
 
-export type SeasonPriceInput = { label: string; startDate: string; endDate: string; price: number };
+export type ArrangementSeasonInput = {
+  label: string;
+  startDate: string;
+  endDate: string;
+  prices: ArrangementPriceInput[];
+};
 
-export async function updateSeasonPrices(arrangementId: string, seasons: SeasonPriceInput[]) {
+/** Vervangt alle seizoenen (en hun eigen prijsregels, via cascade-delete)
+ * in één keer. Seizoenen worden na elkaar aangemaakt (niet in bulk) omdat
+ * elk seizoen eerst zijn eigen id nodig heeft voordat de bijbehorende
+ * prijsregels ernaar kunnen verwijzen. */
+export async function updateArrangementSeasons(arrangementId: string, seasons: ArrangementSeasonInput[]) {
   const { supabase } = await requireNotReadonly();
-  const { error: deleteError } = await supabase
-    .from("arrangement_season_prices")
-    .delete()
-    .eq("arrangement_id", arrangementId);
+  const { error: deleteError } = await supabase.from("arrangement_seasons").delete().eq("arrangement_id", arrangementId);
   if (deleteError) throw deleteError;
 
-  if (seasons.length > 0) {
-    const { error: insertError } = await supabase.from("arrangement_season_prices").insert(
-      seasons.map((s, index) => ({
+  for (const [index, season] of seasons.entries()) {
+    const { data: inserted, error: seasonError } = await supabase
+      .from("arrangement_seasons")
+      .insert({
+        arrangement_id: arrangementId,
+        label: season.label.trim(),
+        start_date: season.startDate,
+        end_date: season.endDate,
+        sort_order: index,
+      })
+      .select("id")
+      .single();
+    if (seasonError) throw seasonError;
+
+    if (season.prices.length > 0) {
+      const { error: priceError } = await supabase.from("arrangement_prices").insert(
+        season.prices.map((p, priceIndex) => ({
+          arrangement_id: arrangementId,
+          season_id: inserted.id,
+          label: p.label.trim(),
+          unit: p.unit,
+          amount: p.amount,
+          sort_order: priceIndex,
+        })),
+      );
+      if (priceError) throw priceError;
+    }
+  }
+  revalidatePath(`/dashboard/arrangementen/${arrangementId}`);
+}
+
+export type ArrangementSurchargeInput = {
+  label: string;
+  minGuests: number;
+  maxGuests: number | null;
+  unit: ArrangementPriceUnit;
+  amount: number;
+};
+
+/** Toeslagen zijn puur informatief (zie ArrangementBlockContent.surcharges)
+ * -- zelfde delete-en-opnieuw-invoegen-aanpak. */
+export async function updateArrangementSurcharges(arrangementId: string, surcharges: ArrangementSurchargeInput[]) {
+  const { supabase } = await requireNotReadonly();
+  const { error: deleteError } = await supabase.from("arrangement_surcharges").delete().eq("arrangement_id", arrangementId);
+  if (deleteError) throw deleteError;
+
+  if (surcharges.length > 0) {
+    const { error: insertError } = await supabase.from("arrangement_surcharges").insert(
+      surcharges.map((s, index) => ({
         arrangement_id: arrangementId,
         label: s.label.trim(),
-        start_date: s.startDate,
-        end_date: s.endDate,
-        price: s.price,
+        min_guests: s.minGuests,
+        max_guests: s.maxGuests,
+        unit: s.unit,
+        amount: s.amount,
         sort_order: index,
       })),
     );

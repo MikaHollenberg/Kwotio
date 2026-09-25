@@ -22,16 +22,14 @@ export default async function NieuwArrangementPage() {
         publicDescription: "",
         category: "",
         colorCode: "#B87F2A",
-        basePrice: 0,
-        pricingMode: "vast",
-        pricePerPerson: false,
         priceDisplay: "excl_btw",
         isPubliclyVisible: false,
         contentItems: [],
         pdfUrl: "",
       }}
-      initialTiers={[]}
+      initialPrices={[]}
       initialSeasons={[]}
+      initialSurcharges={[]}
     />
   );
 }

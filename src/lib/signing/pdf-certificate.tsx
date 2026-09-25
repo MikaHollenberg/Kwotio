@@ -1,6 +1,7 @@
 import "server-only";
 import { Document, Page, Text, View, Link, StyleSheet, renderToBuffer } from "@react-pdf/renderer";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import { formatSplitPrice } from "@/lib/blocks/pricing";
 
 // Helvetica is een ingebouwde PDF-standaardfont (geen @react-pdf/renderer
 // Font.register nodig, geen netwerkverzoek).
@@ -42,9 +43,9 @@ export type CertificateData = {
   clientName: string;
   selectedPackageName: string | null;
   total: number;
+  splitTotal: { fixedAmount: number; perPersonAmount: number };
   currency: string;
   priceDisplayLabel: string;
-  pricePerPerson?: boolean;
   signerName: string;
   signerEmail: string;
   method: "canvas" | "typed";
@@ -88,8 +89,7 @@ function CertificateDocument({ data }: { data: CertificateData }) {
         <View style={styles.row}>
           <Text style={styles.label}>Totaalbedrag</Text>
           <Text style={styles.value}>
-            {formatCurrency(data.total, data.currency)}
-            {data.pricePerPerson ? " p.p." : ""} ({data.priceDisplayLabel})
+            {formatSplitPrice(data.splitTotal.fixedAmount, data.splitTotal.perPersonAmount, data.currency)} ({data.priceDisplayLabel})
           </Text>
         </View>
         {data.aantalPersonen != null && (

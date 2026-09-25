@@ -12,7 +12,7 @@ import type {
   SignatureBlockContent,
   ArrangementBlockContent,
 } from "@/lib/blocks/types";
-import type { Selections } from "@/lib/blocks/pricing";
+import { formatSplitPrice, type Selections } from "@/lib/blocks/pricing";
 import { clusterIntoRows } from "@/lib/arrangements/layout";
 
 // Zelfde merkkleuren als het ondertekeningscertificaat
@@ -247,6 +247,10 @@ export type QuotePdfData = {
   subtotal: number;
   discountAmount: number;
   total: number;
+  /** Vaste en per-persoon-bedragen apart, voor de Totaal-regel -- zie
+   * calculateSplitSubtotal(). Nooit blind "p.p." achter het hele bedrag
+   * plakken als er ook een vaste post (bv. een arrangement-extra) in zit. */
+  splitTotal: { fixedAmount: number; perPersonAmount: number };
   generatedAt: string;
   termsUrl: string | null;
   signature?: QuotePdfSignatureData | null;
@@ -488,22 +492,47 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
             case "arrangement": {
               const c = block.content as ArrangementBlockContent;
               const arrangementColor = c.colorCode || data.accentColor;
+              const priceLinesFixed = c.prices.filter((p) => p.unit === "vast").reduce((sum, p) => sum + p.amount, 0);
+              const priceLinesPerPerson = c.prices.filter((p) => p.unit === "p.p.").reduce((sum, p) => sum + p.amount, 0);
               return (
                 <View key={block.id}>
                   <View style={styles.packageHeaderRow}>
                     <Text style={styles.packageName}>{c.heading || c.name}</Text>
                     <Text style={[styles.packagePrice, { color: data.accentColor }]}>
-                      {c.priceLabel ? "vanaf " : ""}
-                      {formatCurrency(c.basePrice, data.currency)}
-                      {data.pricePerPerson ? " p.p." : ""}
+                      {formatSplitPrice(priceLinesFixed, priceLinesPerPerson, data.currency)}
                     </Text>
                   </View>
+                  {c.seasonLabel && (
+                    <Text style={{ fontSize: 9, color: data.accentColor, marginBottom: 2 }}>{c.seasonLabel}</Text>
+                  )}
+                  {c.prices.length > 1 &&
+                    c.prices.map((p) => (
+                      <View key={p.id} style={styles.addonRow}>
+                        <Text style={styles.addonName}>{p.label}</Text>
+                        <Text style={styles.addonPrice}>
+                          {formatCurrency(p.amount, data.currency)}
+                          {p.unit === "p.p." ? " p.p." : ""}
+                        </Text>
+                      </View>
+                    ))}
                   {c.description &&
                     c.description.split("\n").map((line, i) => (
                       <Text key={i} style={styles.paragraph}>
                         {line || " "}
                       </Text>
                     ))}
+                  {c.surcharges.length > 0 && (
+                    <View style={{ marginTop: 4 }}>
+                      {c.surcharges.map((s) => (
+                        <Text key={s.id} style={{ fontSize: 8.5, color: "#6b7280" }}>
+                          {s.label ? `${s.label}: ` : ""}
+                          {s.minGuests}
+                          {s.maxGuests != null ? `-${s.maxGuests}` : "+"} personen: +{formatCurrency(s.amount, data.currency)}
+                          {s.unit === "p.p." ? " p.p." : ""}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
 
                   <View style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 10 }}>
                     {clusterIntoRows(c.contentItems).map((rowItems, rowIndex) => (
@@ -651,12 +680,9 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
             </View>
           )}
           <View style={styles.grandTotalRow}>
-            <Text style={styles.grandTotalLabel}>
-              Totaal{data.pricePerPerson ? " p.p." : ""} ({data.priceDisplayLabel})
-            </Text>
+            <Text style={styles.grandTotalLabel}>Totaal ({data.priceDisplayLabel})</Text>
             <Text style={[styles.grandTotalValue, { color: data.accentColor }]}>
-              {formatCurrency(data.total, data.currency)}
-              {data.pricePerPerson ? " p.p." : ""}
+              {formatSplitPrice(data.splitTotal.fixedAmount, data.splitTotal.perPersonAmount, data.currency)}
             </Text>
           </View>
         </View>

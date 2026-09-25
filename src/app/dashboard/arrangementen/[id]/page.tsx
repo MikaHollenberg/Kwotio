@@ -6,25 +6,38 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: arrangement }, { data: tiers }, { data: seasons }] = await Promise.all([
-    supabase
-      .from("arrangements")
-      .select(
-        "id, organization_id, name, description, public_description, category, color_code, base_price, pricing_mode, price_per_person, price_display, is_publicly_visible, archived_at, content_items, pdf_url",
-      )
-      .eq("id", id)
-      .maybeSingle(),
-    supabase
-      .from("arrangement_price_tiers")
-      .select("min_guests, max_guests, price")
-      .eq("arrangement_id", id)
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("arrangement_season_prices")
-      .select("label, start_date, end_date, price")
-      .eq("arrangement_id", id)
-      .order("sort_order", { ascending: true }),
-  ]);
+  const [{ data: arrangement }, { data: prices }, { data: seasons }, { data: seasonPrices }, { data: surcharges }] =
+    await Promise.all([
+      supabase
+        .from("arrangements")
+        .select(
+          "id, organization_id, name, description, public_description, category, color_code, price_display, is_publicly_visible, archived_at, content_items, pdf_url",
+        )
+        .eq("id", id)
+        .maybeSingle(),
+      supabase
+        .from("arrangement_prices")
+        .select("id, label, unit, amount")
+        .eq("arrangement_id", id)
+        .is("season_id", null)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("arrangement_seasons")
+        .select("id, label, start_date, end_date")
+        .eq("arrangement_id", id)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("arrangement_prices")
+        .select("id, season_id, label, unit, amount")
+        .eq("arrangement_id", id)
+        .not("season_id", "is", null)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("arrangement_surcharges")
+        .select("id, label, min_guests, max_guests, unit, amount")
+        .eq("arrangement_id", id)
+        .order("sort_order", { ascending: true }),
+    ]);
 
   if (!arrangement) notFound();
 
@@ -40,16 +53,29 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
         publicDescription: arrangement.public_description,
         category: arrangement.category,
         colorCode: arrangement.color_code,
-        basePrice: Number(arrangement.base_price),
-        pricingMode: arrangement.pricing_mode,
-        pricePerPerson: arrangement.price_per_person,
         priceDisplay: arrangement.price_display,
         isPubliclyVisible: arrangement.is_publicly_visible,
         contentItems: arrangement.content_items,
         pdfUrl: arrangement.pdf_url ?? "",
       }}
-      initialTiers={(tiers ?? []).map((t) => ({ minGuests: t.min_guests, maxGuests: t.max_guests, price: Number(t.price) }))}
-      initialSeasons={(seasons ?? []).map((s) => ({ label: s.label, startDate: s.start_date, endDate: s.end_date, price: Number(s.price) }))}
+      initialPrices={(prices ?? []).map((p) => ({ id: p.id, label: p.label, unit: p.unit, amount: Number(p.amount) }))}
+      initialSeasons={(seasons ?? []).map((s) => ({
+        id: s.id,
+        label: s.label,
+        startDate: s.start_date,
+        endDate: s.end_date,
+        prices: (seasonPrices ?? [])
+          .filter((p) => p.season_id === s.id)
+          .map((p) => ({ id: p.id, label: p.label, unit: p.unit, amount: Number(p.amount) })),
+      }))}
+      initialSurcharges={(surcharges ?? []).map((s) => ({
+        id: s.id,
+        label: s.label,
+        minGuests: s.min_guests,
+        maxGuests: s.max_guests,
+        unit: s.unit,
+        amount: Number(s.amount),
+      }))}
     />
   );
 }

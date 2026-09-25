@@ -12,11 +12,10 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Archive, ArchiveRestore, Plus, Boxes, Gauge, CalendarRange, Globe } from "lucide-react";
+import { GripVertical, Pencil, Archive, ArchiveRestore, Plus, Boxes, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import type { ArrangementPricingMode } from "@/lib/types/database";
 import { reorderArrangements, archiveArrangement, unarchiveArrangement } from "./actions";
 
 type ArrangementRow = {
@@ -25,27 +24,16 @@ type ArrangementRow = {
   description: string;
   category: string;
   color_code: string;
-  base_price: number;
-  pricing_mode: ArrangementPricingMode;
-  price_per_person: boolean;
   is_publicly_visible: boolean;
   sort_order: number;
   archived_at: string | null;
-};
-
-const PRICING_MODE_LABELS: Record<ArrangementPricingMode, string> = {
-  vast: "Vaste prijs",
-  staffel: "Staffelprijs",
-  seizoen: "Seizoensprijs",
-};
-const PRICING_MODE_ICONS: Record<ArrangementPricingMode, typeof Gauge> = {
-  vast: Boxes,
-  staffel: Gauge,
-  seizoen: CalendarRange,
+  startingPrice: number | null;
+  pricePerPerson: boolean;
+  /** Meer dan één prijsregel, of een toeslag -- de kaart toont dan "vanaf". */
+  isVariable: boolean;
 };
 
 function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRow; dragging?: boolean }) {
-  const Icon = PRICING_MODE_ICONS[arrangement.pricing_mode];
   return (
     <Card
       className={dragging ? "shadow-lg" : undefined}
@@ -73,16 +61,15 @@ function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRo
           </div>
         </div>
         {arrangement.description && <p className="line-clamp-2 text-xs text-ink-400">{arrangement.description}</p>}
-        <div className="mt-1 flex items-center justify-between gap-2 text-sm">
-          <span className="flex items-center gap-1.5 text-ink-400">
-            <Icon className="size-3.5" /> {PRICING_MODE_LABELS[arrangement.pricing_mode]}
-          </span>
-          <span className="font-display font-semibold text-ink-500">
-            {arrangement.pricing_mode !== "vast" && "vanaf "}
-            {formatCurrency(arrangement.base_price)}
-            {arrangement.price_per_person && " p.p."}
-          </span>
-        </div>
+        {arrangement.startingPrice != null && (
+          <div className="mt-1 flex items-center justify-end text-sm">
+            <span className="font-display font-semibold text-ink-500">
+              {arrangement.isVariable && "vanaf "}
+              {formatCurrency(arrangement.startingPrice)}
+              {arrangement.pricePerPerson && " p.p."}
+            </span>
+          </div>
+        )}
       </div>
     </Card>
   );

@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SignaturePad, type SignaturePadHandle } from "./signature-pad";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
+import { formatSplitPrice } from "@/lib/blocks/pricing";
 import type { PriceDisplayMode } from "@/lib/types/database";
 import { signQuote, type SignQuoteInput } from "@/app/offerte/[token]/sign-action";
 import { useTranslation } from "@/lib/i18n/language-context";
@@ -17,10 +17,9 @@ export function SignModal({
   token,
   quoteTitle,
   selectedPackageName,
-  total,
+  splitTotal,
   currency,
   priceDisplay,
-  pricePerPerson,
   selections,
   organizationName,
   termsUrl,
@@ -33,10 +32,9 @@ export function SignModal({
   token: string;
   quoteTitle: string;
   selectedPackageName: string | null;
-  total: number;
+  splitTotal: { fixedAmount: number; perPersonAmount: number };
   currency: string;
   priceDisplay: PriceDisplayMode;
-  pricePerPerson: boolean;
   selections: SignQuoteInput["selections"];
   organizationName: string;
   termsUrl: string | null;
@@ -111,8 +109,7 @@ export function SignModal({
             <div>
               <p className="text-xs text-ink-400">{selectedPackageName ?? ""}</p>
               <p className="font-display text-lg font-semibold text-ink-500">
-                {formatCurrency(total, currency)}
-                {pricePerPerson ? " p.p." : ""}{" "}
+                {formatSplitPrice(splitTotal.fixedAmount, splitTotal.perPersonAmount, currency)}{" "}
                 <span className="text-xs font-normal text-ink-400">
                   ({t(priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
                 </span>

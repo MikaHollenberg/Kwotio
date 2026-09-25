@@ -56,7 +56,7 @@ export type InvoiceStatus = "concept" | "open" | "deels_betaald" | "betaald" | "
 export type InvoiceType = "standaard" | "aanbetaling" | "slotfactuur" | "creditnota";
 export type InvoicePaymentMethod = "mollie" | "overboeking" | "pin" | "contant" | "sponsoring" | "overig";
 export type InvoiceVatRateType = "hoog" | "laag" | "nul" | "aangepast";
-export type ArrangementPricingMode = "vast" | "staffel" | "seizoen";
+export type ArrangementPriceUnit = "vast" | "p.p.";
 export type ArrangementAvailabilityStatus = "beschikbaar" | "bijna_vol" | "vol";
 /** Basisregels van een PERCENTAGE-aanbetaling (offerte-pakketten, of zelf
  * ingevulde regels bij een losse factuur) -- alleen gevuld bij mode
@@ -666,15 +666,12 @@ export interface Database {
           description: string;
           category: string;
           color_code: string;
-          base_price: number;
-          pricing_mode: ArrangementPricingMode;
           sort_order: number;
           archived_at: string | null;
           created_at: string;
           updated_at: string;
           content_items: ArrangementContentItem[];
           pdf_url: string | null;
-          price_per_person: boolean;
           price_display: PriceDisplayMode;
           is_publicly_visible: boolean;
           public_description: string;
@@ -686,41 +683,61 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["arrangements"]["Row"]>;
         Relationships: [];
       };
-      arrangement_price_tiers: {
+      arrangement_seasons: {
         Row: {
           id: string;
           arrangement_id: string;
-          min_guests: number;
-          max_guests: number | null;
-          price: number;
+          label: string;
+          start_date: string;
+          end_date: string;
           sort_order: number;
         };
-        Insert: Partial<Database["public"]["Tables"]["arrangement_price_tiers"]["Row"]> & {
+        Insert: Partial<Database["public"]["Tables"]["arrangement_seasons"]["Row"]> & {
           arrangement_id: string;
-          min_guests: number;
-          price: number;
+          label: string;
+          start_date: string;
+          end_date: string;
         };
-        Update: Partial<Database["public"]["Tables"]["arrangement_price_tiers"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["arrangement_seasons"]["Row"]>;
         Relationships: [];
       };
-      arrangement_season_prices: {
+      arrangement_prices: {
+        Row: {
+          id: string;
+          arrangement_id: string;
+          season_id: string | null;
+          label: string;
+          unit: ArrangementPriceUnit;
+          amount: number;
+          sort_order: number;
+        };
+        Insert: Partial<Database["public"]["Tables"]["arrangement_prices"]["Row"]> & {
+          arrangement_id: string;
+          label: string;
+          unit: ArrangementPriceUnit;
+          amount: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["arrangement_prices"]["Row"]>;
+        Relationships: [];
+      };
+      arrangement_surcharges: {
         Row: {
           id: string;
           arrangement_id: string;
           label: string;
-          start_date: string;
-          end_date: string;
-          price: number;
+          min_guests: number;
+          max_guests: number | null;
+          unit: ArrangementPriceUnit;
+          amount: number;
           sort_order: number;
         };
-        Insert: Partial<Database["public"]["Tables"]["arrangement_season_prices"]["Row"]> & {
+        Insert: Partial<Database["public"]["Tables"]["arrangement_surcharges"]["Row"]> & {
           arrangement_id: string;
-          label: string;
-          start_date: string;
-          end_date: string;
-          price: number;
+          min_guests: number;
+          unit: ArrangementPriceUnit;
+          amount: number;
         };
-        Update: Partial<Database["public"]["Tables"]["arrangement_season_prices"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["arrangement_surcharges"]["Row"]>;
         Relationships: [];
       };
       arrangement_availability: {

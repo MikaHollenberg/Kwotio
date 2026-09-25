@@ -7,7 +7,7 @@ import type { BlockDraft, PackagesBlockContent } from "@/lib/blocks/types";
 import type { Selections } from "@/lib/blocks/pricing";
 import type { QuoteStatus } from "@/lib/types/database";
 import { useQuoteSelections } from "@/hooks/use-quote-selections";
-import { calculateTotal } from "@/lib/blocks/pricing";
+import { calculateTotal, formatSplitPrice } from "@/lib/blocks/pricing";
 import { cn } from "@/lib/utils";
 import { AnimatedPrice } from "@/components/preview/animated-price";
 import { BlockPreview, type QuoteMeta } from "@/components/preview/quote-preview";
@@ -103,11 +103,17 @@ function PublicQuoteViewInner({
   headerData: QuoteHeaderData;
 }) {
   const { t } = useTranslation();
-  const { packagesBlocks, hasPricedBlocks, selections, setSelections, subtotal } = useQuoteSelections(
+  const { packagesBlocks, hasPricedBlocks, selections, setSelections, subtotal, splitSubtotal } = useQuoteSelections(
     blocks,
+    meta.pricePerPerson,
     initialSelections,
   );
   const total = calculateTotal({ subtotal, discountAmount: meta.discountAmount });
+  const discountRatio = subtotal > 0 ? total / subtotal : 1;
+  const splitTotal = {
+    fixedAmount: splitSubtotal.fixedAmount * discountRatio,
+    perPersonAmount: splitSubtotal.perPersonAmount * discountRatio,
+  };
   const sorted = [...blocks].sort((a, b) => a.position - b.position);
 
   const [comments, setComments] = useState(commentsByBlock);
@@ -238,13 +244,18 @@ function PublicQuoteViewInner({
           <div className="mx-auto flex max-w-3xl items-center justify-between gap-4">
             <div>
               <p className="text-xs text-ink-400">
-                {t("total_label")}
-                {meta.pricePerPerson ? " p.p." : ""} ({t(meta.priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
+                {t("total_label")} ({t(meta.priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
               </p>
-              <p className="font-display text-xl font-semibold text-ink-500">
-                <AnimatedPrice amount={total} currency={meta.currency} />
-                {meta.pricePerPerson ? " p.p." : ""}
-              </p>
+              {splitTotal.fixedAmount > 0 && splitTotal.perPersonAmount > 0 ? (
+                <p className="font-display text-xl font-semibold text-ink-500">
+                  {formatSplitPrice(splitTotal.fixedAmount, splitTotal.perPersonAmount, meta.currency)}
+                </p>
+              ) : (
+                <p className="font-display text-xl font-semibold text-ink-500">
+                  <AnimatedPrice amount={total} currency={meta.currency} />
+                  {splitTotal.perPersonAmount > 0 ? " p.p." : ""}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <a
@@ -331,10 +342,9 @@ function PublicQuoteViewInner({
         token={token}
         quoteTitle={meta.title}
         selectedPackageName={selectedPackageName}
-        total={total}
+        splitTotal={splitTotal}
         currency={meta.currency}
         priceDisplay={meta.priceDisplay}
-        pricePerPerson={meta.pricePerPerson}
         selections={selections}
         organizationName={organizationName}
         termsUrl={termsUrl}

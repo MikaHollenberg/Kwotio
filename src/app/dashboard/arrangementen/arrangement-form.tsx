@@ -10,12 +10,12 @@ import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { DecimalField } from "@/components/ui/decimal-field";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ARRANGEMENT_COLOR_PRESETS } from "@/lib/arrangements/colors";
-import { calculateArrangementPrice } from "@/lib/arrangements/pricing";
+import { resolveArrangementPrices } from "@/lib/arrangements/pricing";
 import type { ArrangementContentItem } from "@/lib/arrangements/types";
 import { PdfUploadField } from "@/components/builder/pdf-upload-field";
 import { ArrangementContentEditor } from "./content-editor";
 import { cn } from "@/lib/utils";
-import type { ArrangementPricingMode, PriceDisplayMode } from "@/lib/types/database";
+import type { ArrangementPriceUnit, PriceDisplayMode } from "@/lib/types/database";
 import type { ArrangementBlockContent } from "@/lib/blocks/types";
 import { BlockPreview } from "@/components/preview/quote-preview";
 import type { Selections } from "@/lib/blocks/pricing";
@@ -23,16 +23,23 @@ import { LanguageProvider } from "@/lib/i18n/language-context";
 import {
   createArrangement,
   updateArrangement,
-  updatePriceTiers,
-  updateSeasonPrices,
+  updateArrangementPrices,
+  updateArrangementSeasons,
+  updateArrangementSurcharges,
   archiveArrangement,
   unarchiveArrangement,
   deleteArrangement,
   type ArrangementFields,
 } from "./actions";
 
-type TierDraft = { key: string; minGuests: number; maxGuests: number | null; price: number };
-type SeasonDraft = { key: string; label: string; startDate: string; endDate: string; price: number };
+type PriceDraft = { key: string; label: string; unit: ArrangementPriceUnit; amount: number };
+type SeasonDraft = { key: string; label: string; startDate: string; endDate: string; prices: PriceDraft[] };
+type SurchargeDraft = { key: string; label: string; minGuests: number; maxGuests: number | null; unit: ArrangementPriceUnit; amount: number };
+
+const UNIT_OPTIONS: { value: ArrangementPriceUnit; label: string }[] = [
+  { value: "vast", label: "vast bedrag" },
+  { value: "p.p.", label: "per persoon" },
+];
 
 function makeKey() {
   return crypto.randomUUID();
@@ -42,27 +49,67 @@ function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
 
-const PRICING_MODE_OPTIONS: { value: ArrangementPricingMode; label: string }[] = [
-  { value: "vast", label: "Vaste prijs" },
-  { value: "staffel", label: "Staffelprijs" },
-  { value: "seizoen", label: "Seizoensprijs" },
-];
+function emptyPrice(): PriceDraft {
+  return { key: makeKey(), label: "", unit: "vast", amount: 0 };
+}
+
+/** Rij-editor voor een lijst prijsregels (naam + bedrag + vast/p.p.-toggle +
+ * verwijderen) -- hergebruikt in zowel de "altijd actieve" prijzenlijst als
+ * per seizoen, zelfde patroon als de bestaande extra's-editor. */
+function PriceLinesEditor({ prices, onChange }: { prices: PriceDraft[]; onChange: (prices: PriceDraft[]) => void }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {prices.map((price) => (
+        <div key={price.key} className="flex flex-wrap items-center gap-1.5">
+          <input
+            value={price.label}
+            onChange={(e) => onChange(prices.map((p) => (p.key === price.key ? { ...p, label: e.target.value } : p)))}
+            placeholder="Waarvoor, bv. Zaalhuur"
+            className="h-9 flex-1 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
+          />
+          <DecimalField
+            value={price.amount}
+            onCommit={(v) => onChange(prices.map((p) => (p.key === price.key ? { ...p, amount: v } : p)))}
+            className="h-9 w-24 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
+          />
+          <SegmentedToggle
+            value={price.unit}
+            options={UNIT_OPTIONS}
+            onChange={(unit) => onChange(prices.map((p) => (p.key === price.key ? { ...p, unit } : p)))}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(prices.filter((p) => p.key !== price.key))}
+            className="flex size-8 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
+      ))}
+      <Button variant="outline" size="sm" onClick={() => onChange([...prices, emptyPrice()])} className="w-fit">
+        <Plus className="size-4" /> Prijs toevoegen
+      </Button>
+    </div>
+  );
+}
 
 export function ArrangementForm({
   mode,
   arrangementId,
   organizationId,
   initial,
-  initialTiers,
+  initialPrices,
   initialSeasons,
+  initialSurcharges,
   archivedAt,
 }: {
   mode: "create" | "edit";
   arrangementId?: string;
   organizationId: string;
   initial: ArrangementFields;
-  initialTiers: { minGuests: number; maxGuests: number | null; price: number }[];
-  initialSeasons: { label: string; startDate: string; endDate: string; price: number }[];
+  initialPrices: { label: string; unit: ArrangementPriceUnit; amount: number }[];
+  initialSeasons: { label: string; startDate: string; endDate: string; prices: { label: string; unit: ArrangementPriceUnit; amount: number }[] }[];
+  initialSurcharges: { label: string; minGuests: number; maxGuests: number | null; unit: ArrangementPriceUnit; amount: number }[];
   archivedAt?: string | null;
 }) {
   const router = useRouter();
@@ -72,19 +119,15 @@ export function ArrangementForm({
   const [category, setCategory] = useState(initial.category);
   const [colorCode, setColorCode] = useState(initial.colorCode);
   const [customColor, setCustomColor] = useState(!ARRANGEMENT_COLOR_PRESETS.includes(initial.colorCode as never));
-  const [basePrice, setBasePrice] = useState(initial.basePrice);
-  const [pricingMode, setPricingMode] = useState<ArrangementPricingMode>(initial.pricingMode);
-  const [pricePerPerson, setPricePerPerson] = useState(initial.pricePerPerson);
   const [priceDisplay, setPriceDisplay] = useState<PriceDisplayMode>(initial.priceDisplay);
   const [isPubliclyVisible, setIsPubliclyVisible] = useState(initial.isPubliclyVisible);
-  const [tiers, setTiers] = useState<TierDraft[]>(initialTiers.map((t) => ({ ...t, key: makeKey() })));
-  const [seasons, setSeasons] = useState<SeasonDraft[]>(initialSeasons.map((s) => ({ ...s, key: makeKey() })));
+  const [prices, setPrices] = useState<PriceDraft[]>(initialPrices.map((p) => ({ ...p, key: makeKey() })));
+  const [seasons, setSeasons] = useState<SeasonDraft[]>(
+    initialSeasons.map((s) => ({ ...s, key: makeKey(), prices: s.prices.map((p) => ({ ...p, key: makeKey() })) })),
+  );
+  const [surcharges, setSurcharges] = useState<SurchargeDraft[]>(initialSurcharges.map((s) => ({ ...s, key: makeKey() })));
   const [contentItems, setContentItems] = useState<ArrangementContentItem[]>(initial.contentItems);
   const [pdfUrl, setPdfUrl] = useState(initial.pdfUrl);
-  // Vaste waarden i.p.v. instelbare velden -- de test-invoerbalk erboven de
-  // live preview is op verzoek verwijderd; de staffel-/seizoensprijs-preview
-  // rekent hier gewoon mee door op basis van deze aannames.
-  const previewGuests = 10;
   const previewDate = todayIso();
   const [previewSelections, setPreviewSelections] = useState<Selections>({ packageIdByBlock: {}, addonQuantities: {} });
   const [pending, startTransition] = useTransition();
@@ -92,15 +135,20 @@ export function ArrangementForm({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
 
-  const preview = useMemo(
+  const resolvedPreviewPrices = useMemo(
     () =>
-      calculateArrangementPrice(
-        { basePrice, pricingMode },
-        tiers.map((t) => ({ id: t.key, minGuests: t.minGuests, maxGuests: t.maxGuests, price: t.price })),
-        seasons.map((s) => ({ id: s.key, label: s.label, startDate: s.startDate, endDate: s.endDate, price: s.price })),
-        { guestCount: previewGuests, eventDate: previewDate },
+      resolveArrangementPrices(
+        prices.map((p) => ({ id: p.key, label: p.label, unit: p.unit, amount: p.amount })),
+        seasons.map((s) => ({
+          id: s.key,
+          label: s.label,
+          startDate: s.startDate,
+          endDate: s.endDate,
+          prices: s.prices.map((p) => ({ id: p.key, label: p.label, unit: p.unit, amount: p.amount })),
+        })),
+        previewDate,
       ),
-    [basePrice, pricingMode, tiers, seasons, previewGuests, previewDate],
+    [prices, seasons, previewDate],
   );
 
   // Zelfde momentopname-vorm als newBlockFromArrangement() bouwt zodra dit
@@ -118,28 +166,30 @@ export function ArrangementForm({
         name,
         description,
         colorCode,
-        pricingMode,
-        basePrice: preview.price,
-        priceLabel: preview.appliedLabel,
-        pricePerPerson,
+        prices: resolvedPreviewPrices.prices,
+        seasonLabel: resolvedPreviewPrices.seasonLabel,
+        surcharges: surcharges.map((s) => ({ id: s.key, label: s.label, minGuests: s.minGuests, maxGuests: s.maxGuests, unit: s.unit, amount: s.amount })),
         priceDisplay,
         contentItems,
         pdfUrl: pdfUrl.trim() || null,
       } satisfies ArrangementBlockContent,
     }),
-    [name, arrangementId, description, colorCode, pricingMode, preview, pricePerPerson, priceDisplay, contentItems, pdfUrl],
+    [name, arrangementId, description, colorCode, resolvedPreviewPrices, surcharges, priceDisplay, contentItems, pdfUrl],
   );
   // Laag prioriteit: het echte typen in Naam/Omschrijving/etc. mag nooit
   // wachten op het herrenderen van de (soms best zware) preview -- vooral
   // bij veel content-items kan dat anders voelbaar haperen tijdens typen.
   const deferredPreviewBlock = useDeferredValue(previewBlock);
 
-  function addTier() {
-    const last = tiers[tiers.length - 1];
-    setTiers([...tiers, { key: makeKey(), minGuests: last ? (last.maxGuests ?? last.minGuests) + 1 : 1, maxGuests: null, price: last?.price ?? basePrice }]);
-  }
   function addSeason() {
-    setSeasons([...seasons, { key: makeKey(), label: "", startDate: todayIso(), endDate: todayIso(), price: basePrice }]);
+    setSeasons([...seasons, { key: makeKey(), label: "", startDate: todayIso(), endDate: todayIso(), prices: [emptyPrice()] }]);
+  }
+  function addSurcharge() {
+    const last = surcharges[surcharges.length - 1];
+    setSurcharges([
+      ...surcharges,
+      { key: makeKey(), label: "", minGuests: last ? (last.maxGuests ?? last.minGuests) + 1 : 1, maxGuests: null, unit: "p.p.", amount: 0 },
+    ]);
   }
 
   function handleSave() {
@@ -150,9 +200,6 @@ export function ArrangementForm({
         publicDescription,
         category,
         colorCode,
-        basePrice,
-        pricingMode,
-        pricePerPerson,
         priceDisplay,
         isPubliclyVisible,
         contentItems,
@@ -165,11 +212,22 @@ export function ArrangementForm({
       } else {
         await updateArrangement(arrangementId!, fields);
       }
-      if (pricingMode === "staffel") {
-        await updatePriceTiers(id!, tiers.map((t) => ({ minGuests: t.minGuests, maxGuests: t.maxGuests, price: t.price })));
-      } else if (pricingMode === "seizoen") {
-        await updateSeasonPrices(id!, seasons.map((s) => ({ label: s.label, startDate: s.startDate, endDate: s.endDate, price: s.price })));
-      }
+      await Promise.all([
+        updateArrangementPrices(id!, prices.map((p) => ({ label: p.label, unit: p.unit, amount: p.amount }))),
+        updateArrangementSeasons(
+          id!,
+          seasons.map((s) => ({
+            label: s.label,
+            startDate: s.startDate,
+            endDate: s.endDate,
+            prices: s.prices.map((p) => ({ label: p.label, unit: p.unit, amount: p.amount })),
+          })),
+        ),
+        updateArrangementSurcharges(
+          id!,
+          surcharges.map((s) => ({ label: s.label, minGuests: s.minGuests, maxGuests: s.maxGuests, unit: s.unit, amount: s.amount })),
+        ),
+      ]);
       if (mode === "create") {
         router.push(`/dashboard/arrangementen/${id}`);
       } else {
@@ -312,152 +370,140 @@ export function ArrangementForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>Prijsmodel</CardTitle>
-          <CardDescription>Eén model per arrangement, zodat altijd duidelijk is welke prijs geldt.</CardDescription>
+          <CardTitle>Prijzen</CardTitle>
+          <CardDescription>
+            Eén of meer losse prijsregels, elk met een eigen naam en vast bedrag of bedrag per persoon -- bv.
+            &quot;Zaalhuur&quot; (vast) naast &quot;Drankarrangement&quot; (per persoon).
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <SegmentedToggle value={pricingMode} options={PRICING_MODE_OPTIONS} onChange={setPricingMode} />
-
-          <div className="flex flex-wrap gap-6">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-ink-400">Weergave</label>
-              <SegmentedToggle
-                value={pricePerPerson ? "per_persoon" : "totaal"}
-                onChange={(v) => setPricePerPerson(v === "per_persoon")}
-                options={[
-                  { value: "totaal", label: "Totaalprijs" },
-                  { value: "per_persoon", label: "Per persoon" },
-                ]}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-medium text-ink-400">Btw</label>
-              <SegmentedToggle
-                value={priceDisplay}
-                onChange={setPriceDisplay}
-                options={[
-                  { value: "excl_btw", label: "Excl. btw" },
-                  { value: "incl_btw", label: "Incl. btw" },
-                ]}
-              />
-            </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-ink-400">Btw</label>
+            <SegmentedToggle
+              value={priceDisplay}
+              onChange={setPriceDisplay}
+              options={[
+                { value: "excl_btw", label: "Excl. btw" },
+                { value: "incl_btw", label: "Incl. btw" },
+              ]}
+            />
           </div>
+          <PriceLinesEditor prices={prices} onChange={setPrices} />
+        </CardContent>
+      </Card>
 
-          {pricingMode === "vast" && (
-            <div className="flex flex-col gap-1.5 sm:w-48">
-              <label className="text-sm font-medium text-ink-500">Prijs</label>
-              <DecimalField
-                key={`base-${initial.basePrice}`}
-                value={basePrice}
-                onCommit={setBasePrice}
-                className="h-11 rounded-brand-sm border border-ink-200 bg-white px-3.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+      <Card>
+        <CardHeader>
+          <CardTitle>Seizoensprijzen</CardTitle>
+          <CardDescription>
+            Een periode met zijn eigen prijsregels, die de prijzen hierboven vervangen zodra de datum van de
+            offerte binnen die periode valt.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {seasons.map((season) => (
+            <div key={season.key} className="flex flex-col gap-2.5 rounded-brand-sm border border-ink-100 bg-sand-50 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={season.label}
+                  onChange={(e) => setSeasons(seasons.map((s) => (s.key === season.key ? { ...s, label: e.target.value } : s)))}
+                  placeholder="Hoogseizoen"
+                  className="h-9 w-40 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
+                />
+                <input
+                  type="date"
+                  value={season.startDate}
+                  onChange={(e) => setSeasons(seasons.map((s) => (s.key === season.key ? { ...s, startDate: e.target.value } : s)))}
+                  className="h-9 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
+                />
+                <span className="text-sm text-ink-400">t/m</span>
+                <input
+                  type="date"
+                  value={season.endDate}
+                  onChange={(e) => setSeasons(seasons.map((s) => (s.key === season.key ? { ...s, endDate: e.target.value } : s)))}
+                  className="h-9 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => setSeasons(seasons.filter((s) => s.key !== season.key))}
+                  className="ml-auto flex size-8 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              </div>
+              <PriceLinesEditor
+                prices={season.prices}
+                onChange={(next) => setSeasons(seasons.map((s) => (s.key === season.key ? { ...s, prices: next } : s)))}
               />
             </div>
-          )}
+          ))}
+          <Button variant="outline" size="sm" onClick={addSeason} className="w-fit">
+            <Plus className="size-4" /> Seizoen toevoegen
+          </Button>
+        </CardContent>
+      </Card>
 
-          {pricingMode === "staffel" && (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1.5 sm:w-48">
-                <label className="text-sm font-medium text-ink-500">Basisprijs (terugval)</label>
-                <DecimalField
-                  key={`base-${initial.basePrice}`}
-                  value={basePrice}
-                  onCommit={setBasePrice}
-                  className="h-11 rounded-brand-sm border border-ink-200 bg-white px-3.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
-                />
-              </div>
-              {tiers.map((tier) => (
-                <div key={tier.key} className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={1}
-                    value={tier.minGuests}
-                    onChange={(e) => setTiers(tiers.map((t) => (t.key === tier.key ? { ...t, minGuests: Number(e.target.value) } : t)))}
-                    className="h-10 w-20 rounded-brand-sm border border-ink-200 bg-white px-2 text-center text-sm text-ink-500 outline-none focus:border-teal-500"
-                  />
-                  <span className="text-sm text-ink-400">tot</span>
-                  <input
-                    type="number"
-                    min={tier.minGuests}
-                    value={tier.maxGuests ?? ""}
-                    placeholder="∞"
-                    onChange={(e) =>
-                      setTiers(tiers.map((t) => (t.key === tier.key ? { ...t, maxGuests: e.target.value === "" ? null : Number(e.target.value) } : t)))
-                    }
-                    className="h-10 w-20 rounded-brand-sm border border-ink-200 bg-white px-2 text-center text-sm text-ink-500 outline-none focus:border-teal-500"
-                  />
-                  <span className="text-sm text-ink-400">personen</span>
-                  <DecimalField
-                    value={tier.price}
-                    onCommit={(v) => setTiers(tiers.map((t) => (t.key === tier.key ? { ...t, price: v } : t)))}
-                    className="ml-auto h-10 w-28 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setTiers(tiers.filter((t) => t.key !== tier.key))}
-                    className="flex size-8 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={addTier} className="w-fit">
-                <Plus className="size-4" /> Staffel toevoegen
-              </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle>Toeslagen</CardTitle>
+          <CardDescription>
+            Leesbare regels op basis van aantal personen, bv. &quot;40-50 personen: +€2,50 p.p.&quot; -- puur informatief,
+            wordt getoond bij de prijzen maar nooit automatisch verrekend (het aantal personen is pas bij
+            ondertekenen bekend).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-3">
+          {surcharges.map((s) => (
+            <div key={s.key} className="flex flex-wrap items-center gap-1.5">
+              <input
+                value={s.label}
+                onChange={(e) => setSurcharges(surcharges.map((x) => (x.key === s.key ? { ...x, label: e.target.value } : x)))}
+                placeholder="Omschrijving (optioneel)"
+                className="h-9 min-w-32 flex-1 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
+              />
+              <input
+                type="number"
+                min={1}
+                value={s.minGuests}
+                onChange={(e) => setSurcharges(surcharges.map((x) => (x.key === s.key ? { ...x, minGuests: Number(e.target.value) } : x)))}
+                className="h-9 w-20 rounded-brand-sm border border-ink-200 bg-white px-2 text-center text-sm text-ink-500 outline-none focus:border-teal-500"
+              />
+              <span className="text-sm text-ink-400">tot</span>
+              <input
+                type="number"
+                min={s.minGuests}
+                value={s.maxGuests ?? ""}
+                placeholder="∞"
+                onChange={(e) =>
+                  setSurcharges(
+                    surcharges.map((x) => (x.key === s.key ? { ...x, maxGuests: e.target.value === "" ? null : Number(e.target.value) } : x)),
+                  )
+                }
+                className="h-9 w-20 rounded-brand-sm border border-ink-200 bg-white px-2 text-center text-sm text-ink-500 outline-none focus:border-teal-500"
+              />
+              <span className="text-sm text-ink-400">personen</span>
+              <DecimalField
+                value={s.amount}
+                onCommit={(v) => setSurcharges(surcharges.map((x) => (x.key === s.key ? { ...x, amount: v } : x)))}
+                className="h-9 w-24 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
+              />
+              <SegmentedToggle
+                value={s.unit}
+                options={UNIT_OPTIONS}
+                onChange={(unit) => setSurcharges(surcharges.map((x) => (x.key === s.key ? { ...x, unit } : x)))}
+              />
+              <button
+                type="button"
+                onClick={() => setSurcharges(surcharges.filter((x) => x.key !== s.key))}
+                className="flex size-8 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
+              >
+                <Trash2 className="size-4" />
+              </button>
             </div>
-          )}
-
-          {pricingMode === "seizoen" && (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1.5 sm:w-48">
-                <label className="text-sm font-medium text-ink-500">Basisprijs (terugval)</label>
-                <DecimalField
-                  key={`base-${initial.basePrice}`}
-                  value={basePrice}
-                  onCommit={setBasePrice}
-                  className="h-11 rounded-brand-sm border border-ink-200 bg-white px-3.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
-                />
-              </div>
-              {seasons.map((season) => (
-                <div key={season.key} className="flex flex-wrap items-center gap-2">
-                  <input
-                    value={season.label}
-                    onChange={(e) => setSeasons(seasons.map((s) => (s.key === season.key ? { ...s, label: e.target.value } : s)))}
-                    placeholder="Hoogseizoen"
-                    className="h-10 w-32 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
-                  />
-                  <input
-                    type="date"
-                    value={season.startDate}
-                    onChange={(e) => setSeasons(seasons.map((s) => (s.key === season.key ? { ...s, startDate: e.target.value } : s)))}
-                    className="h-10 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
-                  />
-                  <span className="text-sm text-ink-400">t/m</span>
-                  <input
-                    type="date"
-                    value={season.endDate}
-                    onChange={(e) => setSeasons(seasons.map((s) => (s.key === season.key ? { ...s, endDate: e.target.value } : s)))}
-                    className="h-10 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
-                  />
-                  <DecimalField
-                    value={season.price}
-                    onCommit={(v) => setSeasons(seasons.map((s) => (s.key === season.key ? { ...s, price: v } : s)))}
-                    className="ml-auto h-10 w-28 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setSeasons(seasons.filter((s) => s.key !== season.key))}
-                    className="flex size-8 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={addSeason} className="w-fit">
-                <Plus className="size-4" /> Periode toevoegen
-              </Button>
-            </div>
-          )}
+          ))}
+          <Button variant="outline" size="sm" onClick={addSurcharge} className="w-fit">
+            <Plus className="size-4" /> Toeslag toevoegen
+          </Button>
         </CardContent>
       </Card>
 
@@ -557,7 +603,7 @@ export function ArrangementForm({
                   eventDate: previewDate || null,
                   currency: "EUR",
                   priceDisplay,
-                  pricePerPerson,
+                  pricePerPerson: false,
                   discountAmount: 0,
                 }}
                 selections={previewSelections}

@@ -14,7 +14,7 @@ import type {
   SignatureBlockContent,
   ArrangementBlockContent,
 } from "@/lib/blocks/types";
-import { calculateTotal, type Selections } from "@/lib/blocks/pricing";
+import { calculateTotal, formatSplitPrice, type Selections } from "@/lib/blocks/pricing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
 import { useQuoteSelections } from "@/hooks/use-quote-selections";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
@@ -86,8 +86,19 @@ function QuotePreviewInner({
   mode: "desktop" | "mobile";
   headerData?: QuoteHeaderData;
 }) {
-  const { hasPricedBlocks, selections, setSelections, subtotal } = useQuoteSelections(blocks);
+  const { hasPricedBlocks, selections, setSelections, subtotal, splitSubtotal } = useQuoteSelections(
+    blocks,
+    meta.pricePerPerson,
+  );
   const total = calculateTotal({ subtotal, discountAmount: meta.discountAmount });
+  // Korting gaat naar rato van de verhouding vast/p.p. in de gesplitste
+  // weergave af, zodat "Totaal" (het blended getal, incl. korting) en de
+  // som van de gesplitste bedragen nooit uit elkaar kunnen lopen.
+  const discountRatio = subtotal > 0 ? total / subtotal : 1;
+  const splitTotal = {
+    fixedAmount: splitSubtotal.fixedAmount * discountRatio,
+    perPersonAmount: splitSubtotal.perPersonAmount * discountRatio,
+  };
   const { t } = useTranslation();
 
   const sorted = [...blocks].sort((a, b) => a.position - b.position);
@@ -121,13 +132,24 @@ function QuotePreviewInner({
           <div className="sticky bottom-0 flex items-center justify-between gap-4 border-t border-ink-100 bg-white/95 px-6 py-4 backdrop-blur-sm">
             <div>
               <p className="text-xs text-ink-400">
-                {t("total_label")}
-                {meta.pricePerPerson ? " p.p." : ""} ({t(meta.priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
+                {t("total_label")} ({t(meta.priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
               </p>
-              <p className="font-display text-xl font-semibold text-ink-500">
-                <AnimatedPrice amount={total} currency={meta.currency} />
-                {meta.pricePerPerson ? " p.p." : ""}
-              </p>
+              {/* Vaste en p.p.-bedragen nooit blind samenvoegen -- een vaste
+                  post (bv. een DJ) telt niet mee als "p.p." puur omdat de
+                  offerte dat globaal aan heeft staan (zie pricing.ts). Bij
+                  precies één soort bedrag blijft de bestaande AnimatedPrice-
+                  animatie behouden; bij een mix (allebei > 0) een gewone,
+                  duidelijk gesplitste tekst. */}
+              {splitTotal.fixedAmount > 0 && splitTotal.perPersonAmount > 0 ? (
+                <p className="font-display text-xl font-semibold text-ink-500">
+                  {formatSplitPrice(splitTotal.fixedAmount, splitTotal.perPersonAmount, meta.currency)}
+                </p>
+              ) : (
+                <p className="font-display text-xl font-semibold text-ink-500">
+                  <AnimatedPrice amount={total} currency={meta.currency} />
+                  {splitTotal.perPersonAmount > 0 ? " p.p." : ""}
+                </p>
+              )}
             </div>
             <Button size={mode === "mobile" ? "sm" : "md"}>{t("accept_and_sign")}</Button>
           </div>
@@ -1071,9 +1093,6 @@ function ArrangementBlockPreview({
 }) {
   const { t } = useTranslation();
   const arrangementColor = c.colorCode || accentColor;
-  const [guestInput, setGuestInput] = useState("");
-  const guestCount = Number(guestInput);
-  const hasGuestCount = guestInput.trim() !== "" && guestCount > 0;
   const btwLabel = c.priceDisplay === "incl_btw" ? t("price_incl_btw") : t("price_excl_btw");
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
@@ -1264,43 +1283,50 @@ function ArrangementBlockPreview({
     ? Math.max(...layoutItems.map((it) => it.y + (measuredHeights[it.id] ?? it.height ?? AUTO_HEIGHT_ESTIMATE))) + 24
     : 0;
 
+  const priceLinesFixed = c.prices.filter((p) => p.unit === "vast").reduce((sum, p) => sum + p.amount, 0);
+  const priceLinesPerPerson = c.prices.filter((p) => p.unit === "p.p.").reduce((sum, p) => sum + p.amount, 0);
+
   return (
     <div className="px-6 py-10">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <SectionHeading>{c.heading || c.name}</SectionHeading>
         <span className="font-display text-xl font-semibold whitespace-nowrap" style={{ color: accentColor }}>
-          {c.priceLabel ? t("from_price_prefix") : ""}
-          {priceLabel(c.basePrice, meta.currency, c.pricePerPerson)}
+          {formatSplitPrice(priceLinesFixed, priceLinesPerPerson, meta.currency)}
         </span>
       </div>
       <p className="mt-0.5 text-xs text-ink-400">
-        {c.priceLabel && `${c.priceLabel} · `}
+        {c.seasonLabel && `${c.seasonLabel} · `}
         {btwLabel}
       </p>
       {c.description && <p className="mt-2 whitespace-pre-line text-sm text-ink-400">{c.description}</p>}
 
-      {c.pricePerPerson && (
-        <div className="mt-4 flex flex-wrap items-end gap-4 rounded-brand-sm border border-ink-100 bg-sand-50 px-4 py-3.5">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-ink-400">{t("headcount_label")}</label>
-            <input
-              type="number"
-              min={1}
-              value={guestInput}
-              onChange={(e) => setGuestInput(e.target.value)}
-              placeholder={t("headcount_placeholder")}
-              className="h-10 w-28 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
-            />
-          </div>
-          {hasGuestCount && (
-            <div className="flex flex-col">
-              <span className="text-xs text-ink-400">{t("total_price")}</span>
-              <span className="font-display text-lg font-semibold" style={{ color: arrangementColor }}>
-                {formatCurrency(c.basePrice * guestCount, meta.currency)}
-                <span className="ml-1 text-xs font-normal text-ink-400">({btwLabel})</span>
+      {c.prices.length > 1 && (
+        <ul className="mt-3 flex flex-col gap-1 text-sm text-ink-500">
+          {c.prices.map((p) => (
+            <li key={p.id} className="flex items-center justify-between gap-3">
+              <span>{p.label}</span>
+              <span className="font-medium">
+                {formatCurrency(p.amount, meta.currency)}
+                {p.unit === "p.p." ? " p.p." : ""}
               </span>
-            </div>
-          )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {c.surcharges.length > 0 && (
+        <div className="mt-3 rounded-brand-sm border border-ink-100 bg-sand-50 px-4 py-3 text-xs text-ink-400">
+          <p className="mb-1 font-semibold text-ink-500">Toeslagen</p>
+          <ul className="flex flex-col gap-0.5">
+            {c.surcharges.map((s) => (
+              <li key={s.id}>
+                {s.label && `${s.label}: `}
+                {s.minGuests}
+                {s.maxGuests != null ? `-${s.maxGuests}` : "+"} personen: +{formatCurrency(s.amount, meta.currency)}
+                {s.unit === "p.p." ? " p.p." : ""}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

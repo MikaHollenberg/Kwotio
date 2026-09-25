@@ -290,7 +290,11 @@ export function PublicOrgPageView({
                     key={a.id}
                     title={a.name}
                     description={a.description}
-                    priceLabel={`${a.pricingMode !== "vast" ? "Vanaf " : ""}${formatCurrency(a.basePrice, "EUR")}${a.pricePerPerson ? " p.p." : ""}`}
+                    priceLabel={
+                      a.basePrice != null
+                        ? `${a.isVariable ? "Vanaf " : ""}${formatCurrency(a.basePrice, "EUR")}${a.pricePerPerson ? " p.p." : ""}`
+                        : undefined
+                    }
                     accentColor={a.colorCode || data.primaryColor}
                     ctaLabel="Bekijk arrangement"
                     selected={a.id === selectedArrangementId}

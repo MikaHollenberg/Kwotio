@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { loadQuoteBlocks } from "@/lib/blocks/persistence";
 import {
   calculateSubtotal,
+  calculateSplitSubtotal,
   calculateTotal,
   defaultSelections,
   normalizeSelectedPackages,
@@ -46,6 +47,7 @@ export async function GET(
   ]);
 
   const packagesBlocksInput = collectPricedBlocks(blocks);
+  const arrangementBlocks = blocks.filter((b) => b.type === "arrangement");
 
   const selectedPackages = normalizeSelectedPackages(quote.selected_packages as Record<string, unknown> | null);
   const hasPriorSelection = Object.keys(selectedPackages).length > 0 || Object.keys(quote.selected_addons ?? {}).length > 0;
@@ -53,9 +55,17 @@ export async function GET(
     ? { packageIdByBlock: selectedPackages, addonQuantities: (quote.selected_addons as Record<string, number>) ?? {} }
     : defaultSelections(packagesBlocksInput);
 
-  const subtotal = calculateSubtotal(packagesBlocksInput, selections);
+  const subtotal = calculateSubtotal(packagesBlocksInput, selections, arrangementBlocks);
   const discountAmount = Number(quote.discount_amount);
   const total = calculateTotal({ subtotal, discountAmount });
+  const rawSplit = calculateSplitSubtotal(packagesBlocksInput, selections, quote.price_per_person, arrangementBlocks);
+  // Korting evenredig verdelen over vast/p.p., zodat de som van de
+  // gesplitste bedragen altijd gelijk blijft aan `total` hierboven.
+  const discountRatio = subtotal > 0 ? total / subtotal : 1;
+  const splitTotal = {
+    fixedAmount: rawSplit.fixedAmount * discountRatio,
+    perPersonAmount: rawSplit.perPersonAmount * discountRatio,
+  };
 
   let signatureData: QuotePdfSignatureData | null = null;
   if (quote.status === "geaccepteerd") {
@@ -137,6 +147,7 @@ export async function GET(
     subtotal,
     discountAmount,
     total,
+    splitTotal,
     generatedAt: new Date().toISOString(),
     termsUrl: organization?.terms_url ?? null,
     signature: signatureData,

@@ -85,30 +85,33 @@ export default async function QuoteEditorPage({
       .eq("type", "slotfactuur"),
     supabase
       .from("arrangements")
-      .select(
-        "id, name, description, category, color_code, base_price, pricing_mode, price_per_person, price_display, content_items, pdf_url",
-      )
+      .select("id, name, description, category, color_code, price_display, content_items, pdf_url")
       .eq("organization_id", organizationId)
       .is("archived_at", null)
       .order("sort_order", { ascending: true }),
   ]);
 
   const arrangementIds = (arrangementRows ?? []).map((a) => a.id);
-  const [{ data: tierRows }, { data: seasonRows }] =
+  const [{ data: priceRows }, { data: seasonRows }, { data: surchargeRows }] =
     arrangementIds.length > 0
       ? await Promise.all([
           supabase
-            .from("arrangement_price_tiers")
-            .select("id, arrangement_id, min_guests, max_guests, price")
+            .from("arrangement_prices")
+            .select("id, arrangement_id, season_id, label, unit, amount")
             .in("arrangement_id", arrangementIds)
             .order("sort_order", { ascending: true }),
           supabase
-            .from("arrangement_season_prices")
-            .select("id, arrangement_id, label, start_date, end_date, price")
+            .from("arrangement_seasons")
+            .select("id, arrangement_id, label, start_date, end_date")
+            .in("arrangement_id", arrangementIds)
+            .order("sort_order", { ascending: true }),
+          supabase
+            .from("arrangement_surcharges")
+            .select("id, arrangement_id, label, min_guests, max_guests, unit, amount")
             .in("arrangement_id", arrangementIds)
             .order("sort_order", { ascending: true }),
         ])
-      : [{ data: [] }, { data: [] }];
+      : [{ data: [] }, { data: [] }, { data: [] }];
 
   const arrangements: ArrangementPickerSummary[] = (arrangementRows ?? []).map((a) => ({
     id: a.id,
@@ -116,18 +119,26 @@ export default async function QuoteEditorPage({
     description: a.description,
     category: a.category,
     colorCode: a.color_code,
-    pricingMode: a.pricing_mode,
-    basePrice: Number(a.base_price),
-    pricePerPerson: a.price_per_person,
     priceDisplay: a.price_display,
     contentItems: a.content_items,
     pdfUrl: a.pdf_url,
-    tiers: (tierRows ?? [])
-      .filter((t) => t.arrangement_id === a.id)
-      .map((t) => ({ id: t.id, minGuests: t.min_guests, maxGuests: t.max_guests, price: Number(t.price) })),
+    prices: (priceRows ?? [])
+      .filter((p) => p.arrangement_id === a.id && p.season_id === null)
+      .map((p) => ({ id: p.id, label: p.label, unit: p.unit, amount: Number(p.amount) })),
     seasons: (seasonRows ?? [])
       .filter((s) => s.arrangement_id === a.id)
-      .map((s) => ({ id: s.id, label: s.label, startDate: s.start_date, endDate: s.end_date, price: Number(s.price) })),
+      .map((s) => ({
+        id: s.id,
+        label: s.label,
+        startDate: s.start_date,
+        endDate: s.end_date,
+        prices: (priceRows ?? [])
+          .filter((p) => p.season_id === s.id)
+          .map((p) => ({ id: p.id, label: p.label, unit: p.unit, amount: Number(p.amount) })),
+      })),
+    surcharges: (surchargeRows ?? [])
+      .filter((s) => s.arrangement_id === a.id)
+      .map((s) => ({ id: s.id, label: s.label, minGuests: s.min_guests, maxGuests: s.max_guests, unit: s.unit, amount: Number(s.amount) })),
   }));
 
   return (

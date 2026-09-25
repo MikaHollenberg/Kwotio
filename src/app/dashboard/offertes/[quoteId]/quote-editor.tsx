@@ -7,7 +7,7 @@ import type { Database, PriceDisplayMode } from "@/lib/types/database";
 import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
 import { newBlock, newBlockFromTemplate, newBlockFromArrangement } from "@/lib/blocks/types";
 import type { ArrangementPickerSummary } from "@/lib/arrangements/types";
-import { calculateArrangementPrice } from "@/lib/arrangements/pricing";
+import { resolveArrangementPrices } from "@/lib/arrangements/pricing";
 import {
   saveQuoteMeta,
   saveQuoteBlocksAction,
@@ -528,13 +528,8 @@ export function QuoteEditor({
               }
               arrangements={initialArrangements}
               onAddArrangement={(arrangement) => {
-                const priceInfo = calculateArrangementPrice(
-                  arrangement,
-                  arrangement.tiers,
-                  arrangement.seasons,
-                  { guestCount: null, eventDate: eventDate || null },
-                );
-                setBlocks([...blocks, newBlockFromArrangement(arrangement, priceInfo, blocks.length)]);
+                const resolved = resolveArrangementPrices(arrangement.prices, arrangement.seasons, eventDate || null);
+                setBlocks([...blocks, newBlockFromArrangement(arrangement, resolved, blocks.length)]);
               }}
             />
           </div>

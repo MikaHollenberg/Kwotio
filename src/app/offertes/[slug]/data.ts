@@ -5,7 +5,7 @@ import { resolvePreferredLogo } from "@/lib/organization/logo";
 import { resolveAccentColor } from "@/lib/organization/theme";
 import { calculateStartingPrice } from "@/lib/arrangements/pricing";
 import type { BlockDraft } from "@/lib/blocks/types";
-import type { PublicPageBackgroundStyle, PriceDisplayMode, ArrangementPricingMode } from "@/lib/types/database";
+import type { PublicPageBackgroundStyle, PriceDisplayMode } from "@/lib/types/database";
 
 export type PublicOrgTemplate = {
   id: string;
@@ -17,18 +17,18 @@ export type PublicOrgTemplate = {
 /** Eén publiek zichtbaar arrangement, kant-en-klaar als offerteblok zodat de
  * publieke pagina 'm rechtstreeks door BlockPreview kan laten renderen --
  * zelfde momentopname-vorm als newBlockFromArrangement() voor een echte
- * offerte bouwt. De prijs wordt hier berekend zonder specifieke
- * datum/aantal personen (een bezoeker bekijkt het aanbod, boekt nog niets):
- * bij staffel/seizoen is `basePrice` de laagst mogelijke ("vanaf") prijs
- * over alle tiers/periodes heen, zie calculateStartingPrice(). */
+ * offerte bouwt. De prijs wordt hier berekend zonder specifieke datum (een
+ * bezoeker bekijkt het aanbod, boekt nog niets): `basePrice` is de laagst
+ * mogelijke ("vanaf") prijs over alle prijsregels/seizoenen heen, zie
+ * calculateStartingPrice(). */
 export type PublicOrgArrangement = {
   id: string;
   name: string;
   description: string | null;
   colorCode: string | null;
-  pricingMode: ArrangementPricingMode;
-  basePrice: number;
-  priceLabel: string | null;
+  /** Meer dan één prijsregel of een seizoen -- de kaart toont dan "Vanaf". */
+  isVariable: boolean;
+  basePrice: number | null;
   pricePerPerson: boolean;
   priceDisplay: PriceDisplayMode;
   block: BlockDraft;
@@ -118,43 +118,53 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
 
   const { data: arrangementRows, error: arrangementError } = await supabase
     .from("arrangements")
-    .select(
-      "id, name, description, public_description, color_code, pricing_mode, base_price, price_per_person, price_display, content_items, pdf_url",
-    )
+    .select("id, name, description, public_description, color_code, price_display, content_items, pdf_url")
     .eq("organization_id", organization.id)
     .eq("is_publicly_visible", true)
     .is("archived_at", null)
     .order("sort_order", { ascending: true });
   if (arrangementError) throw arrangementError;
 
-  // Tiers/seizoensprijzen van alle publiek zichtbare arrangementen in één
-  // keer ophalen (niet per arrangement een losse query) -- zodat staffel/
-  // seizoen hieronder ook echt de laagste ("vanaf") prijs kan tonen i.p.v.
-  // altijd de basisprijs, wat hiervoor altijd het geval was omdat deze
-  // tabellen hier nooit geraadpleegd werden.
+  // Prijzen/seizoenen van alle publiek zichtbare arrangementen in één keer
+  // ophalen (niet per arrangement een losse query) -- zodat een variabel
+  // geprijsd arrangement hieronder ook echt de laagste ("vanaf") prijs kan
+  // tonen i.p.v. altijd hetzelfde platte bedrag.
   const arrangementIds = (arrangementRows ?? []).map((a) => a.id);
-  const [{ data: tierRows }, { data: seasonRows }] =
+  const [{ data: priceRows }, { data: seasonRows }, { data: surchargeRows }] =
     arrangementIds.length > 0
       ? await Promise.all([
           supabase
-            .from("arrangement_price_tiers")
-            .select("arrangement_id, min_guests, max_guests, price")
+            .from("arrangement_prices")
+            .select("arrangement_id, season_id, label, unit, amount")
             .in("arrangement_id", arrangementIds),
+          supabase.from("arrangement_seasons").select("id, arrangement_id, label, start_date, end_date").in("arrangement_id", arrangementIds),
           supabase
-            .from("arrangement_season_prices")
-            .select("arrangement_id, label, start_date, end_date, price")
+            .from("arrangement_surcharges")
+            .select("arrangement_id, label, min_guests, max_guests, unit, amount")
             .in("arrangement_id", arrangementIds),
         ])
-      : [{ data: [] }, { data: [] }];
+      : [{ data: [] }, { data: [] }, { data: [] }];
 
   const arrangements: PublicOrgArrangement[] = (arrangementRows ?? []).map((a) => {
-    const tiers = (tierRows ?? [])
-      .filter((t) => t.arrangement_id === a.id)
-      .map((t) => ({ id: `${t.arrangement_id}-${t.min_guests}`, minGuests: t.min_guests, maxGuests: t.max_guests, price: Number(t.price) }));
-    const seasons = (seasonRows ?? [])
+    const ownPrices = (priceRows ?? [])
+      .filter((p) => p.arrangement_id === a.id && p.season_id === null)
+      .map((p) => ({ id: `${a.id}-${p.label}`, label: p.label, unit: p.unit, amount: Number(p.amount) }));
+    const ownSeasons = (seasonRows ?? [])
       .filter((s) => s.arrangement_id === a.id)
-      .map((s) => ({ id: `${s.arrangement_id}-${s.start_date}`, label: s.label, startDate: s.start_date, endDate: s.end_date, price: Number(s.price) }));
-    const startingPrice = calculateStartingPrice({ basePrice: Number(a.base_price), pricingMode: a.pricing_mode }, tiers, seasons);
+      .map((s) => ({
+        id: s.id,
+        label: s.label,
+        startDate: s.start_date,
+        endDate: s.end_date,
+        prices: (priceRows ?? [])
+          .filter((p) => p.season_id === s.id)
+          .map((p) => ({ id: `${s.id}-${p.label}`, label: p.label, unit: p.unit, amount: Number(p.amount) })),
+      }));
+    const startingPrice = calculateStartingPrice(ownPrices, ownSeasons);
+    const cheapest = [...ownPrices, ...ownSeasons.flatMap((s) => s.prices)].reduce<{ unit: string } | null>(
+      (min, p) => (min === null || p.amount === startingPrice ? p : min),
+      null,
+    );
     return {
       id: a.id,
       name: a.name,
@@ -164,10 +174,10 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
       // zodra iemand de kaart openklapt), zie migratie 0078.
       description: a.public_description.trim() || a.description,
       colorCode: a.color_code,
-      pricingMode: a.pricing_mode,
+      isVariable:
+        ownPrices.length > 1 || ownSeasons.length > 0 || (surchargeRows ?? []).some((s) => s.arrangement_id === a.id),
       basePrice: startingPrice,
-      priceLabel: null,
-      pricePerPerson: a.price_per_person,
+      pricePerPerson: cheapest?.unit === "p.p.",
       priceDisplay: a.price_display,
       block: {
         id: a.id,
@@ -179,10 +189,11 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
           name: a.name,
           description: a.description,
           colorCode: a.color_code,
-          pricingMode: a.pricing_mode,
-          basePrice: startingPrice,
-          priceLabel: null,
-          pricePerPerson: a.price_per_person,
+          prices: ownPrices,
+          seasonLabel: null,
+          surcharges: (surchargeRows ?? [])
+            .filter((s) => s.arrangement_id === a.id)
+            .map((s) => ({ id: `${a.id}-${s.min_guests}`, label: s.label, minGuests: s.min_guests, maxGuests: s.max_guests, unit: s.unit, amount: Number(s.amount) })),
           priceDisplay: a.price_display,
           contentItems: a.content_items,
           pdfUrl: a.pdf_url,
