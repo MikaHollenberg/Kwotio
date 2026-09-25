@@ -3,9 +3,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { loadTemplateBlocks } from "@/lib/blocks/persistence";
 import { resolvePreferredLogo } from "@/lib/organization/logo";
 import { resolveAccentColor } from "@/lib/organization/theme";
-import { calculateArrangementPrice } from "@/lib/arrangements/pricing";
+import { calculateStartingPrice } from "@/lib/arrangements/pricing";
 import type { BlockDraft } from "@/lib/blocks/types";
-import type { PublicPageBackgroundStyle, PriceDisplayMode } from "@/lib/types/database";
+import type { PublicPageBackgroundStyle, PriceDisplayMode, ArrangementPricingMode } from "@/lib/types/database";
 
 export type PublicOrgTemplate = {
   id: string;
@@ -18,15 +18,15 @@ export type PublicOrgTemplate = {
  * publieke pagina 'm rechtstreeks door BlockPreview kan laten renderen --
  * zelfde momentopname-vorm als newBlockFromArrangement() voor een echte
  * offerte bouwt. De prijs wordt hier berekend zonder specifieke
- * datum/aantal personen (een bezoeker bekijkt het aanbod, boekt nog niets),
- * dus staffel/seizoen vallen terug op de basisprijs -- bij een
- * prijs-per-persoon-arrangement kan de bezoeker zelf een aantal invullen
- * (zie ArrangementBlockPreview) om een indicatie te krijgen. */
+ * datum/aantal personen (een bezoeker bekijkt het aanbod, boekt nog niets):
+ * bij staffel/seizoen is `basePrice` de laagst mogelijke ("vanaf") prijs
+ * over alle tiers/periodes heen, zie calculateStartingPrice(). */
 export type PublicOrgArrangement = {
   id: string;
   name: string;
   description: string | null;
   colorCode: string | null;
+  pricingMode: ArrangementPricingMode;
   basePrice: number;
   priceLabel: string | null;
   pricePerPerson: boolean;
@@ -127,11 +127,34 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     .order("sort_order", { ascending: true });
   if (arrangementError) throw arrangementError;
 
+  // Tiers/seizoensprijzen van alle publiek zichtbare arrangementen in één
+  // keer ophalen (niet per arrangement een losse query) -- zodat staffel/
+  // seizoen hieronder ook echt de laagste ("vanaf") prijs kan tonen i.p.v.
+  // altijd de basisprijs, wat hiervoor altijd het geval was omdat deze
+  // tabellen hier nooit geraadpleegd werden.
+  const arrangementIds = (arrangementRows ?? []).map((a) => a.id);
+  const [{ data: tierRows }, { data: seasonRows }] =
+    arrangementIds.length > 0
+      ? await Promise.all([
+          supabase
+            .from("arrangement_price_tiers")
+            .select("arrangement_id, min_guests, max_guests, price")
+            .in("arrangement_id", arrangementIds),
+          supabase
+            .from("arrangement_season_prices")
+            .select("arrangement_id, label, start_date, end_date, price")
+            .in("arrangement_id", arrangementIds),
+        ])
+      : [{ data: [] }, { data: [] }];
+
   const arrangements: PublicOrgArrangement[] = (arrangementRows ?? []).map((a) => {
-    const priceInfo = calculateArrangementPrice({ basePrice: Number(a.base_price), pricingMode: a.pricing_mode }, [], [], {
-      guestCount: null,
-      eventDate: null,
-    });
+    const tiers = (tierRows ?? [])
+      .filter((t) => t.arrangement_id === a.id)
+      .map((t) => ({ id: `${t.arrangement_id}-${t.min_guests}`, minGuests: t.min_guests, maxGuests: t.max_guests, price: Number(t.price) }));
+    const seasons = (seasonRows ?? [])
+      .filter((s) => s.arrangement_id === a.id)
+      .map((s) => ({ id: `${s.arrangement_id}-${s.start_date}`, label: s.label, startDate: s.start_date, endDate: s.end_date, price: Number(s.price) }));
+    const startingPrice = calculateStartingPrice({ basePrice: Number(a.base_price), pricingMode: a.pricing_mode }, tiers, seasons);
     return {
       id: a.id,
       name: a.name,
@@ -141,8 +164,9 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
       // zodra iemand de kaart openklapt), zie migratie 0078.
       description: a.public_description.trim() || a.description,
       colorCode: a.color_code,
-      basePrice: priceInfo.price,
-      priceLabel: priceInfo.appliedLabel,
+      pricingMode: a.pricing_mode,
+      basePrice: startingPrice,
+      priceLabel: null,
       pricePerPerson: a.price_per_person,
       priceDisplay: a.price_display,
       block: {
@@ -156,8 +180,8 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
           description: a.description,
           colorCode: a.color_code,
           pricingMode: a.pricing_mode,
-          basePrice: priceInfo.price,
-          priceLabel: priceInfo.appliedLabel,
+          basePrice: startingPrice,
+          priceLabel: null,
           pricePerPerson: a.price_per_person,
           priceDisplay: a.price_display,
           contentItems: a.content_items,

@@ -59,3 +59,24 @@ export function calculateArrangementPrice(
 
   return { price: arrangement.basePrice, source: "basis", appliedLabel: null };
 }
+
+/**
+ * Laagst mogelijke prijs van dit arrangement, voor plekken waar het aantal
+ * personen/de datum van de bezoeker nog niet bekend is (de publieke
+ * offertepagina) -- een "vanaf"-prijs i.p.v. altijd de basisprijs te tonen,
+ * die bij staffel/seizoen vaak helemaal niet de prijs is die iemand
+ * uiteindelijk betaalt.
+ */
+export function calculateStartingPrice(
+  arrangement: { basePrice: number; pricingMode: ArrangementPricingMode },
+  tiers: PriceTierInput[],
+  seasons: SeasonPriceInput[],
+): number {
+  if (arrangement.pricingMode === "staffel" && tiers.length > 0) {
+    return Math.min(arrangement.basePrice, ...tiers.map((t) => t.price));
+  }
+  if (arrangement.pricingMode === "seizoen" && seasons.length > 0) {
+    return Math.min(arrangement.basePrice, ...seasons.map((s) => s.price));
+  }
+  return arrangement.basePrice;
+}
