@@ -677,6 +677,7 @@ export interface Database {
           price_per_person: boolean;
           price_display: PriceDisplayMode;
           is_publicly_visible: boolean;
+          public_description: string;
         };
         Insert: Partial<Database["public"]["Tables"]["arrangements"]["Row"]> & {
           organization_id: string;

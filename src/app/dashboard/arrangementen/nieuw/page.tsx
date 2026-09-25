@@ -19,6 +19,7 @@ export default async function NieuwArrangementPage() {
       initial={{
         name: "",
         description: "",
+        publicDescription: "",
         category: "",
         colorCode: "#B87F2A",
         basePrice: 0,

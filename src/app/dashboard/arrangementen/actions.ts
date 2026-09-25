@@ -30,6 +30,7 @@ async function requireNotReadonly() {
 export type ArrangementFields = {
   name: string;
   description: string;
+  publicDescription: string;
   category: string;
   colorCode: string;
   basePrice: number;
@@ -49,6 +50,7 @@ export async function createArrangement(fields: ArrangementFields) {
       organization_id: organizationId,
       name: fields.name.trim(),
       description: fields.description.trim(),
+      public_description: fields.publicDescription.trim(),
       category: fields.category.trim(),
       color_code: fields.colorCode,
       base_price: fields.basePrice,
@@ -73,6 +75,7 @@ export async function updateArrangement(id: string, fields: ArrangementFields) {
     .update({
       name: fields.name.trim(),
       description: fields.description.trim(),
+      public_description: fields.publicDescription.trim(),
       category: fields.category.trim(),
       color_code: fields.colorCode,
       base_price: fields.basePrice,

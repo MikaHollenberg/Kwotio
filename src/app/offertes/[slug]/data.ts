@@ -118,7 +118,9 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
 
   const { data: arrangementRows, error: arrangementError } = await supabase
     .from("arrangements")
-    .select("id, name, description, color_code, pricing_mode, base_price, price_per_person, price_display, content_items, pdf_url")
+    .select(
+      "id, name, description, public_description, color_code, pricing_mode, base_price, price_per_person, price_display, content_items, pdf_url",
+    )
     .eq("organization_id", organization.id)
     .eq("is_publicly_visible", true)
     .is("archived_at", null)
@@ -133,7 +135,11 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     return {
       id: a.id,
       name: a.name,
-      description: a.description,
+      // De losse publieke tekst (public_description) is bedoeld voor de
+      // compacte kaart op DEZE pagina -- het blok.content.description
+      // hieronder blijft altijd de "echte" omschrijving (ook zichtbaar
+      // zodra iemand de kaart openklapt), zie migratie 0078.
+      description: a.public_description.trim() || a.description,
       colorCode: a.color_code,
       basePrice: priceInfo.price,
       priceLabel: priceInfo.appliedLabel,

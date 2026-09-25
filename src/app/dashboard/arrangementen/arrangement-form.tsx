@@ -68,6 +68,7 @@ export function ArrangementForm({
   const router = useRouter();
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description);
+  const [publicDescription, setPublicDescription] = useState(initial.publicDescription);
   const [category, setCategory] = useState(initial.category);
   const [colorCode, setColorCode] = useState(initial.colorCode);
   const [customColor, setCustomColor] = useState(!ARRANGEMENT_COLOR_PRESETS.includes(initial.colorCode as never));
@@ -146,6 +147,7 @@ export function ArrangementForm({
       const fields: ArrangementFields = {
         name,
         description,
+        publicDescription,
         category,
         colorCode,
         basePrice,
@@ -237,6 +239,23 @@ export function ArrangementForm({
             />
             <span className="text-sm text-ink-500">Publiek zichtbaar op de offertepagina</span>
           </label>
+
+          {isPubliclyVisible && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-ink-500">Tekst op de publieke pagina (optioneel)</label>
+              <textarea
+                value={publicDescription}
+                onChange={(e) => setPublicDescription(e.target.value)}
+                rows={2}
+                placeholder="Een halve dag zeilen op het IJsselmeer, incl. schipper en koffie/thee."
+                className="rounded-brand-sm border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+              />
+              <p className="text-xs text-ink-400">
+                Getoond op de publieke offertepagina i.p.v. de omschrijving hierboven. Laat leeg om die omschrijving
+                daar ook te gebruiken.
+              </p>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">

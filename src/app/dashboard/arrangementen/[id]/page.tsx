@@ -10,7 +10,7 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
     supabase
       .from("arrangements")
       .select(
-        "id, organization_id, name, description, category, color_code, base_price, pricing_mode, price_per_person, price_display, is_publicly_visible, archived_at, content_items, pdf_url",
+        "id, organization_id, name, description, public_description, category, color_code, base_price, pricing_mode, price_per_person, price_display, is_publicly_visible, archived_at, content_items, pdf_url",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -37,6 +37,7 @@ export default async function ArrangementDetailPage({ params }: { params: Promis
       initial={{
         name: arrangement.name,
         description: arrangement.description,
+        publicDescription: arrangement.public_description,
         category: arrangement.category,
         colorCode: arrangement.color_code,
         basePrice: Number(arrangement.base_price),
