@@ -24,6 +24,8 @@ export function LeadFormModal({
   closedWeekdays,
   accentColor,
   onClose,
+  initialPurpose,
+  initialMessage,
 }: {
   orgSlug: string;
   closedDates: string[];
@@ -31,6 +33,11 @@ export function LeadFormModal({
   closedWeekdays: number[];
   accentColor: string;
   onClose: () => void;
+  /** Vooraf ingevuld vanaf een specifieke knop elders op de pagina (bv.
+   * "Vraag dit arrangement aan" bij een uitgeklapt arrangement) -- de
+   * bezoeker kan dit gewoon nog aanpassen, het is alleen een startpunt. */
+  initialPurpose?: "uitje" | "arrangement" | "overig";
+  initialMessage?: string;
 }) {
   const formStartedAt = useRef(0);
   useEffect(() => {
@@ -40,10 +47,10 @@ export function LeadFormModal({
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [purpose, setPurpose] = useState<"uitje" | "arrangement" | "overig">("uitje");
+  const [purpose, setPurpose] = useState<"uitje" | "arrangement" | "overig">(initialPurpose ?? "uitje");
   const [guestCount, setGuestCount] = useState("");
   const [preferredDate, setPreferredDate] = useState("");
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(initialMessage ?? "");
   const [honeypot, setHoneypot] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);

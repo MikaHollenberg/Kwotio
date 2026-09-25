@@ -101,6 +101,10 @@ export function PublicOrgPageView({
   const [selectedArrangementId, setSelectedArrangementId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [leadFormOpen, setLeadFormOpen] = useState(false);
+  // Alleen gezet als het leadformulier vanaf de "Vraag dit arrangement aan"-
+  // knop bij een uitgeklapt arrangement geopend is -- de gewone "Neem
+  // contact op"-knop onderaan laat dit op null staan.
+  const [leadFormArrangementName, setLeadFormArrangementName] = useState<string | null>(null);
 
   useEffect(() => {
     if (embed) return;
@@ -311,6 +315,18 @@ export function PublicOrgPageView({
                     readOnly
                     accentColor={data.primaryColor}
                   />
+                  <div className="flex justify-center border-t border-ink-100 px-6 py-5">
+                    <Button
+                      style={{ backgroundColor: data.primaryColor }}
+                      className="hover:opacity-90 active:opacity-90"
+                      onClick={() => {
+                        setLeadFormArrangementName(selectedArrangement.name);
+                        setLeadFormOpen(true);
+                      }}
+                    >
+                      Vraag {selectedArrangement.name} aan
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -329,7 +345,10 @@ export function PublicOrgPageView({
             </div>
             <button
               type="button"
-              onClick={() => setLeadFormOpen(true)}
+              onClick={() => {
+                setLeadFormArrangementName(null);
+                setLeadFormOpen(true);
+              }}
               style={{ borderColor: data.primaryColor, color: data.primaryColor }}
               className="shrink-0 whitespace-nowrap rounded-brand-sm border px-4 py-2 text-sm font-semibold hover:opacity-80"
             >
@@ -382,6 +401,8 @@ export function PublicOrgPageView({
           closedWeekdays={data.closedWeekdays}
           accentColor={data.primaryColor}
           onClose={() => setLeadFormOpen(false)}
+          initialPurpose={leadFormArrangementName ? "arrangement" : undefined}
+          initialMessage={leadFormArrangementName ? `Interesse in arrangement: ${leadFormArrangementName}` : undefined}
         />
       )}
     </LanguageProvider>
