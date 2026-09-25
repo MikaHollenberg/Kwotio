@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LayoutTemplate, Info, MessageCircleQuestion } from "lucide-react";
+import Image from "next/image";
+import { LayoutTemplate, Package, ChevronRight, Info, MessageCircleQuestion, type LucideIcon } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { WaveDivider } from "@/components/brand/wave-divider";
@@ -15,11 +16,75 @@ import { BlockPreview, type QuoteMeta } from "@/components/preview/quote-preview
 import { defaultSelections } from "@/lib/blocks/pricing";
 import type { PackagesBlockContent } from "@/lib/blocks/types";
 import { PUBLIC_PRICE_DISCLAIMER, PRIVACYBELEID_URL } from "@/lib/legal";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import type { PublicOrgPageData } from "./data";
 import { RequestFormModal } from "./request-form-modal";
 import { LeadFormModal } from "./lead-form-modal";
 import { logTemplateOpened, logRequestFormOpened } from "./analytics";
+
+/** Eén kaart in de "Onze offertes"/"Onze arrangementen"-rasters -- bewust
+ * één gedeeld component zodat beide secties er exact hetzelfde uitzien
+ * (gevraagd: "Maak deze gelijk aan elkaar"), compact en duidelijk
+ * aanklikbaar zonder het beeld te overheersen. Klikken wisselt de
+ * uitgeklapte inhoud eronder, hetzelfde patroon als de offertes al hadden. */
+function ListingCard({
+  title,
+  description,
+  priceLabel,
+  accentColor,
+  icon: Icon,
+  thumbnailUrl,
+  ctaLabel,
+  selected,
+  onClick,
+}: {
+  title: string;
+  description: string | null;
+  priceLabel?: string | null;
+  accentColor: string;
+  icon: LucideIcon;
+  thumbnailUrl?: string | null;
+  ctaLabel: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex flex-col overflow-hidden rounded-brand-lg border bg-white text-left shadow-sm transition-colors duration-200 ease-brand",
+        selected ? "" : "border-ink-200/60 hover:border-ink-300",
+      )}
+      style={selected ? { borderColor: accentColor, borderWidth: 1.5 } : undefined}
+    >
+      <div className="relative h-24 w-full shrink-0" style={{ backgroundColor: `${accentColor}14` }}>
+        {thumbnailUrl ? (
+          <Image src={thumbnailUrl} alt="" fill sizes="(min-width: 640px) 33vw, 100vw" className="object-cover" />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Icon className="size-7" style={{ color: accentColor }} />
+          </div>
+        )}
+      </div>
+      <div className="flex flex-1 flex-col gap-1.5 p-4">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-semibold text-ink-500">{title}</p>
+          {priceLabel && (
+            <span className="shrink-0 whitespace-nowrap text-sm font-semibold" style={{ color: accentColor }}>
+              {priceLabel}
+            </span>
+          )}
+        </div>
+        {description && <p className="line-clamp-2 flex-1 text-xs text-ink-400">{description}</p>}
+        <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold" style={{ color: accentColor }}>
+          {ctaLabel}
+          <ChevronRight className="size-3.5" />
+        </span>
+      </div>
+    </button>
+  );
+}
 
 const META: QuoteMeta = {
   title: "",
@@ -47,6 +112,7 @@ export function PublicOrgPageView({
   // Bewust geen automatisch geopende template — pas na een klik van de
   // bezoeker (of een gedeelde ?template=-link, zie het effect hieronder).
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedArrangementId, setSelectedArrangementId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [leadFormOpen, setLeadFormOpen] = useState(false);
 
@@ -107,9 +173,17 @@ export function PublicOrgPageView({
     window.history.replaceState({}, "", url);
   }
 
+  function selectArrangement(id: string) {
+    setSelectedArrangementId((current) => (current === id ? null : id));
+  }
+
   const selectedTemplate = useMemo(
     () => data.templates.find((t) => t.id === selectedId) ?? null,
     [data.templates, selectedId],
+  );
+  const selectedArrangement = useMemo(
+    () => data.arrangements.find((a) => a.id === selectedArrangementId) ?? null,
+    [data.arrangements, selectedArrangementId],
   );
   const selections = useMemo(
     () =>
@@ -150,27 +224,6 @@ export function PublicOrgPageView({
             <p>{PUBLIC_PRICE_DISCLAIMER}</p>
           </div>
 
-          <div className="flex items-center gap-4 rounded-brand-lg border border-ink-200/60 bg-white px-5 py-4">
-            <div
-              className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm"
-              style={{ backgroundColor: `${data.primaryColor}1a`, color: data.primaryColor }}
-            >
-              <MessageCircleQuestion className="size-5.5" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-ink-500">Nog niet zeker wat je zoekt?</p>
-              <p className="mt-0.5 text-xs text-ink-400">Laat gewoon je gegevens achter, dan nemen wij contact met je op.</p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setLeadFormOpen(true)}
-              style={{ borderColor: data.primaryColor, color: data.primaryColor }}
-              className="shrink-0 whitespace-nowrap rounded-brand-sm border px-4 py-2 text-sm font-semibold hover:opacity-80"
-            >
-              Neem contact op
-            </button>
-          </div>
-
           {data.templates.length === 0 ? (
             <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
               <LayoutTemplate className="size-8 text-ink-300" />
@@ -179,23 +232,21 @@ export function PublicOrgPageView({
               </p>
             </Card>
           ) : (
-            <>
-              <div className="flex flex-wrap justify-center gap-1.5">
+            <div className="flex flex-col gap-3">
+              <h2 className="font-display text-lg font-semibold text-ink-500">Onze offertes</h2>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {data.templates.map((t) => (
-                  <button
+                  <ListingCard
                     key={t.id}
-                    type="button"
+                    title={t.name}
+                    description={t.description}
+                    accentColor={data.primaryColor}
+                    icon={LayoutTemplate}
+                    thumbnailUrl={t.thumbnailUrl}
+                    ctaLabel="Bekijk offerte"
+                    selected={t.id === selectedId}
                     onClick={() => selectTemplate(t.id)}
-                    style={t.id === selectedId ? { backgroundColor: data.primaryColor, borderColor: data.primaryColor } : undefined}
-                    className={cn(
-                      "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 ease-brand",
-                      t.id === selectedId
-                        ? "text-white"
-                        : "border-ink-200 text-ink-400 hover:border-ink-300 hover:text-ink-500",
-                    )}
-                  >
-                    {t.name}
-                  </button>
+                  />
                 ))}
               </div>
 
@@ -241,28 +292,63 @@ export function PublicOrgPageView({
                   Vraag offerte aan
                 </Button>
               </div>
-            </>
+            </div>
           )}
 
           {data.arrangements.length > 0 && (
             <div className="flex flex-col gap-3">
               <h2 className="font-display text-lg font-semibold text-ink-500">Onze arrangementen</h2>
-              <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {data.arrangements.map((a) => (
-                  <div key={a.id} className="overflow-hidden rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
-                    <BlockPreview
-                      block={a.block}
-                      meta={META}
-                      selections={{ packageIdByBlock: {}, addonQuantities: {} }}
-                      onSelectionsChange={() => {}}
-                      readOnly
-                      accentColor={data.primaryColor}
-                    />
-                  </div>
+                  <ListingCard
+                    key={a.id}
+                    title={a.name}
+                    description={a.description}
+                    priceLabel={`${formatCurrency(a.basePrice, "EUR")}${a.pricePerPerson ? " p.p." : ""}`}
+                    accentColor={a.colorCode || data.primaryColor}
+                    icon={Package}
+                    ctaLabel="Bekijk arrangement"
+                    selected={a.id === selectedArrangementId}
+                    onClick={() => selectArrangement(a.id)}
+                  />
                 ))}
               </div>
+
+              {selectedArrangement && (
+                <div className="overflow-hidden rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
+                  <BlockPreview
+                    block={selectedArrangement.block}
+                    meta={META}
+                    selections={{ packageIdByBlock: {}, addonQuantities: {} }}
+                    onSelectionsChange={() => {}}
+                    readOnly
+                    accentColor={data.primaryColor}
+                  />
+                </div>
+              )}
             </div>
           )}
+
+          <div className="flex items-center gap-4 rounded-brand-lg border border-ink-200/60 bg-white px-5 py-4">
+            <div
+              className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm"
+              style={{ backgroundColor: `${data.primaryColor}1a`, color: data.primaryColor }}
+            >
+              <MessageCircleQuestion className="size-5.5" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-ink-500">Nog niet zeker wat je zoekt?</p>
+              <p className="mt-0.5 text-xs text-ink-400">Laat gewoon je gegevens achter, dan nemen wij contact met je op.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setLeadFormOpen(true)}
+              style={{ borderColor: data.primaryColor, color: data.primaryColor }}
+              className="shrink-0 whitespace-nowrap rounded-brand-sm border px-4 py-2 text-sm font-semibold hover:opacity-80"
+            >
+              Neem contact op
+            </button>
+          </div>
 
           {data.locationPhotoUrl && (
             <LocationSection

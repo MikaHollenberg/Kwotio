@@ -5,7 +5,7 @@ import { resolvePreferredLogo } from "@/lib/organization/logo";
 import { resolveAccentColor } from "@/lib/organization/theme";
 import { calculateArrangementPrice } from "@/lib/arrangements/pricing";
 import type { BlockDraft } from "@/lib/blocks/types";
-import type { PublicPageBackgroundStyle } from "@/lib/types/database";
+import type { PublicPageBackgroundStyle, PriceDisplayMode } from "@/lib/types/database";
 
 export type PublicOrgTemplate = {
   id: string;
@@ -25,6 +25,13 @@ export type PublicOrgTemplate = {
  * (zie ArrangementBlockPreview) om een indicatie te krijgen. */
 export type PublicOrgArrangement = {
   id: string;
+  name: string;
+  description: string | null;
+  colorCode: string | null;
+  basePrice: number;
+  priceLabel: string | null;
+  pricePerPerson: boolean;
+  priceDisplay: PriceDisplayMode;
   block: BlockDraft;
 };
 
@@ -127,6 +134,13 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     });
     return {
       id: a.id,
+      name: a.name,
+      description: a.description,
+      colorCode: a.color_code,
+      basePrice: priceInfo.price,
+      priceLabel: priceInfo.appliedLabel,
+      pricePerPerson: a.price_per_person,
+      priceDisplay: a.price_display,
       block: {
         id: a.id,
         type: "arrangement",
