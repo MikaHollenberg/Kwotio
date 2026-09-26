@@ -52,7 +52,7 @@ export function ClientRowActions({
       <ConfirmDialog
         open={confirmDelete}
         title="Klant verwijderen"
-        description={`Weet je zeker dat je klant "${name}" wilt verwijderen? Dit kan niet ongedaan gemaakt worden. Offertes van deze klant blijven bestaan, maar verliezen de koppeling met dit klantprofiel.`}
+        description={`Weet je zeker dat je klant "${name}" wilt verwijderen? Deze verhuist naar de prullenbak en blijft daar 30 dagen herstelbaar. Offertes van deze klant blijven gewoon gekoppeld.`}
         confirmLabel="Verwijderen"
         danger
         pending={pending}

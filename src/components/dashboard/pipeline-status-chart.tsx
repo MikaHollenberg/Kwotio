@@ -28,13 +28,17 @@ export function PipelineStatusChart({ pipeline }: { pipeline: Record<QuoteStatus
 
   return (
     <div className="flex h-52 items-end gap-4">
-      {counts.map(({ status, count }) => (
+      {counts.map(({ status, count }, i) => (
         <div key={status} className="flex flex-1 flex-col items-center gap-2">
           <span className="text-xs font-semibold text-ink-500">{count}</span>
           <div className="flex h-36 w-full items-end justify-center">
             <div
-              className={`w-full max-w-10 rounded-t-brand-sm transition-all duration-300 ease-brand ${BAR_CLASS[status]}`}
-              style={{ height: `${(count / max) * 100}%`, minHeight: count > 0 ? 6 : 0 }}
+              className={`kw-bar-grow w-full max-w-10 rounded-t-brand-sm transition-all duration-300 ease-brand ${BAR_CLASS[status]}`}
+              style={{
+                height: `${(count / max) * 100}%`,
+                minHeight: count > 0 ? 6 : 0,
+                animationDelay: `${i * 40}ms`,
+              }}
             />
           </div>
           <span className="text-center text-[11px] font-medium text-ink-400">{STATUS_LABELS[status]}</span>

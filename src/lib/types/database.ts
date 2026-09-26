@@ -180,6 +180,7 @@ export interface Database {
           notes: string | null;
           archived_at: string | null;
           client_number: number | null;
+          deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -286,6 +287,7 @@ export interface Database {
           deposit_amount: number | null;
           deposit_paid_at: string | null;
           reminder_date: string | null;
+          deleted_at: string | null;
           created_at: string;
           updated_at: string;
         };

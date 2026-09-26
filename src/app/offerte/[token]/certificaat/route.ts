@@ -12,6 +12,7 @@ export async function GET(
     .from("quotes")
     .select("id, title")
     .eq("share_token", token)
+    .is("deleted_at", null)
     .maybeSingle();
   if (!quote) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
 

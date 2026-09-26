@@ -146,11 +146,36 @@ export async function updateClient(
   revalidatePath("/dashboard/klanten");
 }
 
+/** "Verwijderen" is een zachte verwijdering -- de klant verdwijnt uit elke
+ * gewone lijst/query (RLS-select-policy filtert `deleted_at is null`, zie
+ * migratie 0082) maar blijft 30 dagen herstelbaar via de prullenbak. Een
+ * dagelijkse cron-stap ruimt rijen ouder dan 30 dagen definitief op. */
 export async function deleteClient(clientId: string) {
   const { supabase } = await requireOrganizationId();
-  const { error } = await supabase.from("clients").delete().eq("id", clientId);
+  const { error } = await supabase
+    .from("clients")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", clientId);
   if (error) throw error;
   revalidatePath("/dashboard/klanten");
+}
+
+export async function deleteClients(clientIds: string[]) {
+  const { supabase } = await requireOrganizationId();
+  const { error } = await supabase
+    .from("clients")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", clientIds);
+  if (error) throw error;
+  revalidatePath("/dashboard/klanten");
+}
+
+export async function restoreClient(clientId: string) {
+  const { supabase } = await requireOrganizationId();
+  const { error } = await supabase.from("clients").update({ deleted_at: null }).eq("id", clientId);
+  if (error) throw error;
+  revalidatePath("/dashboard/klanten");
+  revalidatePath("/dashboard/klanten/prullenbak");
 }
 
 export async function archiveClient(clientId: string) {

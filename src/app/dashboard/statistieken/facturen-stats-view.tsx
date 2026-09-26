@@ -104,14 +104,17 @@ export function FacturenStatsView({ stats }: { stats: InvoiceStats }) {
             <CardTitle>Facturen per status</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2.5">
-            {statusOrder.map((status) => {
+            {statusOrder.map((status, i) => {
               const count = stats.statusCounts[status];
               const percent = Math.round((count / maxStatusCount) * 100);
               return (
                 <div key={status} className="flex items-center gap-3 text-sm">
                   <span className="w-28 shrink-0 truncate text-ink-500">{INVOICE_STATUS_LABELS[status]}</span>
                   <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-sand-200">
-                    <div className={`h-full rounded-full ${STATUS_BAR_COLOR[status]}`} style={{ width: `${percent}%` }} />
+                    <div
+                      className={`kw-bar-grow-x h-full rounded-full ${STATUS_BAR_COLOR[status]}`}
+                      style={{ width: `${percent}%`, animationDelay: `${i * 40}ms` }}
+                    />
                   </div>
                   <span className="w-6 shrink-0 text-right text-ink-400">{count}</span>
                 </div>
@@ -129,13 +132,13 @@ export function FacturenStatsView({ stats }: { stats: InvoiceStats }) {
           </CardHeader>
           <CardContent>
             <div className="flex h-28 items-end gap-3">
-              {stats.monthlyRevenue.map((m) => {
+              {stats.monthlyRevenue.map((m, i) => {
                 const heightPx = m.total > 0 ? Math.max(4, Math.round((m.total / maxMonthlyRevenue) * 112)) : 2;
                 return (
                   <div
                     key={m.monthKey}
-                    className="flex-1 rounded-t-sm bg-teal-500"
-                    style={{ height: `${heightPx}px` }}
+                    className="kw-bar-grow flex-1 rounded-t-sm bg-teal-500"
+                    style={{ height: `${heightPx}px`, animationDelay: `${i * 40}ms` }}
                     title={formatCurrency(m.total)}
                   />
                 );

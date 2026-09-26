@@ -2,13 +2,15 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { UserPlus, Search, ArrowRight, CalendarClock } from "lucide-react";
+import { UserPlus, Search, ArrowRight, CalendarClock, Trash2, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge, tones } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ExportCsvButton } from "@/components/dashboard/export-csv-button";
 import { formatDate, cn } from "@/lib/utils";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_TONES, LEAD_PURPOSE_LABELS } from "./status";
-import { markLeadContacted, rejectLead, convertLeadToRequest, setLeadReminder } from "./actions";
+import { markLeadContacted, rejectLead, convertLeadToRequest, setLeadReminder, deleteLeads } from "./actions";
 import type { LeadStatus } from "@/lib/types/database";
 
 const STATUS_ORDER = Object.keys(LEAD_STATUS_LABELS) as LeadStatus[];
@@ -29,17 +31,26 @@ type LeadRow = {
   reminder_date: string | null;
 };
 
-function LeadCard({ lead }: { lead: LeadRow }) {
+function LeadCard({ lead, selected, onToggleSelected }: { lead: LeadRow; selected: boolean; onToggleSelected: () => void }) {
   const [pending, startTransition] = useTransition();
   const [reminderDate, setReminderDate] = useState(lead.reminder_date ?? "");
 
   return (
     <div data-faq-id={`lead-card-${lead.id}`} className="flex flex-col gap-3 border-b border-sand-200 px-5 py-4.5 last:border-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <p className="text-[15px] font-semibold text-ink-500">
-          {lead.name}
-          {lead.company_name && <span className="font-normal text-ink-300"> &middot; {lead.company_name}</span>}
-        </p>
+        <div className="flex items-start gap-2.5">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={onToggleSelected}
+            className="mt-1 size-4 accent-teal-600"
+            aria-label={`Selecteer ${lead.name}`}
+          />
+          <p className="text-[15px] font-semibold text-ink-500">
+            {lead.name}
+            {lead.company_name && <span className="font-normal text-ink-300"> &middot; {lead.company_name}</span>}
+          </p>
+        </div>
         <Badge tone={LEAD_STATUS_TONES[lead.status]}>{LEAD_STATUS_LABELS[lead.status]}</Badge>
       </div>
 
@@ -128,6 +139,9 @@ function LeadCard({ lead }: { lead: LeadRow }) {
 export function LeadsTable({ leads }: { leads: LeadRow[] }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<Set<LeadStatus>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeletePending, startBulkDeleteTransition] = useTransition();
 
   function toggleStatus(status: LeadStatus) {
     setStatusFilter((prev) => {
@@ -136,6 +150,37 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
       else next.add(status);
       return next;
     });
+  }
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function handleBulkDelete() {
+    startBulkDeleteTransition(async () => {
+      await deleteLeads([...selectedIds]);
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+    });
+  }
+
+  function toCsvRow(l: LeadRow) {
+    return {
+      Naam: l.name,
+      Bedrijf: l.company_name ?? "",
+      "E-mail": l.email,
+      Telefoon: l.phone,
+      Waarvoor: LEAD_PURPOSE_LABELS[l.purpose],
+      "Aantal personen": l.guest_count,
+      Voorkeursdatum: formatDate(l.preferred_date),
+      Status: LEAD_STATUS_LABELS[l.status],
+      Binnengekomen: formatDate(l.created_at),
+    };
   }
 
   const visibleLeads = useMemo(() => {
@@ -149,6 +194,8 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
       return true;
     });
   }, [leads, search, statusFilter]);
+
+  const selectedLeads = visibleLeads.filter((l) => selectedIds.has(l.id));
 
   if (leads.length === 0) {
     return (
@@ -205,6 +252,21 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
         </div>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-brand-sm border border-teal-200 bg-teal-50 px-4 py-2.5">
+          <p className="text-sm font-medium text-teal-800">{selectedIds.size} geselecteerd</p>
+          <div className="ml-auto flex items-center gap-2">
+            <ExportCsvButton rows={selectedLeads.map(toCsvRow)} filename="leads-selectie.csv" label="Exporteer selectie" />
+            <Button variant="outline" size="sm" onClick={() => setBulkDeleteOpen(true)} className="text-red-600 hover:bg-red-50">
+              <Trash2 className="size-4" /> Verwijderen
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} title="Selectie wissen">
+              <X className="size-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
       {visibleLeads.length === 0 ? (
         <Card data-faq-id="leads-list" className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <UserPlus className="size-8 text-ink-300" />
@@ -213,10 +275,26 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
       ) : (
         <Card data-faq-id="leads-list" className="overflow-hidden">
           {visibleLeads.map((lead) => (
-            <LeadCard key={lead.id} lead={lead} />
+            <LeadCard
+              key={lead.id}
+              lead={lead}
+              selected={selectedIds.has(lead.id)}
+              onToggleSelected={() => toggleSelected(lead.id)}
+            />
           ))}
         </Card>
       )}
+
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        title="Leads verwijderen"
+        description={`Weet je zeker dat je deze ${selectedIds.size} lead(s) wilt verwijderen? Dit kan niet ongedaan gemaakt worden.`}
+        confirmLabel="Verwijderen"
+        danger
+        pending={bulkDeletePending}
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkDeleteOpen(false)}
+      />
     </div>
   );
 }

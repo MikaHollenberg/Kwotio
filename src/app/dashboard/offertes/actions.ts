@@ -562,9 +562,13 @@ export async function notifySignerOfEdit(quoteId: string) {
   });
 }
 
+/** "Verwijderen" is een zachte verwijdering -- de offerte verdwijnt uit elke
+ * gewone lijst/query (RLS-select-policy filtert `deleted_at is null`, zie
+ * migratie 0082) maar blijft 30 dagen herstelbaar via de prullenbak. Een
+ * dagelijkse cron-stap ruimt rijen ouder dan 30 dagen definitief op. */
 export async function deleteQuote(quoteId: string) {
   const { supabase } = await requireOrganization();
-  const { error } = await supabase.from("quotes").delete().eq("id", quoteId);
+  const { error } = await supabase.from("quotes").update({ deleted_at: new Date().toISOString() }).eq("id", quoteId);
   if (error) throw error;
   revalidatePath("/dashboard/offertes");
 }
@@ -574,7 +578,18 @@ export async function deleteQuote(quoteId: string) {
  * meerdere id's in één keer i.p.v. een los verzoek per offerte. */
 export async function deleteQuotes(quoteIds: string[]) {
   const { supabase } = await requireOrganization();
-  const { error } = await supabase.from("quotes").delete().in("id", quoteIds);
+  const { error } = await supabase
+    .from("quotes")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", quoteIds);
   if (error) throw error;
   revalidatePath("/dashboard/offertes");
+}
+
+export async function restoreQuote(quoteId: string) {
+  const { supabase } = await requireOrganization();
+  const { error } = await supabase.from("quotes").update({ deleted_at: null }).eq("id", quoteId);
+  if (error) throw error;
+  revalidatePath("/dashboard/offertes");
+  revalidatePath("/dashboard/offertes/prullenbak");
 }

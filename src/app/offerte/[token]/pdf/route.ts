@@ -29,6 +29,7 @@ export async function GET(
       "id, organization_id, client_id, title, currency, price_display, price_per_person, discount_amount, event_date, selected_packages, selected_addons, client_display_name, client_display_email, client_display_phone, client_display_company, reference_number, handled_by_profile_id, status, aantal_personen",
     )
     .eq("share_token", token)
+    .is("deleted_at", null)
     .maybeSingle();
   if (!quote) return NextResponse.json({ error: "Niet gevonden" }, { status: 404 });
 

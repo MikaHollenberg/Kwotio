@@ -137,7 +137,7 @@ export function OfferteRowActions({
       <ConfirmDialog
         open={confirmOpen}
         title="Offerte verwijderen"
-        description={`Weet je zeker dat je de offerte "${title}" wilt verwijderen? Dit kan niet ongedaan gemaakt worden.`}
+        description={`Weet je zeker dat je de offerte "${title}" wilt verwijderen? Deze verhuist naar de prullenbak en blijft daar 30 dagen herstelbaar.`}
         confirmLabel="Verwijderen"
         danger
         pending={pending}

@@ -16,6 +16,7 @@ async function getQuoteIdByToken(token: string) {
     .from("quotes")
     .select("id, organization_id, status, title, client_id, created_by")
     .eq("share_token", token)
+    .is("deleted_at", null)
     .maybeSingle();
   if (error) throw error;
   return data;
@@ -78,6 +79,7 @@ export async function verifyAccessCode(token: string, code: string): Promise<boo
     .from("quotes")
     .select("access_code")
     .eq("share_token", token)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!quote?.access_code || quote.access_code !== code) return false;

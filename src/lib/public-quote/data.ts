@@ -29,6 +29,7 @@ export async function getQuoteByToken(token: string): Promise<PublicQuoteData | 
     .from("quotes")
     .select("*")
     .eq("share_token", token)
+    .is("deleted_at", null)
     .maybeSingle();
   if (quoteError) throw quoteError;
   if (!quote) return null;

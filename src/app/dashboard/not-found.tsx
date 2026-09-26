@@ -1,6 +1,6 @@
-import { FileQuestion } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ErrorIllustration } from "@/components/brand/error-illustration";
 
 /**
  * Renderde binnen dashboard/layout.tsx (sidebar/topbar blijven staan) —
@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 export default function DashboardNotFound() {
   return (
     <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-      <FileQuestion className="size-8 text-ink-300" />
+      <ErrorIllustration variant="404" size={64} />
       <div>
         <p className="font-display text-lg font-semibold text-ink-500">Niet gevonden</p>
         <p className="mt-1 text-sm text-ink-400">

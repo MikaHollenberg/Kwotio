@@ -132,3 +132,10 @@ export async function deleteLead(leadId: string) {
   if (error) throw error;
   revalidatePath("/dashboard/leads");
 }
+
+export async function deleteLeads(leadIds: string[]) {
+  const { supabase } = await requireOrganization();
+  const { error } = await supabase.from("leads").delete().in("id", leadIds);
+  if (error) throw error;
+  revalidatePath("/dashboard/leads");
+}

@@ -204,9 +204,14 @@ export function OffertesTable({
             <p className="text-sm text-ink-400">Alle offertes</p>
             <h2 className="font-display text-2xl font-semibold text-ink-500">Offertes</h2>
           </div>
-          <ButtonLink href="/dashboard/offertes/nieuw" data-faq-id="new-quote-button">
-            <Plus className="size-4" /> Nieuwe offerte
-          </ButtonLink>
+          <div className="flex items-center gap-2">
+            <ButtonLink href="/dashboard/offertes/prullenbak" variant="outline">
+              <Trash2 className="size-4" /> Prullenbak
+            </ButtonLink>
+            <ButtonLink href="/dashboard/offertes/nieuw" data-faq-id="new-quote-button">
+              <Plus className="size-4" /> Nieuwe offerte
+            </ButtonLink>
+          </div>
         </div>
         <Card data-faq-id="offertes-list" className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <FileText className="kw-bob size-8 text-ink-300" />
@@ -230,6 +235,9 @@ export function OffertesTable({
         </div>
         <div className="flex items-center gap-2">
           <ExportCsvButton rows={exportRows} filename="offertes.csv" />
+          <ButtonLink href="/dashboard/offertes/prullenbak" variant="outline">
+            <Trash2 className="size-4" /> Prullenbak
+          </ButtonLink>
           <ButtonLink href="/dashboard/offertes/nieuw" data-faq-id="new-quote-button">
             <Plus className="size-4" /> Nieuwe offerte
           </ButtonLink>
@@ -369,7 +377,7 @@ export function OffertesTable({
               </thead>
               <tbody>
                 {visibleQuotes.map((q) => (
-                  <tr key={q.id} className="border-b border-ink-50 last:border-0 hover:bg-sand-100">
+                  <tr key={q.id} className="kw-glow-row border-b border-ink-50 last:border-0">
                     <td className="px-5 py-3">
                       <input
                         type="checkbox"
@@ -418,7 +426,7 @@ export function OffertesTable({
       <ConfirmDialog
         open={bulkDeleteOpen}
         title="Offertes verwijderen"
-        description={`Weet je zeker dat je deze ${selectedIds.size} offerte(s) wilt verwijderen? Dit kan niet ongedaan gemaakt worden.`}
+        description={`Weet je zeker dat je deze ${selectedIds.size} offerte(s) wilt verwijderen? Ze verhuizen naar de prullenbak en blijven daar 30 dagen herstelbaar.`}
         confirmLabel="Verwijderen"
         danger
         pending={bulkDeletePending}

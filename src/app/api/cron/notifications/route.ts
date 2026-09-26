@@ -13,6 +13,7 @@ import { INVOICE_TYPE_LABELS } from "@/lib/invoicing/status";
 import { PRIVACYBELEID_URL } from "@/lib/legal";
 import { renderEmailTemplate } from "@/lib/email/template-vars";
 import { formatDate, formatCurrency } from "@/lib/utils";
+import { TRASH_RETENTION_DAYS } from "@/lib/trash";
 
 /**
  * Dagelijkse cron-taak (zie vercel.json): stuurt de door het bureau zelf
@@ -45,6 +46,8 @@ export async function GET(request: NextRequest) {
     expiringSoonNotified: 0,
     markedExpired: 0,
     invoiceRemindersSent: 0,
+    trashPurgedQuotes: 0,
+    trashPurgedClients: 0,
   };
 
   const { data: organizations } = await supabase
@@ -68,7 +71,8 @@ export async function GET(request: NextRequest) {
         .select("id, title, client_id, sent_at, share_token, event_date")
         .eq("organization_id", rule.organization_id)
         .in("status", ["verzonden", "bekeken"])
-        .not("sent_at", "is", null);
+        .not("sent_at", "is", null)
+        .is("deleted_at", null);
 
       for (const quote of openQuotes ?? []) {
         if (!quote.sent_at) continue;
@@ -128,7 +132,8 @@ export async function GET(request: NextRequest) {
         .select("id, title, client_id, share_token, event_date")
         .eq("organization_id", rule.organization_id)
         .eq("event_date", targetDateKey)
-        .eq("status", "geaccepteerd");
+        .eq("status", "geaccepteerd")
+        .is("deleted_at", null);
 
       for (const quote of upcomingEventQuotes ?? []) {
         const { count: alreadySent } = await supabase
@@ -184,7 +189,8 @@ export async function GET(request: NextRequest) {
         .select("id, title, client_id, share_token, event_date")
         .eq("organization_id", rule.organization_id)
         .eq("event_date", targetDateKey)
-        .eq("status", "geaccepteerd");
+        .eq("status", "geaccepteerd")
+        .is("deleted_at", null);
 
       for (const quote of pastEventQuotes ?? []) {
         const { count: alreadySent } = await supabase
@@ -243,7 +249,8 @@ export async function GET(request: NextRequest) {
         .eq("organization_id", rule.organization_id)
         .eq("status", "geaccepteerd")
         .not("event_date", "is", null)
-        .lt("event_date", todayKey);
+        .lt("event_date", todayKey)
+        .is("deleted_at", null);
 
       for (const quote of pastAcceptedQuotes ?? []) {
         const eventDate = new Date(quote.event_date as string);
@@ -302,7 +309,8 @@ export async function GET(request: NextRequest) {
     .from("quotes")
     .select("id, organization_id, title, client_id, total, currency, valid_until, created_by")
     .eq("valid_until", in2DaysKey)
-    .not("status", "in", '("geaccepteerd","geweigerd","verlopen")');
+    .not("status", "in", '("geaccepteerd","geweigerd","verlopen")')
+    .is("deleted_at", null);
 
   for (const quote of expiringQuotes ?? []) {
     const org = orgById.get(quote.organization_id);
@@ -352,6 +360,7 @@ export async function GET(request: NextRequest) {
     .update({ status: "verlopen" })
     .lt("valid_until", todayKey)
     .not("status", "in", '("geaccepteerd","geweigerd","verlopen")')
+    .is("deleted_at", null)
     .select("id");
   if (!expireError) results.markedExpired = expired?.length ?? 0;
 
@@ -409,6 +418,29 @@ export async function GET(request: NextRequest) {
     }
   } catch (invoiceReminderError) {
     console.error("[cron] Factuur-herinneringen mislukt:", invoiceReminderError);
+  }
+
+  // 6. Prullenbak definitief legen: een offerte/klant die langer dan
+  // TRASH_RETENTION_DAYS geleden verwijderd is, wordt nu pas echt hard
+  // verwijderd. Eigen try/catch, los van de secties hierboven.
+  try {
+    const purgeThreshold = new Date(now.getTime() - TRASH_RETENTION_DAYS * 86_400_000).toISOString();
+
+    const { data: purgedQuotes, error: purgeQuotesError } = await supabase
+      .from("quotes")
+      .delete()
+      .lt("deleted_at", purgeThreshold)
+      .select("id");
+    if (!purgeQuotesError) results.trashPurgedQuotes = purgedQuotes?.length ?? 0;
+
+    const { data: purgedClients, error: purgeClientsError } = await supabase
+      .from("clients")
+      .delete()
+      .lt("deleted_at", purgeThreshold)
+      .select("id");
+    if (!purgeClientsError) results.trashPurgedClients = purgedClients?.length ?? 0;
+  } catch (trashPurgeError) {
+    console.error("[cron] Prullenbak opruimen mislukt:", trashPurgeError);
   }
 
   return NextResponse.json({ ok: true, ...results });

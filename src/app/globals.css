@@ -239,6 +239,28 @@ h1, h2, h3, h4, .font-display {
 }
 .kw-breathe { animation: kw-breathe 2.2s ease-in-out infinite; }
 
+/* Magic hover: een zachte gloed i.p.v. een platte hover-kleur op offerte-/
+   klantrijen -- bewust een vaste radiale gloed i.p.v. muisvolgend (deze rijen
+   zijn <tr>'s in een Server Component, geen JS-mousemove-tracking nodig). */
+.kw-glow-row { transition: background-color 0.2s var(--ease-brand); }
+.kw-glow-row:hover {
+  background-image: radial-gradient(320px circle at 50% 50%, var(--color-gold-50), transparent 70%);
+}
+
+/* Grafieken intekenen: staven groeien op vanaf de basislijn i.p.v. meteen
+   op volle hoogte/breedte te staan -- zowel verticaal (bar-charts) als
+   horizontaal (voortgangsbalken). */
+@keyframes kw-bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.kw-bar-grow { animation: kw-bar-grow 0.5s var(--ease-brand) backwards; transform-origin: bottom; }
+@keyframes kw-bar-grow-x {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.kw-bar-grow-x { animation: kw-bar-grow-x 0.5s var(--ease-brand) backwards; transform-origin: left; }
+
 /* Vinkje-zwiep: het vinkje tekent zich in (stroke-dashoffset) i.p.v. in één
    keer te verschijnen, met een korte kw-bump-overshoot op het vakje zelf
    zodra je 'm aanvinkt -- zie AnimatedCheckbox. */
@@ -345,6 +367,11 @@ h1, h2, h3, h4, .font-display {
   .kw-fire-pulse,
   .kw-breathe {
     animation: none !important;
+  }
+  .kw-bar-grow,
+  .kw-bar-grow-x {
+    animation: none !important;
+    transform: none !important;
   }
   .kw-discount-strike::after,
   .kw-discount-new,
