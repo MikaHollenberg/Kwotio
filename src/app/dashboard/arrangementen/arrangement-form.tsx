@@ -3,7 +3,17 @@
 import { useDeferredValue, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, Archive, ArchiveRestore } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ArrowLeft, Plus, Trash2, Archive, ArchiveRestore, GripVertical } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
@@ -53,39 +63,82 @@ function emptyPrice(): PriceDraft {
   return { key: makeKey(), label: "", unit: "vast", amount: 0 };
 }
 
+function SortablePriceRow({
+  price,
+  onChange,
+  onRemove,
+}: {
+  price: PriceDraft;
+  onChange: (price: PriceDraft) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: price.key });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn("flex flex-wrap items-center gap-1.5", isDragging && "z-10 opacity-90")}
+    >
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="flex size-8 shrink-0 cursor-grab items-center justify-center rounded-brand-sm text-ink-300 hover:bg-sand-200 hover:text-ink-500 active:cursor-grabbing"
+      >
+        <GripVertical className="size-4" />
+      </button>
+      <input
+        value={price.label}
+        onChange={(e) => onChange({ ...price, label: e.target.value })}
+        placeholder="Waarvoor, bv. Zaalhuur"
+        className="h-9 flex-1 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
+      />
+      <DecimalField
+        value={price.amount}
+        onCommit={(v) => onChange({ ...price, amount: v })}
+        className="h-9 w-24 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
+      />
+      <SegmentedToggle value={price.unit} options={UNIT_OPTIONS} onChange={(unit) => onChange({ ...price, unit })} />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="flex size-8 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
+      >
+        <Trash2 className="size-4" />
+      </button>
+    </div>
+  );
+}
+
 /** Rij-editor voor een lijst prijsregels (naam + bedrag + vast/p.p.-toggle +
- * verwijderen) -- hergebruikt in zowel de "altijd actieve" prijzenlijst als
- * per seizoen, zelfde patroon als de bestaande extra's-editor. */
+ * sleephandvat + verwijderen) -- hergebruikt in zowel de "altijd actieve"
+ * prijzenlijst als per seizoen, zelfde drag-patroon als de blokken-editor. */
 function PriceLinesEditor({ prices, onChange }: { prices: PriceDraft[]; onChange: (prices: PriceDraft[]) => void }) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = prices.findIndex((p) => p.key === active.id);
+    const newIndex = prices.findIndex((p) => p.key === over.id);
+    onChange(arrayMove(prices, oldIndex, newIndex));
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      {prices.map((price) => (
-        <div key={price.key} className="flex flex-wrap items-center gap-1.5">
-          <input
-            value={price.label}
-            onChange={(e) => onChange(prices.map((p) => (p.key === price.key ? { ...p, label: e.target.value } : p)))}
-            placeholder="Waarvoor, bv. Zaalhuur"
-            className="h-9 flex-1 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
-          />
-          <DecimalField
-            value={price.amount}
-            onCommit={(v) => onChange(prices.map((p) => (p.key === price.key ? { ...p, amount: v } : p)))}
-            className="h-9 w-24 rounded-brand-sm border border-ink-200 bg-white px-2.5 text-sm text-ink-500 outline-none focus:border-teal-500"
-          />
-          <SegmentedToggle
-            value={price.unit}
-            options={UNIT_OPTIONS}
-            onChange={(unit) => onChange(prices.map((p) => (p.key === price.key ? { ...p, unit } : p)))}
-          />
-          <button
-            type="button"
-            onClick={() => onChange(prices.filter((p) => p.key !== price.key))}
-            className="flex size-8 items-center justify-center rounded-brand-sm text-ink-300 hover:bg-red-50 hover:text-red-600"
-          >
-            <Trash2 className="size-4" />
-          </button>
-        </div>
-      ))}
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={prices.map((p) => p.key)} strategy={verticalListSortingStrategy}>
+          {prices.map((price) => (
+            <SortablePriceRow
+              key={price.key}
+              price={price}
+              onChange={(next) => onChange(prices.map((p) => (p.key === price.key ? next : p)))}
+              onRemove={() => onChange(prices.filter((p) => p.key !== price.key))}
+            />
+          ))}
+        </SortableContext>
+      </DndContext>
       <Button variant="outline" size="sm" onClick={() => onChange([...prices, emptyPrice()])} className="w-fit">
         <Plus className="size-4" /> Prijs toevoegen
       </Button>

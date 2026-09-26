@@ -20,6 +20,7 @@ import type { PublicOrgPageData } from "./data";
 import { RequestFormModal } from "./request-form-modal";
 import { LeadFormModal } from "./lead-form-modal";
 import { logTemplateOpened, logRequestFormOpened } from "./analytics";
+import { useIdlePulse } from "@/hooks/use-idle-pulse";
 
 /** Eén kaart in de "Onze offertes"/"Onze arrangementen"-rasters -- bewust
  * één gedeeld component zodat beide secties er exact hetzelfde uitzien
@@ -105,6 +106,7 @@ export function PublicOrgPageView({
   // knop bij een uitgeklapt arrangement geopend is -- de gewone "Neem
   // contact op"-knop onderaan laat dit op null staan.
   const [leadFormArrangementName, setLeadFormArrangementName] = useState<string | null>(null);
+  const ctaIdle = useIdlePulse(8000);
 
   useEffect(() => {
     if (embed) return;
@@ -275,7 +277,7 @@ export function PublicOrgPageView({
                     setFormOpen(true);
                     void logRequestFormOpened(orgSlug);
                   }}
-                  className="shadow-lg hover:opacity-90 active:opacity-90"
+                  className={cn("shadow-lg hover:opacity-90 active:opacity-90", ctaIdle && !formOpen && "kw-breathe")}
                 >
                   Vraag offerte aan
                 </Button>

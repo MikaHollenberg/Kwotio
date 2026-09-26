@@ -31,6 +31,8 @@ type ArrangementRow = {
   pricePerPerson: boolean;
   /** Meer dan één prijsregel, of een toeslag -- de kaart toont dan "vanaf". */
   isVariable: boolean;
+  /** Vaakst aan een offerte toegevoegd deze maand (minimaal 2 keer). */
+  isPopular: boolean;
 };
 
 function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRow; dragging?: boolean }) {
@@ -55,6 +57,14 @@ function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRo
               {arrangement.is_publicly_visible && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-teal-50 px-2 py-0.5 text-[11px] font-semibold text-teal-700">
                   <Globe className="size-3" /> Publiek
+                </span>
+              )}
+              {arrangement.isPopular && (
+                <span
+                  title="Vaakst aan een offerte toegevoegd deze maand"
+                  className="kw-fire-pulse inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-orange-400 to-red-500 px-2 py-0.5 text-[11px] font-bold text-white"
+                >
+                  🔥 Populair
                 </span>
               )}
             </div>

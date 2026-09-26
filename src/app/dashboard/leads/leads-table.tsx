@@ -2,13 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { UserPlus, Search, ArrowRight } from "lucide-react";
+import { UserPlus, Search, ArrowRight, CalendarClock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge, tones } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, cn } from "@/lib/utils";
 import { LEAD_STATUS_LABELS, LEAD_STATUS_TONES, LEAD_PURPOSE_LABELS } from "./status";
-import { markLeadContacted, rejectLead, convertLeadToRequest } from "./actions";
+import { markLeadContacted, rejectLead, convertLeadToRequest, setLeadReminder } from "./actions";
 import type { LeadStatus } from "@/lib/types/database";
 
 const STATUS_ORDER = Object.keys(LEAD_STATUS_LABELS) as LeadStatus[];
@@ -26,10 +26,12 @@ type LeadRow = {
   status: LeadStatus;
   converted_request_id: string | null;
   created_at: string;
+  reminder_date: string | null;
 };
 
 function LeadCard({ lead }: { lead: LeadRow }) {
   const [pending, startTransition] = useTransition();
+  const [reminderDate, setReminderDate] = useState(lead.reminder_date ?? "");
 
   return (
     <div data-faq-id={`lead-card-${lead.id}`} className="flex flex-col gap-3 border-b border-sand-200 px-5 py-4.5 last:border-0">
@@ -67,7 +69,25 @@ function LeadCard({ lead }: { lead: LeadRow }) {
       {lead.message && <p className="text-[12.5px] italic text-ink-400">&ldquo;{lead.message}&rdquo;</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] text-ink-300">Binnengekomen op {formatDate(lead.created_at)}</p>
+        <div className="flex items-center gap-3">
+          <p className="text-[11px] text-ink-300">Binnengekomen op {formatDate(lead.created_at)}</p>
+          <label
+            title="Follow-up-herinnering -- verschijnt in de meldingenbel zodra deze datum is aangebroken."
+            className="flex items-center gap-1 text-[11px] font-medium text-ink-400"
+          >
+            <CalendarClock className="size-3.5" />
+            <input
+              type="date"
+              value={reminderDate}
+              onChange={(e) => {
+                const next = e.target.value;
+                setReminderDate(next);
+                startTransition(() => setLeadReminder(lead.id, next || null));
+              }}
+              className="rounded-brand-sm border border-ink-200 bg-white px-1.5 py-0.5 text-[11px] text-ink-500 outline-none focus:border-teal-500"
+            />
+          </label>
+        </div>
         {lead.status === "omgezet" && lead.converted_request_id ? (
           <Link
             href={`/dashboard/aanvragen/${lead.converted_request_id}`}

@@ -167,6 +167,12 @@ h1, h2, h3, h4, .font-display {
 }
 .kw-ring-pulse { animation: kw-ring-pulse 1.1s var(--ease-brand) infinite; }
 
+@keyframes kw-fire-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.kw-fire-pulse { animation: kw-fire-pulse 2.2s var(--ease-brand) infinite; }
+
 @keyframes kw-bump {
   0% { transform: scale(1); }
   35% { transform: scale(1.08); }
@@ -213,6 +219,65 @@ h1, h2, h3, h4, .font-display {
   background: linear-gradient(90deg, var(--color-sand-200) 25%, var(--color-sand-300) 37%, var(--color-sand-200) 63%);
   background-size: 200% 100%;
   animation: kw-skeleton 1.6s ease-in-out infinite;
+}
+
+/* Live optel-flits: kort highlight-momentje op het totaalbedrag zodra het
+   verandert (bv. een extra optie aangevinkt) -- usePriceFlash triggert dit. */
+@keyframes kw-price-flash {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.07); color: var(--color-gold-600); }
+  100% { transform: scale(1); }
+}
+.kw-price-flash { animation: kw-price-flash 0.5s var(--ease-brand); display: inline-block; }
+
+/* Zachte adem-pulsatie: na een tijdje inactiviteit ademt de hoofd-CTA zacht
+   op/neer, om 'm net iets meer op te laten vallen zonder opdringerig te
+   worden -- useIdlePulse triggert dit. */
+@keyframes kw-breathe {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 0, 0, 0); }
+  50% { transform: scale(1.035); box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.25); }
+}
+.kw-breathe { animation: kw-breathe 2.2s ease-in-out infinite; }
+
+/* Vinkje-zwiep: het vinkje tekent zich in (stroke-dashoffset) i.p.v. in één
+   keer te verschijnen, met een korte kw-bump-overshoot op het vakje zelf
+   zodra je 'm aanvinkt -- zie AnimatedCheckbox. */
+.kw-check-path { transition: stroke-dashoffset 0.28s var(--ease-brand); }
+.kw-check-box { transition: background-color 0.18s var(--ease-brand), border-color 0.18s var(--ease-brand); }
+
+/* Korting-doorstreping (DiscountPrice): eerst de streep door het oude
+   bedrag trekken, dan het nieuwe bedrag laten instromen, dan de badge --
+   ::after i.p.v. text-decoration zodat de streep zelf animeert i.p.v. in
+   één keer te verschijnen. */
+.kw-discount-strike::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 2px;
+  width: 0;
+  background: #dc2626;
+  transform: translateY(-50%);
+  animation: kw-discount-strike-in 0.38s var(--ease-brand) 0.15s forwards;
+}
+@keyframes kw-discount-strike-in {
+  to { width: 100%; }
+}
+.kw-discount-new {
+  opacity: 0;
+  transform: translateX(-6px);
+  animation: kw-discount-new-in 0.34s var(--ease-brand) 0.42s forwards;
+}
+@keyframes kw-discount-new-in {
+  to { opacity: 1; transform: translateX(0); }
+}
+.kw-discount-badge {
+  opacity: 0;
+  transform: scale(0.6);
+  animation: kw-discount-badge-in 0.32s var(--ease-brand) 0.52s forwards;
+}
+@keyframes kw-discount-badge-in {
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* Instellingen-accordion (Fase 16): grid-template-rows 0fr -> 1fr i.p.v. een
@@ -276,10 +341,27 @@ h1, h2, h3, h4, .font-display {
   .kw-page-enter,
   .kw-materialize,
   .kw-pop-in,
-  .kw-skeleton {
+  .kw-skeleton,
+  .kw-fire-pulse,
+  .kw-breathe {
+    animation: none !important;
+  }
+  .kw-discount-strike::after,
+  .kw-discount-new,
+  .kw-discount-badge {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    width: 100% !important;
+  }
+  .kw-price-flash {
     animation: none !important;
   }
   .kw-accordion {
+    transition: none !important;
+  }
+  .kw-check-path,
+  .kw-check-box {
     transition: none !important;
   }
 }

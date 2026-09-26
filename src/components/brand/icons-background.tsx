@@ -120,6 +120,29 @@ export function IconsBackground() {
   // lange offerte) -- zelfde ResizeObserver-op-documentElement-patroon als
   // de embed-hoogtemeting hierboven in dit bestand.
   const [cycles, setCycles] = useState(2);
+  const [parallaxOffset, setParallaxOffset] = useState(0);
+
+  useEffect(() => {
+    // Zachte parallax: de iconen bewegen net iets trager mee dan de content
+    // bij het scrollen, alsof ze net iets verder weg staan -- een kleine
+    // factor (8%) is hiervoor genoeg, te veel oogt onrustig. rAF-gebundeld
+    // zoals de andere scroll/resize-afhandeling in dit bestand.
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    let frame: number | null = null;
+    function onScroll() {
+      if (frame !== null) return;
+      frame = requestAnimationFrame(() => {
+        frame = null;
+        setParallaxOffset(window.scrollY * 0.08);
+      });
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
+  }, []);
 
   useEffect(() => {
     // ResizeObserver op documentElement reageert betrouwbaar op een echte
@@ -155,7 +178,11 @@ export function IconsBackground() {
   }, []);
 
   return (
-    <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      style={{ transform: `translateY(${parallaxOffset}px)` }}
+    >
       {Array.from({ length: cycles }).map((_, cycleIndex) =>
         CYCLE_ICONS.map(({ Icon, top, className }, i) => (
           <Icon

@@ -118,6 +118,14 @@ export async function createDemoLeadForFaq(): Promise<string> {
   return data.id;
 }
 
+/** `date: null` verwijdert de herinnering weer. */
+export async function setLeadReminder(leadId: string, date: string | null) {
+  const { supabase } = await requireOrganization();
+  const { error } = await supabase.from("leads").update({ reminder_date: date }).eq("id", leadId);
+  if (error) throw error;
+  revalidatePath("/dashboard/leads");
+}
+
 export async function deleteLead(leadId: string) {
   const { supabase } = await requireOrganization();
   const { error } = await supabase.from("leads").delete().eq("id", leadId);

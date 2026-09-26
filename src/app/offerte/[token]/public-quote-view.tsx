@@ -7,9 +7,12 @@ import type { BlockDraft, PackagesBlockContent } from "@/lib/blocks/types";
 import type { Selections } from "@/lib/blocks/pricing";
 import type { QuoteStatus } from "@/lib/types/database";
 import { useQuoteSelections } from "@/hooks/use-quote-selections";
+import { usePriceFlash } from "@/hooks/use-price-flash";
 import { calculateTotal, formatSplitPrice } from "@/lib/blocks/pricing";
 import { cn } from "@/lib/utils";
 import { AnimatedPrice } from "@/components/preview/animated-price";
+import { PdfDownloadButton } from "@/components/preview/pdf-download-button";
+import { DiscountPrice } from "@/components/preview/discount-price";
 import { BlockPreview, type QuoteMeta } from "@/components/preview/quote-preview";
 import { WaveDivider } from "@/components/brand/wave-divider";
 import { QuoteHeaderSection, type QuoteHeaderData } from "@/components/preview/quote-header";
@@ -102,7 +105,7 @@ function PublicQuoteViewInner({
   headcountNote: string | null;
   headerData: QuoteHeaderData;
 }) {
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const { packagesBlocks, hasPricedBlocks, selections, setSelections, subtotal, splitSubtotal } = useQuoteSelections(
     blocks,
     meta.pricePerPerson,
@@ -114,6 +117,7 @@ function PublicQuoteViewInner({
     fixedAmount: splitSubtotal.fixedAmount * discountRatio,
     perPersonAmount: splitSubtotal.perPersonAmount * discountRatio,
   };
+  const priceFlashing = usePriceFlash(total);
   const sorted = [...blocks].sort((a, b) => a.position - b.position);
 
   const [comments, setComments] = useState(commentsByBlock);
@@ -189,7 +193,7 @@ function PublicQuoteViewInner({
         </div>
       )}
 
-      <main className="mx-auto mt-6 max-w-3xl px-0">
+      <main key={lang} className="kw-page-enter mx-auto mt-6 max-w-3xl px-0">
         <div className="overflow-hidden bg-white shadow-sm sm:rounded-brand-lg">
           <QuoteHeaderSection data={headerData} />
           {sorted.map((block, i) => (
@@ -246,25 +250,33 @@ function PublicQuoteViewInner({
               <p className="text-xs text-ink-400">
                 {t("total_label")} ({t(meta.priceDisplay === "incl_btw" ? "price_incl_btw" : "price_excl_btw")})
               </p>
-              {splitTotal.fixedAmount > 0 && splitTotal.perPersonAmount > 0 ? (
-                <p className="font-display text-xl font-semibold text-ink-500">
+              {meta.discountAmount > 0 ? (
+                <span className={cn(priceFlashing && "kw-price-flash")}>
+                  <DiscountPrice
+                    subtotal={subtotal}
+                    total={total}
+                    currency={meta.currency}
+                    suffix={splitTotal.perPersonAmount > 0 && splitTotal.fixedAmount === 0 ? " p.p." : undefined}
+                  />
+                </span>
+              ) : splitTotal.fixedAmount > 0 && splitTotal.perPersonAmount > 0 ? (
+                <p className={cn("font-display text-xl font-semibold text-ink-500", priceFlashing && "kw-price-flash")}>
                   {formatSplitPrice(splitTotal.fixedAmount, splitTotal.perPersonAmount, meta.currency)}
                 </p>
               ) : (
-                <p className="font-display text-xl font-semibold text-ink-500">
+                <p className={cn("font-display text-xl font-semibold text-ink-500", priceFlashing && "kw-price-flash")}>
                   <AnimatedPrice amount={total} currency={meta.currency} />
                   {splitTotal.perPersonAmount > 0 ? " p.p." : ""}
                 </p>
               )}
             </div>
             <div className="flex items-center gap-2">
-              <a
+              <PdfDownloadButton
                 href={pdfHref}
-                className="flex items-center gap-2 rounded-brand-sm border border-ink-200 px-3 py-2.5 text-sm font-semibold text-ink-500 hover:bg-sand-200"
-              >
-                <Download className="size-4" />
-                <span className="hidden sm:inline">{t("download_quote_pdf")}</span>
-              </a>
+                filename={`offerte-${meta.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase() || "kwotio"}.pdf`}
+                label={t("download_quote_pdf")}
+                className="rounded-brand-sm border border-ink-200 px-3 py-2.5 text-sm font-semibold text-ink-500 hover:bg-sand-200"
+              />
               {isSigned ? (
                 <a
                   href={certificateHref}

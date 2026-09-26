@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { loadTemplateBlocks, loadQuoteBlocks, saveQuoteBlocks } from "@/lib/blocks/persistence";
+import { loadTemplateBlocks, loadQuoteBlocks, saveQuoteBlocks, saveTemplateBlocks } from "@/lib/blocks/persistence";
 import { calculateTotal } from "@/lib/blocks/pricing";
 import { duplicateBlockDraft, newBlock, type BlockDraft } from "@/lib/blocks/types";
 import type { PriceDisplayMode } from "@/lib/types/database";
@@ -194,6 +194,47 @@ export async function duplicateQuote(quoteId: string, options?: { sameClientNext
   redirect(`/dashboard/offertes/${newQuote.id}`);
 }
 
+/**
+ * Maakt een nieuw, herbruikbaar template van de huidige inhoud van deze
+ * offerte -- handig als een net verstuurde offerte goed uitpakte en je 'm
+ * als basis voor volgende keren wilt bewaren. Alleen de blokken worden
+ * gekopieerd (geen klantgegevens/status/datum, dat hoort niet in een
+ * template) met vers gegenereerde id's (duplicateBlockDraft), zodat de
+ * template nooit dezelfde rijen deelt met de bron-offerte.
+ */
+export async function createTemplateFromQuote(quoteId: string) {
+  const { supabase, organizationId, userId } = await requireOrganization();
+
+  const { data: source, error } = await supabase
+    .from("quotes")
+    .select("title, language")
+    .eq("id", quoteId)
+    .single();
+  if (error) throw error;
+
+  const sourceBlocks = await loadQuoteBlocks(supabase, quoteId);
+
+  const { data: template, error: insertError } = await supabase
+    .from("templates")
+    .insert({
+      organization_id: organizationId,
+      name: source.title,
+      event_type: source.title,
+      language: source.language,
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+  if (insertError) throw insertError;
+
+  if (sourceBlocks.length > 0) {
+    await saveTemplateBlocks(supabase, template.id, sourceBlocks.map(duplicateBlockDraft));
+  }
+
+  revalidatePath("/dashboard/templates");
+  redirect(`/dashboard/templates/${template.id}`);
+}
+
 export async function saveQuoteMeta(
   quoteId: string,
   input: {
@@ -212,6 +253,7 @@ export async function saveQuoteMeta(
     clientDisplayCompany: string;
     referenceNumber: string;
     internalNotes: string;
+    reminderDate: string | null;
   },
 ) {
   const { supabase } = await requireOrganization();
@@ -234,6 +276,7 @@ export async function saveQuoteMeta(
       client_display_company: input.clientDisplayCompany || null,
       reference_number: input.referenceNumber || null,
       internal_notes: input.internalNotes || null,
+      reminder_date: input.reminderDate,
     })
     .eq("id", quoteId);
   if (error) throw error;
@@ -324,7 +367,13 @@ export async function detachFromTemplate(quoteId: string) {
   revalidatePath(`/dashboard/offertes/${quoteId}`);
 }
 
-export async function sendQuote(quoteId: string) {
+export type SendQuoteMilestone = { title: string; detail: string } | null;
+
+/** Ronde aantallen waar we een klein feestmoment aan koppelen -- puur leuk,
+ * geen functie, dus bewust een korte, overzichtelijke lijst. */
+const MILESTONE_COUNTS = [10, 25, 50, 100, 250, 500, 1000];
+
+export async function sendQuote(quoteId: string): Promise<{ milestone: SendQuoteMilestone }> {
   const { supabase } = await requireOrganization();
 
   const { data: quote, error: quoteError } = await supabase
@@ -389,6 +438,30 @@ export async function sendQuote(quoteId: string) {
 
   revalidatePath(`/dashboard/offertes/${quoteId}`);
   revalidatePath("/dashboard/offertes");
+
+  // Mijlpaal-check: eerst een rond aantal verstuurde offertes (alles behalve
+  // concept telt als "verstuurd"), anders de eerste offerte ooit voor deze
+  // klant -- nooit allebei tegelijk, het eerste dat matcht wint.
+  let milestone: SendQuoteMilestone = null;
+  const { count: sentCount } = await supabase
+    .from("quotes")
+    .select("id", { count: "exact", head: true })
+    .eq("organization_id", quote.organization_id)
+    .not("status", "eq", "concept");
+  if (sentCount != null && MILESTONE_COUNTS.includes(sentCount)) {
+    milestone = { title: `${sentCount}e offerte verstuurd! 🎉`, detail: "Goed bezig deze periode." };
+  } else if (quote.client_id) {
+    const { count: clientQuoteCount } = await supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", quote.client_id)
+      .not("status", "eq", "concept");
+    if (clientQuoteCount === 1) {
+      milestone = { title: "Eerste offerte voor deze klant!", detail: quote.client_display_name || "Mooi begin van een nieuwe relatie." };
+    }
+  }
+
+  return { milestone };
 }
 
 export async function replyToComment(quoteId: string, blockId: string | null, body: string) {

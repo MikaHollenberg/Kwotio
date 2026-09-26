@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { Search, UserPlus, Check, ArrowLeft } from "lucide-react";
-import { searchClients, createClientRecord } from "@/app/dashboard/klanten/actions";
+import { Search, UserPlus, Check, ArrowLeft, AlertTriangle } from "lucide-react";
+import { searchClients, createClientRecord, checkDuplicateClient, type DuplicateClientMatch } from "@/app/dashboard/klanten/actions";
 import { cn } from "@/lib/utils";
 
 export type SelectedClient = { id: string; name: string; email: string | null; companyName: string | null };
@@ -31,6 +31,8 @@ export function ClientCombobox({
   const [newCompany, setNewCompany] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [creating, startCreateTransition] = useTransition();
+  const [duplicateMatch, setDuplicateMatch] = useState<DuplicateClientMatch | null>(null);
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
 
   // Portal naar document.body (zelfde patroon als ConfirmDialog/MobileNav/
   // NotificationBell) -- deze combobox staat vaak in een Card met
@@ -84,6 +86,25 @@ export function ClientCombobox({
       setCreateError("E-mailadres is verplicht.");
       return;
     }
+    // Al eerder gecheckt voor dit e-mailadres en de gebruiker klikt nogmaals
+    // -- dat telt als "toch aanmaken", niet opnieuw checken.
+    if (duplicateMatch) {
+      createNow();
+      return;
+    }
+    setCheckingDuplicate(true);
+    startCreateTransition(async () => {
+      const match = await checkDuplicateClient(newEmail);
+      setCheckingDuplicate(false);
+      if (match) {
+        setDuplicateMatch(match);
+        return;
+      }
+      await createNow();
+    });
+  }
+
+  function createNow() {
     startCreateTransition(async () => {
       try {
         const created = await createClientRecord({
@@ -92,15 +113,20 @@ export function ClientCombobox({
           companyName: newCompany.trim() || undefined,
         });
         onChange({ id: created.id, name: created.name, email: created.email, companyName: created.company_name });
-        setQuery("");
-        setNewEmail("");
-        setNewCompany("");
-        setCreatingNew(false);
-        setOpen(false);
+        resetCreateForm();
       } catch {
         setCreateError("Aanmaken mislukt. Probeer het opnieuw.");
       }
     });
+  }
+
+  function resetCreateForm() {
+    setQuery("");
+    setNewEmail("");
+    setNewCompany("");
+    setDuplicateMatch(null);
+    setCreatingNew(false);
+    setOpen(false);
   }
 
   return (
@@ -147,7 +173,10 @@ export function ClientCombobox({
                 </span>
                 <input
                   value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
+                  onChange={(e) => {
+                    setNewEmail(e.target.value);
+                    setDuplicateMatch(null);
+                  }}
                   type="email"
                   required
                   placeholder="naam@bedrijf.nl"
@@ -163,13 +192,35 @@ export function ClientCombobox({
                 />
               </label>
               {createError && <p className="text-xs text-red-600">{createError}</p>}
+              {duplicateMatch && (
+                <div className="flex flex-col gap-2 rounded-brand-sm border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                    <span>
+                      <strong>{duplicateMatch.name}</strong>
+                      {duplicateMatch.companyName ? ` (${duplicateMatch.companyName})` : ""} lijkt al te bestaan
+                      (zelfde e-mailadres). Nogmaals klikken op &quot;Klant aanmaken&quot; maakt toch een nieuwe aan.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange({ id: duplicateMatch.id, name: duplicateMatch.name, email: newEmail.trim() || null, companyName: duplicateMatch.companyName });
+                      resetCreateForm();
+                    }}
+                    className="self-start font-semibold underline hover:no-underline"
+                  >
+                    Gebruik bestaande klant
+                  </button>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={handleCreate}
-                disabled={creating || !newEmail.trim()}
+                disabled={creating || checkingDuplicate || !newEmail.trim()}
                 className="flex h-10 items-center justify-center rounded-brand-sm bg-teal-600 text-sm font-semibold text-white transition-colors duration-200 ease-brand hover:bg-teal-700 disabled:opacity-60"
               >
-                {creating ? "Bezig…" : "Klant aanmaken"}
+                {checkingDuplicate ? "Even checken…" : creating ? "Bezig…" : duplicateMatch ? "Toch aanmaken" : "Klant aanmaken"}
               </button>
             </div>
           ) : (

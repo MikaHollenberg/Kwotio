@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Trash2, Smartphone, Monitor, Link2, Send, Unlink, Copy, Check, Languages, MessageCircle } from "lucide-react";
+import { ArrowLeft, Trash2, Smartphone, Monitor, Link2, Send, Unlink, Copy, Check, Languages, MessageCircle, BookmarkPlus } from "lucide-react";
 import type { Database, PriceDisplayMode } from "@/lib/types/database";
 import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
 import { newBlock, newBlockFromTemplate, newBlockFromArrangement } from "@/lib/blocks/types";
@@ -15,6 +15,7 @@ import {
   sendQuote,
   detachFromTemplate,
   translateQuoteBlocks,
+  createTemplateFromQuote,
 } from "@/app/dashboard/offertes/actions";
 import { useAutosave } from "@/hooks/use-autosave";
 import { AutosaveIndicator } from "@/components/builder/autosave-indicator";
@@ -27,6 +28,8 @@ import { Button } from "@/components/ui/button";
 import { MorphButton } from "@/components/ui/morph-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { useToast } from "@/components/dashboard/toast-context";
+import { MilestoneCelebration } from "@/components/dashboard/milestone-celebration";
+import type { SendQuoteMilestone } from "@/app/dashboard/offertes/actions";
 import { QuoteStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, TextInput } from "@/components/builder/field";
@@ -114,6 +117,7 @@ export function QuoteEditor({
   const [clientDisplayCompany, setClientDisplayCompany] = useState(quote.client_display_company ?? "");
   const [referenceNumber, setReferenceNumber] = useState(quote.reference_number ?? "");
   const [internalNotes, setInternalNotes] = useState(quote.internal_notes ?? "");
+  const [reminderDate, setReminderDate] = useState(quote.reminder_date ?? "");
   const [blocks, setBlocks] = useState<BlockDraft[]>(initialBlocks);
   const [blockTemplates, setBlockTemplates] = useState<BlockTemplateSummary[]>(initialBlockTemplates);
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
@@ -129,6 +133,8 @@ export function QuoteEditor({
   const [translateDone, setTranslateDone] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletePending, startDeleteTransition] = useTransition();
+  const [savingAsTemplate, startSaveAsTemplateTransition] = useTransition();
+  const [milestone, setMilestone] = useState<SendQuoteMilestone>(null);
 
   const autosaveStatus = useAutosave(
     {
@@ -148,6 +154,7 @@ export function QuoteEditor({
       clientDisplayCompany,
       referenceNumber,
       internalNotes,
+      reminderDate,
     },
     async (value) => {
       await Promise.all([
@@ -167,6 +174,7 @@ export function QuoteEditor({
           clientDisplayCompany: value.clientDisplayCompany,
           referenceNumber: value.referenceNumber,
           internalNotes: value.internalNotes,
+          reminderDate: value.reminderDate || null,
         }),
         saveQuoteBlocksAction(quote.id, value.blocks),
       ]);
@@ -238,6 +246,16 @@ export function QuoteEditor({
           <Button
             variant="outline"
             size="sm"
+            disabled={savingAsTemplate}
+            title="Maakt een nieuw, herbruikbaar template van de huidige inhoud van deze offerte."
+            onClick={() => startSaveAsTemplateTransition(async () => { await createTemplateFromQuote(quote.id); })}
+          >
+            <BookmarkPlus className="size-4" />
+            {savingAsTemplate ? "Bezig…" : "Dupliceer als template"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             disabled={translating}
             title="Vertaalt de huidige inhoud; vertaal opnieuw na wijzigingen."
             onClick={() =>
@@ -271,7 +289,8 @@ export function QuoteEditor({
             doneLabel={status === "concept" ? "Aangemaakt" : "Verzonden"}
             onClick={() =>
               startSendTransition(async () => {
-                await sendQuote(quote.id);
+                const result = await sendQuote(quote.id);
+                if (result.milestone) setMilestone(result.milestone);
                 setStatusLocal("verzonden");
                 setJustSent(true);
                 showToast(
@@ -382,6 +401,16 @@ export function QuoteEditor({
               rows={3}
               className="rounded-brand-sm border border-ink-200 bg-white px-3.5 py-2.5 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
             />
+          </label>
+          <label className="flex flex-col gap-1.5 sm:w-56">
+            <span className="text-xs font-semibold text-ink-400">Follow-up-herinnering</span>
+            <input
+              type="date"
+              value={reminderDate}
+              onChange={(e) => setReminderDate(e.target.value)}
+              className="h-10 rounded-brand-sm border border-ink-200 bg-white px-3 text-sm text-ink-500 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+            />
+            <p className="text-xs text-ink-300">Verschijnt in de meldingenbel zodra deze datum is aangebroken.</p>
           </label>
           <ContactLogPanel quoteId={quote.id} logs={initialContactLogs} />
         </CardContent>
@@ -571,6 +600,10 @@ export function QuoteEditor({
           </div>
         </div>
       </div>
+
+      {milestone && (
+        <MilestoneCelebration title={milestone.title} detail={milestone.detail} onClose={() => setMilestone(null)} />
+      )}
     </div>
   );
 }

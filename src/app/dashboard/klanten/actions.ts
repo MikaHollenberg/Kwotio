@@ -37,6 +37,39 @@ export async function searchClients(query: string) {
   return data ?? [];
 }
 
+/** Zelfde normalisatie als aanvragen/status.ts's duplicaat-aanvraag-detectie
+ * (los gehouden, geen gedeelde export nodig voor zo'n kleine functie). */
+function normalizePhone(phone: string): string {
+  return phone.replace(/[^0-9+]/g, "");
+}
+
+export type DuplicateClientMatch = { id: string; name: string; companyName: string | null };
+
+/** Waarschuwt vóór het aanmaken van een klant als er al een klant met
+ * hetzelfde e-mailadres of telefoonnummer bestaat in de organisatie
+ * (inclusief gearchiveerde klanten -- "bestaat al" geldt ook dan). Geen
+ * harde blokkade, puur een signaal; het bureau kan altijd toch doorgaan. */
+export async function checkDuplicateClient(email: string, phone?: string): Promise<DuplicateClientMatch | null> {
+  const { supabase, organizationId } = await requireOrganizationId();
+  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedPhone = phone?.trim() ? normalizePhone(phone) : null;
+  if (!normalizedEmail && !normalizedPhone) return null;
+
+  const { data, error } = await supabase
+    .from("clients")
+    .select("id, name, email, phone, company_name")
+    .eq("organization_id", organizationId);
+  if (error) throw error;
+
+  const match = (data ?? []).find((c) => {
+    if (normalizedEmail && c.email?.trim().toLowerCase() === normalizedEmail) return true;
+    if (normalizedPhone && c.phone && normalizePhone(c.phone) === normalizedPhone) return true;
+    return false;
+  });
+
+  return match ? { id: match.id, name: match.name, companyName: match.company_name } : null;
+}
+
 export async function createClientRecord(input: { name: string; email: string; phone?: string; companyName?: string }) {
   const { supabase, organizationId } = await requireOrganizationId();
 

@@ -285,6 +285,7 @@ export interface Database {
           deposit_invoice_id: string | null;
           deposit_amount: number | null;
           deposit_paid_at: string | null;
+          reminder_date: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -513,6 +514,7 @@ export interface Database {
           converted_request_id: string | null;
           created_at: string;
           updated_at: string;
+          reminder_date: string | null;
         };
         Insert: Partial<Database["public"]["Tables"]["leads"]["Row"]> & {
           organization_id: string;

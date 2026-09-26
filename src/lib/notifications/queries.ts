@@ -6,7 +6,7 @@ type Client = SupabaseClient<Database>;
 
 export type NotificationItem = {
   id: string;
-  type: "comment" | "declined" | "signed" | "quote_request" | "lead";
+  type: "comment" | "declined" | "signed" | "quote_request" | "lead" | "follow_up_reminder";
   title: string;
   detail: string;
   href: string;
@@ -27,11 +27,15 @@ export async function getRecentNotifications(
   organizationId: string,
   limit = 20,
 ): Promise<NotificationItem[]> {
-  const { data: quotes } = await supabase.from("quotes").select("id, title").eq("organization_id", organizationId);
+  const { data: quotes } = await supabase
+    .from("quotes")
+    .select("id, title, reminder_date")
+    .eq("organization_id", organizationId);
   const quoteIds = (quotes ?? []).map((q) => q.id);
   const titleById = new Map((quotes ?? []).map((q) => [q.id, q.title]));
+  const todayKey = new Date().toISOString().slice(0, 10);
 
-  const [{ data: comments }, { data: events }, { data: requests }, { data: leads }] = await Promise.all([
+  const [{ data: comments }, { data: events }, { data: requests }, { data: leads }, { data: leadReminders }] = await Promise.all([
     quoteIds.length > 0
       ? supabase
           .from("comments")
@@ -64,6 +68,12 @@ export async function getRecentNotifications(
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false })
       .limit(limit),
+    supabase
+      .from("leads")
+      .select("id, name, reminder_date")
+      .eq("organization_id", organizationId)
+      .not("reminder_date", "is", null)
+      .lte("reminder_date", todayKey),
   ]);
 
   const items: NotificationItem[] = [];
@@ -122,6 +132,31 @@ export async function getRecentNotifications(
       detail: l.name,
       href: `/dashboard/leads`,
       createdAt: l.created_at,
+    });
+  }
+
+  // Follow-up-herinneringen: zelf gezette datums die vandaag of eerder zijn
+  // -- createdAt wordt hier de herinneringsdatum zelf, zodat de melding pas
+  // als "nieuw" (ongelezen) telt zodra die datum daadwerkelijk is aangebroken.
+  for (const l of leadReminders ?? []) {
+    items.push({
+      id: `reminder-lead-${l.id}`,
+      type: "follow_up_reminder",
+      title: "Follow-up: lead",
+      detail: l.name,
+      href: `/dashboard/leads`,
+      createdAt: `${l.reminder_date}T00:00:00.000Z`,
+    });
+  }
+  for (const q of quotes ?? []) {
+    if (!q.reminder_date || q.reminder_date > todayKey) continue;
+    items.push({
+      id: `reminder-quote-${q.id}`,
+      type: "follow_up_reminder",
+      title: "Follow-up: offerte",
+      detail: `"${q.title}"`,
+      href: `/dashboard/offertes/${q.id}`,
+      createdAt: `${q.reminder_date}T00:00:00.000Z`,
     });
   }
 

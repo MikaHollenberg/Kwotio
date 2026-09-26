@@ -21,8 +21,11 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { WaveDivider } from "@/components/brand/wave-divider";
 import { QuoteHeaderSection, type QuoteHeaderData } from "@/components/preview/quote-header";
 import { AnimatedPrice } from "@/components/preview/animated-price";
+import { DiscountPrice } from "@/components/preview/discount-price";
+import { usePriceFlash } from "@/hooks/use-price-flash";
 import { SunWatermark } from "@/components/brand/sun-watermark";
 import { Button } from "@/components/ui/button";
+import { AnimatedCheckbox } from "@/components/ui/animated-checkbox";
 import type { PriceDisplayMode } from "@/lib/types/database";
 import { LanguageProvider, useTranslation } from "@/lib/i18n/language-context";
 import { sanitizeBlockHtml } from "@/lib/blocks/sanitize-html";
@@ -100,6 +103,7 @@ function QuotePreviewInner({
     perPersonAmount: splitSubtotal.perPersonAmount * discountRatio,
   };
   const { t } = useTranslation();
+  const priceFlashing = usePriceFlash(total);
 
   const sorted = [...blocks].sort((a, b) => a.position - b.position);
 
@@ -140,12 +144,21 @@ function QuotePreviewInner({
                   precies één soort bedrag blijft de bestaande AnimatedPrice-
                   animatie behouden; bij een mix (allebei > 0) een gewone,
                   duidelijk gesplitste tekst. */}
-              {splitTotal.fixedAmount > 0 && splitTotal.perPersonAmount > 0 ? (
-                <p className="font-display text-xl font-semibold text-ink-500">
+              {meta.discountAmount > 0 ? (
+                <span className={cn(priceFlashing && "kw-price-flash")}>
+                  <DiscountPrice
+                    subtotal={subtotal}
+                    total={total}
+                    currency={meta.currency}
+                    suffix={splitTotal.perPersonAmount > 0 && splitTotal.fixedAmount === 0 ? " p.p." : undefined}
+                  />
+                </span>
+              ) : splitTotal.fixedAmount > 0 && splitTotal.perPersonAmount > 0 ? (
+                <p className={cn("font-display text-xl font-semibold text-ink-500", priceFlashing && "kw-price-flash")}>
                   {formatSplitPrice(splitTotal.fixedAmount, splitTotal.perPersonAmount, meta.currency)}
                 </p>
               ) : (
-                <p className="font-display text-xl font-semibold text-ink-500">
+                <p className={cn("font-display text-xl font-semibold text-ink-500", priceFlashing && "kw-price-flash")}>
                   <AnimatedPrice amount={total} currency={meta.currency} />
                   {splitTotal.perPersonAmount > 0 ? " p.p." : ""}
                 </p>
@@ -678,24 +691,22 @@ function PackagesBlockPreview({
                     className="flex items-center justify-between gap-3 rounded-brand-sm border border-ink-100 px-3.5 py-3"
                   >
                     <label className="flex flex-1 items-center gap-3">
-                      <input
-                        type="checkbox"
+                      <AnimatedCheckbox
                         checked={checked}
                         disabled={readOnly}
+                        accentColor={accentColor}
                         onChange={
                           readOnly
                             ? undefined
-                            : (e) =>
+                            : (next) =>
                                 onSelectionsChange({
                                   ...selections,
                                   addonQuantities: {
                                     ...selections.addonQuantities,
-                                    [addon.id]: e.target.checked ? (addon.quantityEditable ? addon.defaultQuantity || 1 : 1) : 0,
+                                    [addon.id]: next ? (addon.quantityEditable ? addon.defaultQuantity || 1 : 1) : 0,
                                   },
                                 })
                         }
-                        style={{ accentColor }}
-                        className="size-4 disabled:opacity-100"
                       />
                       <div>
                         <p className="text-sm font-medium text-ink-500">{addon.name}</p>
@@ -1022,21 +1033,19 @@ function ArrangementContentItemView({
                     className="flex items-center justify-between gap-3 rounded-brand-sm border border-ink-100 px-3.5 py-3"
                   >
                     <label className="flex flex-1 items-center gap-3">
-                      <input
-                        type="checkbox"
+                      <AnimatedCheckbox
                         checked={checked}
                         disabled={readOnly}
+                        accentColor={itemColor}
                         onChange={
                           readOnly
                             ? undefined
-                            : (e) =>
+                            : (next) =>
                                 onSelectionsChange({
                                   ...selections,
-                                  addonQuantities: { ...selections.addonQuantities, [extra.id]: e.target.checked ? 1 : 0 },
+                                  addonQuantities: { ...selections.addonQuantities, [extra.id]: next ? 1 : 0 },
                                 })
                         }
-                        style={{ accentColor: itemColor }}
-                        className="size-4 disabled:opacity-100"
                       />
                       <p className="text-sm font-medium text-ink-500" style={textStyle}>
                         {extra.name}
