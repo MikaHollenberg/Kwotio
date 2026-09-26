@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { ALL_TOUR_STEPS, type TourPhase, type TourStep } from "./product-tour";
 import { markTourSeen } from "@/app/dashboard/tour-actions";
 
@@ -46,6 +46,7 @@ export function TourProvider({
   invoicingEnabled?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const steps = useMemo(
     () => ALL_TOUR_STEPS.filter((s) => (!s.adminOnly || canManageOrg) && (!s.invoicingOnly || invoicingEnabled)),
     [canManageOrg, invoicingEnabled],
@@ -55,7 +56,12 @@ export function TourProvider({
 
   function goToStep(index: number) {
     setStepIndex(index);
-    router.push(steps[index].href);
+    // De meeste stappen delen dezelfde pagina (1 nav-stap + 2-3 content-
+    // stappen per pagina) -- een router.push() naar de URL waar je al op
+    // staat is overbodig en bleek de rondleiding soms te laten haperen
+    // (een nieuwe navigatie terwijl er nog geen echte paginawissel nodig
+    // is). Alleen echt navigeren als de doelpagina afwijkt.
+    if (steps[index].href !== pathname) router.push(steps[index].href);
   }
 
   function closeTour(markSeen: boolean) {
