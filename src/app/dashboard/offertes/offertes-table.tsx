@@ -208,7 +208,7 @@ export function OffertesTable({
             <Plus className="size-4" /> Nieuwe offerte
           </ButtonLink>
         </div>
-        <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+        <Card data-faq-id="offertes-list" className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <FileText className="kw-bob size-8 text-ink-300" />
           <p className="text-sm text-ink-400">
             Nog geen offertes. Maak je eerste offerte aan vanuit een template of vanaf nul.
