@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowLeft, Trash2, Smartphone, Monitor, Link2, Send, Unlink, Copy, Check, Languages, MessageCircle, BookmarkPlus } from "lucide-react";
+import { ArrowLeft, Trash2, Smartphone, Monitor, Link2, Send, Unlink, Copy, Check, Languages, MessageCircle, BookmarkPlus, Maximize2, Minimize2 } from "lucide-react";
 import type { Database, PriceDisplayMode } from "@/lib/types/database";
-import type { BlockDraft, BlockTemplateSummary } from "@/lib/blocks/types";
+import type { BlockDraft, BlockTemplateSummary, PackagesBlockContent, ArrangementBlockContent } from "@/lib/blocks/types";
 import { newBlock, newBlockFromTemplate, newBlockFromArrangement } from "@/lib/blocks/types";
 import type { ArrangementPickerSummary } from "@/lib/arrangements/types";
 import { resolveArrangementPrices } from "@/lib/arrangements/pricing";
@@ -34,6 +34,7 @@ import { QuoteStatusBadge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Field, TextInput } from "@/components/builder/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ConceptCheckDialog } from "./concept-check-dialog";
 import { CommentsPanel } from "./comments-panel";
 import { ContactLogPanel } from "./contact-log-panel";
 import { SignatureInfoCard } from "./signature-info-card";
@@ -62,6 +63,30 @@ type OrganizationHeaderInfo = Pick<
   | "contact_phone"
 > | null;
 type TeamMember = { id: string; name: string };
+
+/** Vlak voor versturen: signaleert waarschijnlijk-ontbrekende info, puur als
+ * heads-up (zie ConceptCheckDialog) -- geen harde validatie, het bureau kan
+ * altijd toch doorgaan. */
+function getConceptCheckWarnings(eventDate: string, blocks: BlockDraft[]): string[] {
+  const warnings: string[] = [];
+  if (blocks.length === 0) warnings.push("Er staan nog geen blokken in deze offerte.");
+  if (!eventDate) warnings.push("Er is nog geen eventdatum ingevuld.");
+
+  const hasPrice = blocks.some((block) => {
+    if (block.type === "packages") {
+      const content = block.content as unknown as PackagesBlockContent;
+      return content.packages?.some((p) => p.price > 0) || content.addons?.some((a) => a.price > 0);
+    }
+    if (block.type === "arrangement") {
+      const content = block.content as unknown as ArrangementBlockContent;
+      return content.prices?.some((p) => p.amount > 0);
+    }
+    return false;
+  });
+  if (blocks.length > 0 && !hasPrice) warnings.push("Er lijkt nog geen prijs ingevuld te zijn.");
+
+  return warnings;
+}
 
 export function QuoteEditor({
   origin,
@@ -135,6 +160,8 @@ export function QuoteEditor({
   const [deletePending, startDeleteTransition] = useTransition();
   const [savingAsTemplate, startSaveAsTemplateTransition] = useTransition();
   const [milestone, setMilestone] = useState<SendQuoteMilestone>(null);
+  const [conceptCheckOpen, setConceptCheckOpen] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
 
   const autosaveStatus = useAutosave(
     {
@@ -204,8 +231,23 @@ export function QuoteEditor({
   // contactkiezer van de gebruiker — met nummer gaat 'm direct naar de klant.
   const whatsappHref = clientDisplayPhone ? toWhatsAppLink(clientDisplayPhone, whatsappText) : `https://wa.me/?text=${encodeURIComponent(whatsappText)}`;
 
+  function performSend() {
+    startSendTransition(async () => {
+      const result = await sendQuote(quote.id);
+      if (result.milestone) setMilestone(result.milestone);
+      setStatusLocal("verzonden");
+      setJustSent(true);
+      showToast(
+        status === "concept" ? `Offerte "${title}" is aangemaakt` : `Offerte "${title}" is verzonden naar de klant`,
+      );
+      setTimeout(() => setJustSent(false), 1500);
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      <div className={cn("kw-accordion", !focusMode && "kw-accordion-open")}>
+      <div className="flex flex-col gap-6 overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
@@ -287,21 +329,23 @@ export function QuoteEditor({
               </>
             }
             doneLabel={status === "concept" ? "Aangemaakt" : "Verzonden"}
-            onClick={() =>
-              startSendTransition(async () => {
-                const result = await sendQuote(quote.id);
-                if (result.milestone) setMilestone(result.milestone);
-                setStatusLocal("verzonden");
-                setJustSent(true);
-                showToast(
-                  status === "concept"
-                    ? `Offerte "${title}" is aangemaakt`
-                    : `Offerte "${title}" is verzonden naar de klant`,
-                );
-                setTimeout(() => setJustSent(false), 1500);
-              })
-            }
+            onClick={() => {
+              const warnings = getConceptCheckWarnings(eventDate, blocks);
+              if (warnings.length > 0) {
+                setConceptCheckOpen(true);
+                return;
+              }
+              performSend();
+            }}
           />
+          <Button
+            variant="outline"
+            size="sm"
+            title="Verberg alles behalve de live preview, handig om de layout te finetunen."
+            onClick={() => setFocusMode(true)}
+          >
+            <Maximize2 className="size-4" /> Focus-modus
+          </Button>
           <Button variant="ghost" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
             <Trash2 className="size-4" />
           </Button>
@@ -309,7 +353,7 @@ export function QuoteEditor({
           <ConfirmDialog
             open={deleteConfirmOpen}
             title="Offerte verwijderen"
-            description={`Weet je zeker dat je de offerte "${title}" wilt verwijderen? Dit kan niet ongedaan gemaakt worden.`}
+            description={`Weet je zeker dat je de offerte "${title}" wilt verwijderen? Deze verhuist naar de prullenbak en blijft daar 30 dagen herstelbaar.`}
             confirmLabel="Verwijderen"
             danger
             pending={deletePending}
@@ -320,6 +364,17 @@ export function QuoteEditor({
               });
             }}
             onCancel={() => setDeleteConfirmOpen(false)}
+          />
+
+          <ConceptCheckDialog
+            open={conceptCheckOpen}
+            warnings={getConceptCheckWarnings(eventDate, blocks)}
+            pending={sending}
+            onSendAnyway={() => {
+              setConceptCheckOpen(false);
+              performSend();
+            }}
+            onCancel={() => setConceptCheckOpen(false)}
           />
         </div>
       </div>
@@ -538,9 +593,29 @@ export function QuoteEditor({
           </FieldBox>
         )}
       </div>
+      </div>
+      </div>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_480px]">
-        <div className="flex flex-col gap-3">
+      {focusMode && (
+        <div className="sticky top-4 z-10 flex justify-end">
+          <Button variant="outline" size="sm" onClick={() => setFocusMode(false)}>
+            <Minimize2 className="size-4" /> Focus-modus verlaten
+          </Button>
+        </div>
+      )}
+
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-6 transition-[grid-template-columns] duration-500 ease-brand",
+          focusMode ? "xl:grid-cols-[0px_1fr]" : "xl:grid-cols-[minmax(0,1fr)_480px]",
+        )}
+      >
+        <div
+          className={cn(
+            "flex flex-col gap-3 overflow-hidden transition-all duration-500 ease-brand",
+            focusMode && "pointer-events-none max-w-0 -translate-x-3 opacity-0",
+          )}
+        >
           <div data-faq-id="quote-block-list">
             <BlockList
               blocks={blocks}
@@ -564,8 +639,11 @@ export function QuoteEditor({
           </div>
         </div>
 
-        <div className="xl:sticky xl:top-6 xl:self-start" data-faq-id="quote-preview-panel">
-          <div className="mb-3 flex items-center justify-between">
+        <div
+          className={cn("transition-all duration-500 ease-brand", !focusMode && "xl:sticky xl:top-6 xl:self-start")}
+          data-faq-id="quote-preview-panel"
+        >
+          <div className={cn("mb-3 flex items-center justify-between", focusMode && "mx-auto max-w-3xl")}>
             <p className="text-sm font-semibold text-ink-500">Live preview</p>
             <div className="flex gap-1 rounded-brand-sm bg-sand-200 p-1">
               <button
@@ -582,21 +660,28 @@ export function QuoteEditor({
               </button>
             </div>
           </div>
-          <div className="max-h-[calc(100vh-160px)] overflow-y-auto rounded-brand-lg bg-sand-200 p-4">
-            <QuotePreview
-              blocks={blocks}
-              mode={previewMode}
-              headerData={headerData}
-              meta={{
-                title,
-                clientName: client?.name ?? "",
-                eventDate: eventDate || null,
-                currency: quote.currency,
-                priceDisplay,
-                pricePerPerson,
-                discountAmount,
-              }}
-            />
+          <div
+            className={cn(
+              "overflow-y-auto rounded-brand-lg transition-all duration-500 ease-brand",
+              focusMode ? "max-h-none bg-transparent p-0" : "max-h-[calc(100vh-160px)] bg-sand-200 p-4",
+            )}
+          >
+            <div className={cn(focusMode && "mx-auto max-w-3xl")}>
+              <QuotePreview
+                blocks={blocks}
+                mode={previewMode}
+                headerData={headerData}
+                meta={{
+                  title,
+                  clientName: client?.name ?? "",
+                  eventDate: eventDate || null,
+                  currency: quote.currency,
+                  priceDisplay,
+                  pricePerPerson,
+                  discountAmount,
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
