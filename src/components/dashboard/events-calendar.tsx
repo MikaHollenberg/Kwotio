@@ -44,6 +44,9 @@ export function EventsCalendar({ events }: { events: CalendarEvent[] }) {
   while (cells.length % 7 !== 0) cells.push(null);
 
   const today = toDateKey(new Date());
+  // Eerstvolgende datum met een event (vandaag telt mee) -- krijgt een
+  // ademende gloed zodat die meteen opvalt tussen de rest.
+  const nextUpKey = [...eventsByDate.keys()].filter((key) => key >= today).sort()[0] ?? null;
 
   return (
     <div>
@@ -78,6 +81,7 @@ export function EventsCalendar({ events }: { events: CalendarEvent[] }) {
           const key = toDateKey(date);
           const dayEvents = eventsByDate.get(key) ?? [];
           const isToday = key === today;
+          const isNextUp = key === nextUpKey;
           return (
             <div
               key={i}
@@ -85,6 +89,7 @@ export function EventsCalendar({ events }: { events: CalendarEvent[] }) {
                 "flex min-h-14 flex-col items-center gap-0.5 rounded-brand-sm border border-transparent px-1 py-1.5 text-xs transition-all duration-200 ease-brand",
                 isToday && "border-teal-300 bg-teal-50",
                 dayEvents.length > 0 && !isToday && "bg-orange-50 hover:shadow-[0_0_0_3px_rgba(204,122,62,0.25)]",
+                isNextUp && "kw-cal-next-up",
               )}
             >
               <span className={cn("font-medium", isToday ? "text-teal-700" : "text-ink-400")}>{date.getDate()}</span>

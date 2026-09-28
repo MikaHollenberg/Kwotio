@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Plus, FileText, Search, ChevronUp, ChevronDown, Trash2, X } from "lucide-react";
+import { Plus, FileText, Search, ChevronUp, ChevronDown, Trash2, X, Eye } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { QuoteStatusBadge, STATUS_LABELS, STATUS_TONES, tones } from "@/components/ui/badge";
 import { ExportCsvButton } from "@/components/dashboard/export-csv-button";
+import { HoverTooltip } from "@/components/dashboard/hover-tooltip";
 import { OfferteRowActions } from "./offerte-row-actions";
 import { OfferteEditLink } from "./offerte-edit-link";
 import { deleteQuotes } from "./actions";
@@ -15,6 +16,11 @@ import { calculateActualQuoteValue } from "@/lib/blocks/pricing";
 import type { QuoteStatus } from "@/lib/types/database";
 
 const STATUS_ORDER = Object.keys(STATUS_LABELS) as QuoteStatus[];
+/** "Openstaand" voor de dubbele-boeking-knipoog: nog niet definitief
+ * (geaccepteerd/geweigerd/verlopen) -- twee openstaande offertes op
+ * dezelfde datum kunnen allebei nog alle kanten op, dus juist dán is een
+ * seintje nuttig. */
+const OPEN_STATUSES: QuoteStatus[] = ["concept", "verzonden", "bekeken", "in_overleg"];
 
 type QuoteRow = {
   id: string;
@@ -100,6 +106,22 @@ function SortableHeader({
   );
 }
 
+function DoubleBookingHint({ others }: { others: QuoteRow[] }) {
+  const names = others.map((o) => o.clientName ?? o.title).join(", ");
+  return (
+    <HoverTooltip
+      content={
+        <>
+          👀 Nog {others.length === 1 ? "een offerte" : `${others.length} offertes`} op deze datum: <b>{names}</b>.
+          Twee feestjes op één dag — check even of dat past!
+        </>
+      }
+    >
+      <Eye className="size-3.5 shrink-0 text-orange-500" />
+    </HoverTooltip>
+  );
+}
+
 export function OffertesTable({
   quotes,
   invoicingEnabled = false,
@@ -149,6 +171,21 @@ export function OffertesTable({
       setSortDirection("desc");
     }
   }
+
+  const conflictsByQuoteId = useMemo(() => {
+    const byDate = new Map<string, QuoteRow[]>();
+    for (const q of quotes) {
+      if (!q.event_date || !OPEN_STATUSES.includes(q.status)) continue;
+      if (!byDate.has(q.event_date)) byDate.set(q.event_date, []);
+      byDate.get(q.event_date)!.push(q);
+    }
+    const result = new Map<string, QuoteRow[]>();
+    for (const group of byDate.values()) {
+      if (group.length < 2) continue;
+      for (const q of group) result.set(q.id, group.filter((other) => other.id !== q.id));
+    }
+    return result;
+  }, [quotes]);
 
   const visibleQuotes = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -320,7 +357,10 @@ export function OffertesTable({
                 </div>
                 <div className="flex items-center justify-between text-xs text-ink-400">
                   <span>{q.clientName ?? "—"}</span>
-                  <span>{q.event_date ? formatDate(q.event_date) : "—"}</span>
+                  <span className="flex items-center gap-1.5">
+                    {q.event_date ? formatDate(q.event_date) : "—"}
+                    {conflictsByQuoteId.has(q.id) && <DoubleBookingHint others={conflictsByQuoteId.get(q.id)!} />}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex flex-col">
@@ -400,7 +440,12 @@ export function OffertesTable({
                     <td className="px-5 py-3">
                       <QuoteStatusBadge status={q.status} title={q.decline_reason ?? undefined} />
                     </td>
-                    <td className="px-5 py-3 text-ink-400">{q.event_date ? formatDate(q.event_date) : "—"}</td>
+                    <td className="px-5 py-3 text-ink-400">
+                      <span className="flex items-center gap-1.5">
+                        {q.event_date ? formatDate(q.event_date) : "—"}
+                        {conflictsByQuoteId.has(q.id) && <DoubleBookingHint others={conflictsByQuoteId.get(q.id)!} />}
+                      </span>
+                    </td>
                     <td className="px-5 py-3 text-right">
                       <QuoteValueCell
                         total={Number(q.total)}

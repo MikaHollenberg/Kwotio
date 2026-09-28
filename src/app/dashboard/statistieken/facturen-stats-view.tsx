@@ -135,12 +135,15 @@ export function FacturenStatsView({ stats }: { stats: InvoiceStats }) {
               {stats.monthlyRevenue.map((m, i) => {
                 const heightPx = m.total > 0 ? Math.max(4, Math.round((m.total / maxMonthlyRevenue) * 112)) : 2;
                 return (
-                  <div
-                    key={m.monthKey}
-                    className="kw-bar-grow flex-1 rounded-t-sm bg-teal-500"
-                    style={{ height: `${heightPx}px`, animationDelay: `${i * 40}ms` }}
-                    title={formatCurrency(m.total)}
-                  />
+                  <div key={m.monthKey} className="group relative flex flex-1 justify-center">
+                    <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 -translate-x-1/2 translate-y-1 scale-90 whitespace-nowrap rounded-brand-sm border border-ink-100 bg-white px-2.5 py-1.5 text-xs opacity-0 shadow-lg transition-all duration-150 ease-brand group-hover:translate-y-0 group-hover:scale-100 group-hover:opacity-100">
+                      <span className="text-ink-400">{m.label}</span> <span className="font-semibold text-ink-500">{formatCurrency(m.total)}</span>
+                    </div>
+                    <div
+                      className="kw-bar-grow w-full rounded-t-sm bg-teal-500 transition-[filter] duration-150 ease-brand group-hover:brightness-110"
+                      style={{ height: `${heightPx}px`, animationDelay: `${i * 40}ms` }}
+                    />
+                  </div>
                 );
               })}
             </div>

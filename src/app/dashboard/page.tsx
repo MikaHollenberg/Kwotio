@@ -15,6 +15,7 @@ import {
 import { ActivityFeed } from "@/components/dashboard/activity-feed";
 import { EventsCalendar } from "@/components/dashboard/events-calendar";
 import { CountUpValue } from "@/components/dashboard/count-up-value";
+import { TiltCard } from "@/components/dashboard/tilt-card";
 import { formatDate, cn } from "@/lib/utils";
 
 export default async function DashboardOverviewPage() {
@@ -146,19 +147,20 @@ export default async function DashboardOverviewPage() {
         </Card>
       )}
 
-      <div data-faq-id="dashboard-kpis" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div
+        data-faq-id="dashboard-kpis"
+        className="grid grid-cols-1 gap-4 [perspective:800px] sm:grid-cols-2 xl:grid-cols-4"
+      >
         {kpiCards.map(({ label, icon: Icon, value }) => (
-          <Card key={label}>
-            <CardContent className="flex items-center gap-4">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm bg-blue-50 text-blue-600">
-                <Icon className="size-5" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-ink-400">{label}</p>
-                <p className="font-display text-xl font-semibold text-ink-500">{value}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <TiltCard key={label}>
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm bg-blue-50 text-blue-600">
+              <Icon className="size-5" />
+            </div>
+            <div>
+              <p className="text-xs font-medium text-ink-400">{label}</p>
+              <p className="font-display text-xl font-semibold text-ink-500">{value}</p>
+            </div>
+          </TiltCard>
         ))}
       </div>
 

@@ -247,6 +247,28 @@ h1, h2, h3, h4, .font-display {
   background-image: radial-gradient(320px circle at 50% 50%, var(--color-gold-50), transparent 70%);
 }
 
+/* Knipperende cursor achter een typewriter-tekst (statistieken-laadscherm). */
+@keyframes kw-cursor-blink {
+  50% { opacity: 0; }
+}
+.kw-typewriter-cursor::after {
+  content: "|";
+  margin-left: 2px;
+  color: var(--color-gold-600);
+  animation: kw-cursor-blink 0.9s step-end infinite;
+}
+
+/* Ademende gloed op de eerstvolgende event-datum in de kalenderweergave --
+   box-shadow i.p.v. scale(): een scale-animatie op een breed-laag vakje
+   geeft procentueel meer beweging in de breedte dan de hoogte (zichtbaar
+   scheve "adem"), box-shadow dijt in vaste pixels gelijk naar alle kanten
+   uit. */
+@keyframes kw-cal-breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 125, 160, 0.45); }
+  50% { box-shadow: 0 0 0 6px rgba(37, 125, 160, 0.16); }
+}
+.kw-cal-next-up { border-color: var(--color-teal-600) !important; animation: kw-cal-breathe 2.4s var(--ease-brand) infinite; }
+
 /* Grafieken intekenen: staven groeien op vanaf de basislijn i.p.v. meteen
    op volle hoogte/breedte te staan -- zowel verticaal (bar-charts) als
    horizontaal (voortgangsbalken). */
@@ -372,6 +394,13 @@ h1, h2, h3, h4, .font-display {
   .kw-bar-grow-x {
     animation: none !important;
     transform: none !important;
+  }
+  .kw-cal-next-up {
+    animation: none !important;
+    box-shadow: none !important;
+  }
+  .kw-typewriter-cursor::after {
+    animation: none !important;
   }
   .kw-discount-strike::after,
   .kw-discount-new,
