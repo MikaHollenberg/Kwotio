@@ -12,11 +12,11 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, arrayMove, rectSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Archive, ArchiveRestore, Plus, Boxes, Globe } from "lucide-react";
+import { GripVertical, Pencil, Copy, Archive, ArchiveRestore, Plus, Boxes, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { reorderArrangements, archiveArrangement, unarchiveArrangement } from "./actions";
+import { reorderArrangements, archiveArrangement, unarchiveArrangement, duplicateArrangement } from "./actions";
 
 type ArrangementRow = {
   id: string;
@@ -85,7 +85,15 @@ function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRo
   );
 }
 
-function SortableCard({ arrangement, onArchive }: { arrangement: ArrangementRow; onArchive: () => void }) {
+function SortableCard({
+  arrangement,
+  onArchive,
+  onDuplicate,
+}: {
+  arrangement: ArrangementRow;
+  onArchive: () => void;
+  onDuplicate: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: arrangement.id,
     transition: { duration: 350, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
@@ -116,6 +124,17 @@ function SortableCard({ arrangement, onArchive }: { arrangement: ArrangementRow;
         >
           <Pencil className="size-3.5" />
         </Link>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            onDuplicate();
+          }}
+          title="Dupliceren"
+          className="flex size-7 items-center justify-center rounded-brand-sm bg-white text-ink-400 shadow-sm hover:bg-sand-200 hover:text-ink-500"
+        >
+          <Copy className="size-3.5" />
+        </button>
         <button
           type="button"
           onClick={(e) => {
@@ -165,6 +184,12 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
     });
   }
 
+  function handleDuplicate(id: string) {
+    startTransition(async () => {
+      await duplicateArrangement(id);
+    });
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -192,7 +217,12 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
           <SortableContext items={visible.map((a) => a.id)} strategy={rectSortingStrategy}>
             <div data-faq-id="arrangementen-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {visible.map((arrangement) => (
-                <SortableCard key={arrangement.id} arrangement={arrangement} onArchive={() => handleArchive(arrangement.id)} />
+                <SortableCard
+                  key={arrangement.id}
+                  arrangement={arrangement}
+                  onArchive={() => handleArchive(arrangement.id)}
+                  onDuplicate={() => handleDuplicate(arrangement.id)}
+                />
               ))}
             </div>
           </SortableContext>

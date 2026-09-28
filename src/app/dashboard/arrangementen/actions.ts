@@ -83,6 +83,143 @@ export async function updateArrangement(id: string, fields: ArrangementFields) {
   revalidatePath(`/dashboard/arrangementen/${id}`);
 }
 
+/** Kopieert een arrangement inclusief zijn prijsregels, seizoenen (met hun
+ * eigen prijsregels) en toeslagen -- alleen de drie prijstabellen zijn
+ * genormaliseerd, dus die moeten los meegekopieerd worden; `content_items`
+ * staat al als jsonb op de rij zelf en gaat gewoon mee. Bewust
+ * `is_publicly_visible: false`, ongeacht de bron: een kopie is nog niet
+ * nagekeken en mag niet meteen naast (of in plaats van) het origineel op de
+ * publieke pagina verschijnen. */
+export async function duplicateArrangement(id: string) {
+  const { supabase, organizationId } = await requireNotReadonly();
+
+  const { data: source, error } = await supabase
+    .from("arrangements")
+    .select("name, description, public_description, category, color_code, price_display, content_items, pdf_url")
+    .eq("id", id)
+    .single();
+  if (error) throw error;
+
+  const [{ data: prices }, { data: seasons }, { data: surcharges }] = await Promise.all([
+    supabase
+      .from("arrangement_prices")
+      .select("label, unit, amount, sort_order")
+      .eq("arrangement_id", id)
+      .is("season_id", null)
+      .order("sort_order"),
+    supabase
+      .from("arrangement_seasons")
+      .select("id, label, start_date, end_date, sort_order")
+      .eq("arrangement_id", id)
+      .order("sort_order"),
+    supabase
+      .from("arrangement_surcharges")
+      .select("label, min_guests, max_guests, unit, amount, sort_order")
+      .eq("arrangement_id", id)
+      .order("sort_order"),
+  ]);
+
+  const seasonPricesBySeasonId = new Map<
+    string,
+    { label: string; unit: ArrangementPriceUnit; amount: number; sort_order: number }[]
+  >();
+  if (seasons && seasons.length > 0) {
+    const { data: allSeasonPrices } = await supabase
+      .from("arrangement_prices")
+      .select("season_id, label, unit, amount, sort_order")
+      .in(
+        "season_id",
+        seasons.map((s) => s.id),
+      );
+    for (const p of allSeasonPrices ?? []) {
+      if (!p.season_id) continue;
+      const list = seasonPricesBySeasonId.get(p.season_id) ?? [];
+      list.push(p);
+      seasonPricesBySeasonId.set(p.season_id, list);
+    }
+  }
+
+  const { data: newArrangement, error: insertError } = await supabase
+    .from("arrangements")
+    .insert({
+      organization_id: organizationId,
+      name: `${source.name} (kopie)`,
+      description: source.description,
+      public_description: source.public_description,
+      category: source.category,
+      color_code: source.color_code,
+      price_display: source.price_display,
+      is_publicly_visible: false,
+      content_items: source.content_items,
+      pdf_url: source.pdf_url,
+    })
+    .select("id")
+    .single();
+  if (insertError) throw insertError;
+
+  if (prices && prices.length > 0) {
+    const { error: priceError } = await supabase.from("arrangement_prices").insert(
+      prices.map((p) => ({
+        arrangement_id: newArrangement.id,
+        season_id: null,
+        label: p.label,
+        unit: p.unit,
+        amount: p.amount,
+        sort_order: p.sort_order,
+      })),
+    );
+    if (priceError) throw priceError;
+  }
+
+  for (const season of seasons ?? []) {
+    const { data: insertedSeason, error: seasonError } = await supabase
+      .from("arrangement_seasons")
+      .insert({
+        arrangement_id: newArrangement.id,
+        label: season.label,
+        start_date: season.start_date,
+        end_date: season.end_date,
+        sort_order: season.sort_order,
+      })
+      .select("id")
+      .single();
+    if (seasonError) throw seasonError;
+
+    const seasonPrices = seasonPricesBySeasonId.get(season.id) ?? [];
+    if (seasonPrices.length > 0) {
+      const { error: seasonPriceError } = await supabase.from("arrangement_prices").insert(
+        seasonPrices.map((p) => ({
+          arrangement_id: newArrangement.id,
+          season_id: insertedSeason.id,
+          label: p.label,
+          unit: p.unit,
+          amount: p.amount,
+          sort_order: p.sort_order,
+        })),
+      );
+      if (seasonPriceError) throw seasonPriceError;
+    }
+  }
+
+  if (surcharges && surcharges.length > 0) {
+    const { error: surchargeError } = await supabase.from("arrangement_surcharges").insert(
+      surcharges.map((s) => ({
+        arrangement_id: newArrangement.id,
+        label: s.label,
+        min_guests: s.min_guests,
+        max_guests: s.max_guests,
+        unit: s.unit,
+        amount: s.amount,
+        sort_order: s.sort_order,
+      })),
+    );
+    if (surchargeError) throw surchargeError;
+  }
+
+  revalidatePath("/dashboard/arrangementen");
+  redirect(`/dashboard/arrangementen/${newArrangement.id}`);
+}
+
 export async function archiveArrangement(id: string) {
   const { supabase } = await requireNotReadonly();
   const { error } = await supabase.from("arrangements").update({ archived_at: new Date().toISOString() }).eq("id", id);

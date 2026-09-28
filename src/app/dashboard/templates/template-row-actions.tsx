@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Archive, ArchiveRestore, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Copy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { archiveTemplate, unarchiveTemplate, deleteTemplateFromList } from "./actions";
+import { archiveTemplate, unarchiveTemplate, deleteTemplateFromList, duplicateTemplate } from "./actions";
 
 export function TemplateRowActions({
   templateId,
@@ -16,11 +16,21 @@ export function TemplateRowActions({
   archived: boolean;
 }) {
   const [pending, startTransition] = useTransition();
+  const [duplicating, startDuplicateTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="flex items-center justify-end gap-1">
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={duplicating}
+        title="Dupliceren"
+        onClick={() => startDuplicateTransition(async () => { await duplicateTemplate(templateId); })}
+      >
+        <Copy className="size-4" />
+      </Button>
       <Button
         variant="ghost"
         size="sm"

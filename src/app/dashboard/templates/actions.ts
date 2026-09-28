@@ -3,8 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { saveTemplateBlocks } from "@/lib/blocks/persistence";
-import { newBlock, type BlockDraft } from "@/lib/blocks/types";
+import { loadTemplateBlocks, saveTemplateBlocks } from "@/lib/blocks/persistence";
+import { newBlock, duplicateBlockDraft, type BlockDraft } from "@/lib/blocks/types";
 
 async function requireOrganizationId() {
   const supabase = await createClient();
@@ -67,6 +67,45 @@ export async function createDemoTemplateForFaq(): Promise<string> {
   await saveTemplateBlocks(supabase, data.id, demoBlocks);
 
   return data.id;
+}
+
+export async function duplicateTemplate(templateId: string) {
+  const { supabase, organizationId, userId } = await requireOrganizationId();
+
+  const { data: source, error } = await supabase
+    .from("templates")
+    .select("name, event_type, description, language, is_active")
+    .eq("id", templateId)
+    .single();
+  if (error) throw error;
+
+  const sourceBlocks = await loadTemplateBlocks(supabase, templateId);
+
+  const { data: newTemplate, error: insertError } = await supabase
+    .from("templates")
+    .insert({
+      organization_id: organizationId,
+      name: `${source.name} (kopie)`,
+      event_type: source.event_type,
+      description: source.description,
+      language: source.language,
+      is_active: source.is_active,
+      // Bewust altijd uit, ongeacht de bron -- een kopie is nog niet
+      // nagekeken door het bureau en mag niet meteen op de publieke
+      // offertepagina naast (of in plaats van) het origineel verschijnen.
+      is_publicly_visible: false,
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+  if (insertError) throw insertError;
+
+  if (sourceBlocks.length > 0) {
+    await saveTemplateBlocks(supabase, newTemplate.id, sourceBlocks.map(duplicateBlockDraft));
+  }
+
+  revalidatePath("/dashboard/templates");
+  redirect(`/dashboard/templates/${newTemplate.id}`);
 }
 
 export async function updateTemplateMeta(
