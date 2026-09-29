@@ -230,9 +230,6 @@ export function LeadFormModal({
               <Button type="submit" disabled={pending} className="mt-1">
                 {pending ? "Bezig met versturen…" : "Versturen"}
               </Button>
-              <p className="text-center text-xs text-ink-300">
-                Ter vergelijking: de volledige aanvraag vraagt ook nog een specifiek template.
-              </p>
             </form>
           </>
         )}
