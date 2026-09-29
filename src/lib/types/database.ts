@@ -206,6 +206,7 @@ export interface Database {
           created_by: string | null;
           created_at: string;
           updated_at: string;
+          sort_order: number;
         };
         Insert: Partial<Database["public"]["Tables"]["templates"]["Row"]> & {
           organization_id: string;

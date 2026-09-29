@@ -178,6 +178,15 @@ export async function archiveTemplate(templateId: string) {
   revalidatePath(`/dashboard/templates/${templateId}`);
 }
 
+/** Zelfde patroon als reorderArrangements: sort_order simpelweg gelijk aan
+ * de positie in de meegegeven array zetten. Bepaalt zowel de volgorde in
+ * deze lijst als op de publieke offertepagina (zie offertes/[slug]/data.ts). */
+export async function reorderTemplates(orderedIds: string[]) {
+  const { supabase } = await requireOrganizationId();
+  await Promise.all(orderedIds.map((id, index) => supabase.from("templates").update({ sort_order: index }).eq("id", id)));
+  revalidatePath("/dashboard/templates");
+}
+
 export async function unarchiveTemplate(templateId: string) {
   const { supabase } = await requireOrganizationId();
   const { error } = await supabase.from("templates").update({ archived_at: null }).eq("id", templateId);

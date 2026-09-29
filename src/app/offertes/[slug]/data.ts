@@ -104,7 +104,7 @@ export async function getPublicOrgPageData(slug: string): Promise<PublicOrgPageD
     .eq("is_publicly_visible", true)
     .eq("is_active", true)
     .is("archived_at", null)
-    .order("name", { ascending: true });
+    .order("sort_order", { ascending: true });
   if (templateError) throw templateError;
 
   const templates: PublicOrgTemplate[] = await Promise.all(
