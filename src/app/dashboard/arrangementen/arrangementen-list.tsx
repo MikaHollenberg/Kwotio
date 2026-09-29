@@ -16,6 +16,8 @@ import { GripVertical, Pencil, Copy, Archive, ArchiveRestore, Plus, Boxes, Globe
 import { Card } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { TiltCard } from "@/components/dashboard/tilt-card";
+import { ActionIconButton } from "@/components/dashboard/action-icon-button";
+import { CollapsibleItem, COLLAPSE_MS } from "@/components/dashboard/collapsible-item";
 import { formatCurrency } from "@/lib/utils";
 import { reorderArrangements, archiveArrangement, unarchiveArrangement, duplicateArrangement } from "./actions";
 
@@ -90,12 +92,14 @@ function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRo
 
 function SortableCard({
   arrangement,
+  collapsed,
   onArchive,
   onDuplicate,
 }: {
   arrangement: ArrangementRow;
-  onArchive: () => void;
-  onDuplicate: () => void;
+  collapsed: boolean;
+  onArchive: () => Promise<void>;
+  onDuplicate: () => Promise<void>;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: arrangement.id,
@@ -103,65 +107,72 @@ function SortableCard({
   });
 
   return (
-    <div
-      ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
-      className="group relative"
-    >
-      <Link href={`/dashboard/arrangementen/${arrangement.id}`} className="block">
-        <ArrangementCard arrangement={arrangement} dragging={isDragging} />
-      </Link>
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        aria-label="Verslepen om te herordenen"
-        className="absolute right-2 top-2 flex size-7 cursor-grab items-center justify-center rounded-brand-sm text-ink-300 opacity-0 transition-opacity duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500 group-hover:opacity-100 active:cursor-grabbing"
+    <CollapsibleItem collapsed={collapsed}>
+      <div
+        ref={setNodeRef}
+        style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
+        className="group relative"
       >
-        <GripVertical className="size-4" />
-      </button>
-      <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 transition-opacity duration-200 ease-brand group-hover:opacity-100">
-        <Link
-          href={`/dashboard/arrangementen/${arrangement.id}`}
-          className="flex size-7 items-center justify-center rounded-brand-sm bg-white text-ink-400 shadow-sm hover:bg-sand-200 hover:text-ink-500"
-        >
-          <Pencil className="size-3.5" />
+        <Link href={`/dashboard/arrangementen/${arrangement.id}`} className="block">
+          <ArrangementCard arrangement={arrangement} dragging={isDragging} />
         </Link>
         <button
           type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            onDuplicate();
-          }}
-          title="Dupliceren"
-          className="flex size-7 items-center justify-center rounded-brand-sm bg-white text-ink-400 shadow-sm hover:bg-sand-200 hover:text-ink-500"
+          {...attributes}
+          {...listeners}
+          aria-label="Verslepen om te herordenen"
+          className="absolute right-2 top-2 flex size-7 cursor-grab items-center justify-center rounded-brand-sm text-ink-300 opacity-0 transition-opacity duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500 group-hover:opacity-100 active:cursor-grabbing"
         >
-          <Copy className="size-3.5" />
+          <GripVertical className="size-4" />
         </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            onArchive();
-          }}
-          title="Archiveren"
-          className="flex size-7 items-center justify-center rounded-brand-sm bg-white text-ink-400 shadow-sm hover:bg-sand-200 hover:text-ink-500"
+        <div
+          className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 transition-opacity duration-200 ease-brand group-hover:opacity-100"
+          onClick={(e) => e.preventDefault()}
         >
-          <Archive className="size-3.5" />
-        </button>
+          <Link
+            href={`/dashboard/arrangementen/${arrangement.id}`}
+            className="flex size-7 items-center justify-center rounded-brand-sm bg-white text-ink-400 shadow-sm hover:bg-sand-200 hover:text-ink-500"
+          >
+            <Pencil className="size-3.5" />
+          </Link>
+          <ActionIconButton
+            icon={Copy}
+            title="Dupliceren"
+            onAction={onDuplicate}
+            iconClassName="size-3.5"
+            className="size-7 bg-white shadow-sm hover:bg-sand-200"
+          />
+          <ActionIconButton
+            icon={Archive}
+            title="Archiveren"
+            onAction={onArchive}
+            iconClassName="size-3.5"
+            className="size-7 bg-white shadow-sm hover:bg-sand-200"
+          />
+        </div>
       </div>
-    </div>
+    </CollapsibleItem>
   );
 }
 
 export function ArrangementenList({ arrangements: initial }: { arrangements: ArrangementRow[] }) {
   const [arrangements, setArrangements] = useState(initial);
+  const [collapsingIds, setCollapsingIds] = useState<Set<string>>(new Set());
   const [showArchived, setShowArchived] = useState(false);
   const [pending, startTransition] = useTransition();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
-  const visible = useMemo(() => arrangements.filter((a) => !a.archived_at), [arrangements]);
-  const archived = useMemo(() => arrangements.filter((a) => a.archived_at), [arrangements]);
+  // Blijft nog even meetellen als "zichtbaar" terwijl 'm wegkrimpt, ook al
+  // is archived_at hierboven al gezet -- anders springt de kaart in één
+  // klap weg zodra de server-actie klaar is, i.p.v. netjes te krimpen.
+  const visible = useMemo(
+    () => arrangements.filter((a) => !a.archived_at || collapsingIds.has(a.id)),
+    [arrangements, collapsingIds],
+  );
+  const archived = useMemo(
+    () => arrangements.filter((a) => a.archived_at && !collapsingIds.has(a.id)),
+    [arrangements, collapsingIds],
+  );
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -173,11 +184,17 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
     startTransition(() => reorderArrangements(reordered.map((a) => a.id)));
   }
 
-  function handleArchive(id: string) {
-    startTransition(async () => {
-      await archiveArrangement(id);
-      setArrangements((prev) => prev.map((a) => (a.id === id ? { ...a, archived_at: new Date().toISOString() } : a)));
-    });
+  async function handleArchive(id: string) {
+    await archiveArrangement(id);
+    setArrangements((prev) => prev.map((a) => (a.id === id ? { ...a, archived_at: new Date().toISOString() } : a)));
+    setCollapsingIds((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      setCollapsingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, COLLAPSE_MS);
   }
 
   function handleUnarchive(id: string) {
@@ -187,10 +204,8 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
     });
   }
 
-  function handleDuplicate(id: string) {
-    startTransition(async () => {
-      await duplicateArrangement(id);
-    });
+  async function handleDuplicate(id: string) {
+    await duplicateArrangement(id);
   }
 
   return (
@@ -226,6 +241,7 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
                 <SortableCard
                   key={arrangement.id}
                   arrangement={arrangement}
+                  collapsed={collapsingIds.has(arrangement.id)}
                   onArchive={() => handleArchive(arrangement.id)}
                   onDuplicate={() => handleDuplicate(arrangement.id)}
                 />

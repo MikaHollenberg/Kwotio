@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { Eye, Pencil, Copy, Trash2, UserPlus, CalendarClock, Receipt } from "lucide-react";
+import { Eye, Pencil, Copy, Trash2, UserPlus, CalendarClock, Receipt, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { CreateInvoiceModal } from "@/components/invoicing/create-invoice-modal";
@@ -26,6 +26,7 @@ export function OfferteRowActions({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [duplicatePending, startDuplicateTransition] = useTransition();
+  const [duplicatingKind, setDuplicatingKind] = useState<"new" | "sameClient" | null>(null);
   const [duplicateMenuOpen, setDuplicateMenuOpen] = useState(false);
   const duplicateMenuRef = useRef<HTMLDivElement>(null);
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
@@ -41,8 +42,12 @@ export function OfferteRowActions({
   }, []);
 
   function handleDuplicate(sameClientNextYear: boolean) {
-    setDuplicateMenuOpen(false);
-    startDuplicateTransition(() => duplicateQuote(quoteId, { sameClientNextYear }));
+    setDuplicatingKind(sameClientNextYear ? "sameClient" : "new");
+    startDuplicateTransition(async () => {
+      await duplicateQuote(quoteId, { sameClientNextYear });
+      setDuplicateMenuOpen(false);
+      setDuplicatingKind(null);
+    });
   }
 
   function handleDelete() {
@@ -95,16 +100,21 @@ export function OfferteRowActions({
           data-faq-id={`duplicate-quote-button-${quoteId}`}
           onClick={() => setDuplicateMenuOpen((v) => !v)}
         >
-          <Copy className="size-4" />
+          {duplicatePending ? <Loader2 className="size-4 animate-spin text-teal-600" /> : <Copy className="size-4" />}
         </Button>
         {duplicateMenuOpen && (
           <div className="absolute right-0 top-full z-20 mt-1 w-64 rounded-brand-sm border border-ink-200 bg-white p-1.5 shadow-lg">
             <button
               type="button"
+              disabled={duplicatePending}
               onClick={() => handleDuplicate(false)}
-              className="flex w-full items-start gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200"
+              className="flex w-full items-start gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200 disabled:pointer-events-none disabled:opacity-60"
             >
-              <UserPlus className="mt-0.5 size-4 shrink-0 text-ink-400" />
+              {duplicatingKind === "new" ? (
+                <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-teal-600" />
+              ) : (
+                <UserPlus className="mt-0.5 size-4 shrink-0 text-ink-400" />
+              )}
               <span>
                 <span className="block font-medium">Voor een nieuwe klant</span>
                 <span className="block text-xs text-ink-400">Zonder klant en datum, klaar om in te vullen</span>
@@ -112,10 +122,15 @@ export function OfferteRowActions({
             </button>
             <button
               type="button"
+              disabled={duplicatePending}
               onClick={() => handleDuplicate(true)}
-              className="flex w-full items-start gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200"
+              className="flex w-full items-start gap-2.5 rounded-brand-sm px-3 py-2 text-left text-sm text-ink-500 transition-colors duration-200 ease-brand hover:bg-sand-200 disabled:pointer-events-none disabled:opacity-60"
             >
-              <CalendarClock className="mt-0.5 size-4 shrink-0 text-ink-400" />
+              {duplicatingKind === "sameClient" ? (
+                <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin text-teal-600" />
+              ) : (
+                <CalendarClock className="mt-0.5 size-4 shrink-0 text-ink-400" />
+              )}
               <span>
                 <span className="block font-medium">Voor dezelfde klant (volgend jaar)</span>
                 <span className="block text-xs text-ink-400">Klant en datum (+1 jaar) worden meegenomen</span>

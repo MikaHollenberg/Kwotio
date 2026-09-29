@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Archive, ArchiveRestore, Copy, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ActionIconButton } from "@/components/dashboard/action-icon-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { archiveTemplate, unarchiveTemplate, deleteTemplateFromList, duplicateTemplate } from "./actions";
 
@@ -10,50 +10,48 @@ export function TemplateRowActions({
   templateId,
   name,
   archived,
+  onArchived,
+  onUnarchived,
+  onDeleted,
 }: {
   templateId: string;
   name: string;
   archived: boolean;
+  /** Optioneel: laat de aanroepende lijst het kaartje netjes laten
+   * wegkrimpen i.p.v. in één klap te verdwijnen bij de volgende revalidatie. */
+  onArchived?: () => void;
+  onUnarchived?: () => void;
+  onDeleted?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [duplicating, startDuplicateTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   return (
     <div className="flex items-center justify-end gap-1">
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={duplicating}
-        title="Dupliceren"
-        onClick={() => startDuplicateTransition(async () => { await duplicateTemplate(templateId); })}
-      >
-        <Copy className="size-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={pending}
+      <ActionIconButton icon={Copy} title="Dupliceren" onAction={() => duplicateTemplate(templateId)} />
+      <ActionIconButton
+        icon={archived ? ArchiveRestore : Archive}
         title={archived ? "Template herstellen" : "Template archiveren"}
-        onClick={() =>
-          startTransition(async () => {
-            if (archived) await unarchiveTemplate(templateId);
-            else await archiveTemplate(templateId);
-          })
-        }
-      >
-        {archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={pending}
+        onAction={async () => {
+          if (archived) {
+            await unarchiveTemplate(templateId);
+            onUnarchived?.();
+          } else {
+            await archiveTemplate(templateId);
+            onArchived?.();
+          }
+        }}
+      />
+      <button
+        type="button"
         title="Template verwijderen"
+        aria-label="Template verwijderen"
         onClick={() => setConfirmDelete(true)}
+        className="flex size-8 items-center justify-center rounded-brand-sm text-ink-400 transition-colors duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500"
       >
         <Trash2 className="size-4" />
-      </Button>
+      </button>
 
       <ConfirmDialog
         open={confirmDelete}
@@ -67,6 +65,7 @@ export function TemplateRowActions({
             try {
               await deleteTemplateFromList(templateId);
               setConfirmDelete(false);
+              onDeleted?.();
             } catch {
               setConfirmDelete(false);
               setError("Verwijderen mislukt. Probeer het opnieuw.");

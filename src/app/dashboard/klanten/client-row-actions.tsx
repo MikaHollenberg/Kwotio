@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Archive, ArchiveRestore, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ActionIconButton } from "@/components/dashboard/action-icon-button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { archiveClient, unarchiveClient, deleteClient } from "./actions";
 
@@ -31,20 +32,14 @@ export function ClientRowActions({
       >
         <Pencil className="size-4" />
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        disabled={pending}
+      <ActionIconButton
+        icon={archived ? ArchiveRestore : Archive}
         title={archived ? "Klant herstellen" : "Klant archiveren"}
-        onClick={() =>
-          startTransition(async () => {
-            if (archived) await unarchiveClient(clientId);
-            else await archiveClient(clientId);
-          })
-        }
-      >
-        {archived ? <ArchiveRestore className="size-4" /> : <Archive className="size-4" />}
-      </Button>
+        onAction={async () => {
+          if (archived) await unarchiveClient(clientId);
+          else await archiveClient(clientId);
+        }}
+      />
       <Button variant="ghost" size="sm" disabled={pending} title="Klant verwijderen" onClick={() => setConfirmDelete(true)}>
         <Trash2 className="size-4" />
       </Button>
