@@ -4,7 +4,7 @@
 // sowieso nooit — de same-origin-check hieronder sluit dat uit. Wordt alleen
 // geregistreerd binnen het ingelogde dashboard (zie install-app-banner.tsx),
 // dus dit draait nooit voor een klant op de publieke offertepagina.
-const CACHE_VERSION = 'kwotio-v1'
+const CACHE_VERSION = 'kwotio-v2'
 const CORE_ASSETS = ['/dashboard', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png']
 
 self.addEventListener('install', (event) => {
@@ -42,12 +42,28 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Overige same-origin assets: stale-while-revalidate — toon direct wat er
-  // in de cache staat (snel, werkt offline), ververs de cache op de
-  // achtergrond zodat een volgend bezoek de nieuwste versie heeft. Next.js'
-  // content-hashed bundlernamen maken dit veilig: een gewijzigd bestand
-  // krijgt sowieso een nieuwe URL, dus er wordt nooit een stale asset onder
-  // de verkeerde naam hergebruikt.
+  // Alleen écht content-hashed statische bestanden (/_next/static/...) en de
+  // expliciete CORE_ASSETS-lijst cachen. Next.js' eigen interne client-side-
+  // navigatie (het ophalen van een RSC-payload zodra je naar een nog niet
+  // bezochte route navigeert) loopt via de KALE route-URL zelf, niet via een
+  // gehashte bestandsnaam -- die hoort dus niet bij de eerdere aanname
+  // hieronder ("een gewijzigd bestand krijgt sowieso een nieuwe URL"). Zonder
+  // deze uitsluiting serveerde de stale-while-revalidate-strategie na een
+  // nieuwe deploy soms een verouderde RSC-payload terug aan een tabblad dat
+  // van vóór die deploy dateert -- de router raakte daardoor in de war en
+  // Next.js herstelde zich met een volledige pagina-herlaad, wat live
+  // gemeld en gereproduceerd is als "de rondleiding verdwijnt zomaar
+  // midden in een stap". RSC-/route-fetches gaan nu altijd gewoon naar het
+  // netwerk, geen caching.
+  const url = new URL(request.url)
+  const isHashedStaticAsset = url.pathname.startsWith('/_next/static/')
+  const isCoreAsset = CORE_ASSETS.includes(url.pathname)
+  if (!isHashedStaticAsset && !isCoreAsset) return
+
+  // Stale-while-revalidate voor wat overblijft (alléén de twee categorieën
+  // hierboven): toon direct wat er in de cache staat (snel, werkt offline),
+  // ververs de cache op de achtergrond zodat een volgend bezoek de nieuwste
+  // versie heeft.
   event.respondWith(
     caches.match(request).then((cached) => {
       const netwerkFetch = fetch(request)
