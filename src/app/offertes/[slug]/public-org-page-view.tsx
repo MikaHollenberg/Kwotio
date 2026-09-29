@@ -192,6 +192,60 @@ export function PublicOrgPageView({
     [selectedTemplate],
   );
 
+  const expandedTemplateContent = selectedTemplate && (
+    <div className="overflow-hidden rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
+      <div className="font-sans text-ink-500">
+        {selectedTemplate.description && (
+          <p className="px-6 pt-6 text-sm text-ink-400">{selectedTemplate.description}</p>
+        )}
+        {[...selectedTemplate.blocks]
+          .sort((a, b) => a.position - b.position)
+          .map((block, i) => (
+            <div key={block.id}>
+              {i > 0 && (
+                <div className="px-6">
+                  <WaveDivider className="text-blue-200" />
+                </div>
+              )}
+              <BlockPreview
+                block={block}
+                meta={{ ...META, title: selectedTemplate.name }}
+                selections={selections}
+                onSelectionsChange={() => {}}
+                readOnly
+                accentColor={data.primaryColor}
+              />
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+
+  const expandedArrangementContent = selectedArrangement && (
+    <div className="overflow-hidden rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
+      <BlockPreview
+        block={selectedArrangement.block}
+        meta={META}
+        selections={{ packageIdByBlock: {}, addonQuantities: {} }}
+        onSelectionsChange={() => {}}
+        readOnly
+        accentColor={data.primaryColor}
+      />
+      <div className="flex justify-center border-t border-ink-100 px-6 py-5">
+        <Button
+          style={{ backgroundColor: data.primaryColor }}
+          className="hover:opacity-90 active:opacity-90"
+          onClick={() => {
+            setLeadFormArrangementName(selectedArrangement.name);
+            setLeadFormOpen(true);
+          }}
+        >
+          Vraag {selectedArrangement.name} aan
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <LanguageProvider initialLang="nl">
       <div className={cn(!embed && "relative isolate min-h-screen overflow-hidden bg-sand-100")}>
@@ -226,7 +280,40 @@ export function PublicOrgPageView({
           ) : (
             <div className="flex flex-col gap-3">
               <h2 className="font-display text-lg font-semibold text-ink-500">Onze offertes</h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+
+              {/* Mobiel (< sm): elke offerte klapt direct onder zichzelf open
+                  i.p.v. pas onderaan de hele lijst (live gemeld: op een
+                  smal scherm moest je eerst langs alle andere offertes
+                  scrollen). Aparte render i.p.v. JS-breakpoint-detectie --
+                  zelfde patroon als offertes-table.tsx elders in de app,
+                  voorkomt een hydration-mismatch. */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                {data.templates.map((t) => (
+                  <div key={t.id} className="flex flex-col">
+                    <ListingCard
+                      title={t.name}
+                      description={t.description}
+                      accentColor={data.primaryColor}
+                      ctaLabel="Bekijk offerte"
+                      selected={t.id === selectedId}
+                      onClick={() => selectTemplate(t.id)}
+                    />
+                    <div
+                      className="grid transition-[grid-template-rows] duration-300 ease-brand"
+                      style={{ gridTemplateRows: t.id === selectedId ? "1fr" : "0fr" }}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="pt-3">{t.id === selectedId && expandedTemplateContent}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tablet/desktop (>= sm): raster + één gedeelde uitklap-sectie
+                  onderaan, ongewijzigd -- een uitklap-per-kaart zou hier het
+                  raster breken zodra een kaart niet in de laatste rij staat. */}
+              <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
                 {data.templates.map((t) => (
                   <ListingCard
                     key={t.id}
@@ -239,35 +326,7 @@ export function PublicOrgPageView({
                   />
                 ))}
               </div>
-
-              {selectedTemplate && (
-                <div className="overflow-hidden rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
-                  <div className="font-sans text-ink-500">
-                    {selectedTemplate.description && (
-                      <p className="px-6 pt-6 text-sm text-ink-400">{selectedTemplate.description}</p>
-                    )}
-                    {[...selectedTemplate.blocks]
-                      .sort((a, b) => a.position - b.position)
-                      .map((block, i) => (
-                        <div key={block.id}>
-                          {i > 0 && (
-                            <div className="px-6">
-                              <WaveDivider className="text-blue-200" />
-                            </div>
-                          )}
-                          <BlockPreview
-                            block={block}
-                            meta={{ ...META, title: selectedTemplate.name }}
-                            selections={selections}
-                            onSelectionsChange={() => {}}
-                            readOnly
-                            accentColor={data.primaryColor}
-                          />
-                        </div>
-                      ))}
-                  </div>
-                </div>
-              )}
+              {selectedTemplate && <div className="hidden sm:block">{expandedTemplateContent}</div>}
 
               <div className="sticky bottom-4 flex justify-center">
                 <Button
@@ -288,7 +347,40 @@ export function PublicOrgPageView({
           {data.arrangements.length > 0 && (
             <div className="flex flex-col gap-3">
               <h2 className="font-display text-lg font-semibold text-ink-500">Onze arrangementen</h2>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+
+              {/* Mobiel (< sm): zelfde per-kaart-uitklap-patroon als "Onze offertes"
+                  hierboven. */}
+              <div className="flex flex-col gap-3 sm:hidden">
+                {data.arrangements.map((a) => (
+                  <div key={a.id} className="flex flex-col">
+                    <ListingCard
+                      title={a.name}
+                      description={a.description}
+                      priceLabel={
+                        a.basePrice != null
+                          ? `${a.isVariable ? "Vanaf " : ""}${formatCurrency(a.basePrice, "EUR")}${a.pricePerPerson ? " p.p." : ""}`
+                          : undefined
+                      }
+                      accentColor={a.colorCode || data.primaryColor}
+                      ctaLabel="Bekijk arrangement"
+                      selected={a.id === selectedArrangementId}
+                      onClick={() => selectArrangement(a.id)}
+                    />
+                    <div
+                      className="grid transition-[grid-template-rows] duration-300 ease-brand"
+                      style={{ gridTemplateRows: a.id === selectedArrangementId ? "1fr" : "0fr" }}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="pt-3">{a.id === selectedArrangementId && expandedArrangementContent}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Tablet/desktop (>= sm): raster + gedeelde uitklap-sectie onderaan,
+                  ongewijzigd. */}
+              <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
                 {data.arrangements.map((a) => (
                   <ListingCard
                     key={a.id}
@@ -306,31 +398,7 @@ export function PublicOrgPageView({
                   />
                 ))}
               </div>
-
-              {selectedArrangement && (
-                <div className="overflow-hidden rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
-                  <BlockPreview
-                    block={selectedArrangement.block}
-                    meta={META}
-                    selections={{ packageIdByBlock: {}, addonQuantities: {} }}
-                    onSelectionsChange={() => {}}
-                    readOnly
-                    accentColor={data.primaryColor}
-                  />
-                  <div className="flex justify-center border-t border-ink-100 px-6 py-5">
-                    <Button
-                      style={{ backgroundColor: data.primaryColor }}
-                      className="hover:opacity-90 active:opacity-90"
-                      onClick={() => {
-                        setLeadFormArrangementName(selectedArrangement.name);
-                        setLeadFormOpen(true);
-                      }}
-                    >
-                      Vraag {selectedArrangement.name} aan
-                    </Button>
-                  </div>
-                </div>
-              )}
+              {selectedArrangement && <div className="hidden sm:block">{expandedArrangementContent}</div>}
             </div>
           )}
 
