@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { TiltCard } from "@/components/dashboard/tilt-card";
 import { formatCurrency } from "@/lib/utils";
 import { INVOICE_STATUS_LABELS, INVOICE_PAYMENT_METHOD_LABELS } from "@/lib/invoicing/status";
 import type { InvoiceStats } from "@/lib/stats/invoice-queries";
@@ -53,12 +54,16 @@ function Tile({
       </div>
     </CardContent>
   );
-  return href ? (
-    <Link href={href}>
-      <Card className="transition-colors duration-200 ease-brand hover:bg-sand-100">{content}</Card>
-    </Link>
-  ) : (
-    <Card>{content}</Card>
+  return (
+    <TiltCard>
+      {href ? (
+        <Link href={href}>
+          <Card className="transition-colors duration-200 ease-brand hover:bg-sand-100">{content}</Card>
+        </Link>
+      ) : (
+        <Card>{content}</Card>
+      )}
+    </TiltCard>
   );
 }
 
@@ -69,7 +74,7 @@ export function FacturenStatsView({ stats }: { stats: InvoiceStats }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 [perspective:800px] sm:grid-cols-4">
         <Tile
           label="Ontvangen deze maand"
           icon={Banknote}
@@ -202,7 +207,7 @@ export function FacturenStatsView({ stats }: { stats: InvoiceStats }) {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 [perspective:800px] sm:grid-cols-4">
         <Tile
           label="Gem. factuurwaarde"
           icon={Wallet}

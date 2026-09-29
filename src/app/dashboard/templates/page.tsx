@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ButtonLink } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { TiltCard } from "@/components/dashboard/tilt-card";
 import { ThemeIcon, detectThemeIcon } from "@/components/brand/theme-icon";
 import { TemplatesTabs } from "@/components/builder/templates-tabs";
 import { TemplateRowActions } from "./template-row-actions";
@@ -47,31 +48,33 @@ export default async function TemplatesPage() {
           </ButtonLink>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 [perspective:800px] sm:grid-cols-2 xl:grid-cols-3">
           {templates.map((t) => {
             const iconKey = detectThemeIcon(t.event_type);
             return (
-              <Card key={t.id} className="h-full transition-shadow duration-200 ease-brand hover:shadow-md">
-                <CardContent className="flex h-full flex-col gap-3">
-                  <a href={`/dashboard/templates/${t.id}`} className="flex flex-1 flex-col gap-3">
-                    <div className="flex items-start justify-between gap-2">
-                      {iconKey ? (
-                        <ThemeIcon icon={iconKey} size={36} />
-                      ) : (
-                        <LayoutTemplate className="size-9 text-ink-300" />
-                      )}
-                      {!t.is_active && <Badge tone="neutral">Inactief</Badge>}
+              <TiltCard key={t.id} className="h-full">
+                <Card className="h-full transition-shadow duration-200 ease-brand hover:shadow-md">
+                  <CardContent className="flex h-full flex-col gap-3">
+                    <a href={`/dashboard/templates/${t.id}`} className="flex flex-1 flex-col gap-3">
+                      <div className="flex items-start justify-between gap-2">
+                        {iconKey ? (
+                          <ThemeIcon icon={iconKey} size={36} />
+                        ) : (
+                          <LayoutTemplate className="size-9 text-ink-300" />
+                        )}
+                        {!t.is_active && <Badge tone="neutral">Inactief</Badge>}
+                      </div>
+                      <div>
+                        <p className="font-display text-lg font-semibold text-ink-500">{t.name}</p>
+                        <p className="text-sm text-ink-400">{t.event_type}</p>
+                      </div>
+                    </a>
+                    <div className="-mx-2 -mb-2 flex items-center justify-end border-t border-ink-50 pt-1">
+                      <TemplateRowActions templateId={t.id} name={t.name} archived={false} />
                     </div>
-                    <div>
-                      <p className="font-display text-lg font-semibold text-ink-500">{t.name}</p>
-                      <p className="text-sm text-ink-400">{t.event_type}</p>
-                    </div>
-                  </a>
-                  <div className="-mx-2 -mb-2 flex items-center justify-end border-t border-ink-50 pt-1">
-                    <TemplateRowActions templateId={t.id} name={t.name} archived={false} />
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </TiltCard>
             );
           })}
         </div>

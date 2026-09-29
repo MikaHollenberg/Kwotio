@@ -153,13 +153,17 @@ export default async function DashboardOverviewPage() {
       >
         {kpiCards.map(({ label, icon: Icon, value }) => (
           <TiltCard key={label}>
-            <div className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm bg-blue-50 text-blue-600">
-              <Icon className="size-5" />
-            </div>
-            <div>
-              <p className="text-xs font-medium text-ink-400">{label}</p>
-              <p className="font-display text-xl font-semibold text-ink-500">{value}</p>
-            </div>
+            <Card>
+              <CardContent className="flex items-center gap-4">
+                <div className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm bg-blue-50 text-blue-600">
+                  <Icon className="size-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-ink-400">{label}</p>
+                  <p className="font-display text-xl font-semibold text-ink-500">{value}</p>
+                </div>
+              </CardContent>
+            </Card>
           </TiltCard>
         ))}
       </div>

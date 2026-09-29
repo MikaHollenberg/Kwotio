@@ -1,13 +1,14 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /** Lichte 3D-kanteling die de muispositie volgt op hover -- puur cosmetisch
  * (geen state, alleen een directe stijl-update op het element zelf), voor
- * een premium SaaS-gevoel op de dashboard-KPI-tegels. De ouder-grid heeft
- * `perspective` nodig (`[perspective:800px]`) om het effect zichtbaar te
- * maken. */
+ * een premium SaaS-gevoel op tegel-grids door het hele dashboard heen.
+ * Wrapt willekeurige children (meestal een `<Card>`) i.p.v. zelf een vaste
+ * Card/CardContent-layout op te leggen, zodat élk soort tegel 'm kan
+ * hergebruiken. De ouder-grid heeft `perspective` nodig
+ * (`[perspective:800px]`) om het effect zichtbaar te maken. */
 export function TiltCard({ children, className }: { children: React.ReactNode; className?: string }) {
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -22,7 +23,7 @@ export function TiltCard({ children, className }: { children: React.ReactNode; c
   }
 
   return (
-    <Card
+    <div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className={cn(
@@ -30,7 +31,7 @@ export function TiltCard({ children, className }: { children: React.ReactNode; c
         className,
       )}
     >
-      <CardContent className="flex items-center gap-4">{children}</CardContent>
-    </Card>
+      {children}
+    </div>
   );
 }

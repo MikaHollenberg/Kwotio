@@ -43,7 +43,7 @@ export default async function OffertesPrullenbakPage() {
 
       {!quotes || quotes.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-          <Trash2 className="size-8 text-ink-300" />
+          <Trash2 className="kw-bob size-8 text-ink-300" />
           <p className="text-sm text-ink-400">De prullenbak is leeg.</p>
         </Card>
       ) : (

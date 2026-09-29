@@ -15,6 +15,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical, Pencil, Copy, Archive, ArchiveRestore, Plus, Boxes, Globe } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
+import { TiltCard } from "@/components/dashboard/tilt-card";
 import { formatCurrency } from "@/lib/utils";
 import { reorderArrangements, archiveArrangement, unarchiveArrangement, duplicateArrangement } from "./actions";
 
@@ -37,11 +38,12 @@ type ArrangementRow = {
 
 function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRow; dragging?: boolean }) {
   return (
-    <Card
-      className={dragging ? "shadow-lg" : undefined}
-      style={{ borderLeftWidth: 4, borderLeftColor: arrangement.color_code }}
-    >
-      <div className="flex flex-col gap-2 p-4">
+    <TiltCard>
+      <Card
+        className={dragging ? "shadow-lg" : undefined}
+        style={{ borderLeftWidth: 4, borderLeftColor: arrangement.color_code }}
+      >
+        <div className="flex flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate font-display text-base font-semibold text-ink-500">{arrangement.name}</p>
@@ -81,7 +83,8 @@ function ArrangementCard({ arrangement, dragging }: { arrangement: ArrangementRo
           </div>
         )}
       </div>
-    </Card>
+      </Card>
+    </TiltCard>
   );
 }
 
@@ -215,7 +218,10 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
       ) : (
         <DndContext id="arrangementen-list" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={visible.map((a) => a.id)} strategy={rectSortingStrategy}>
-            <div data-faq-id="arrangementen-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div
+              data-faq-id="arrangementen-grid"
+              className="grid grid-cols-1 gap-4 [perspective:800px] sm:grid-cols-2 xl:grid-cols-3"
+            >
               {visible.map((arrangement) => (
                 <SortableCard
                   key={arrangement.id}
@@ -235,7 +241,7 @@ export function ArrangementenList({ arrangements: initial }: { arrangements: Arr
             {showArchived ? "Verberg" : "Toon"} gearchiveerd ({archived.length})
           </Button>
           {showArchived && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 [perspective:800px] sm:grid-cols-2 xl:grid-cols-3">
               {archived.map((arrangement) => (
                 <div key={arrangement.id} className="flex flex-col gap-2 opacity-60">
                   <ArrangementCard arrangement={arrangement} />

@@ -11,6 +11,7 @@ import {
   getPublicPageStatsThisMonth,
 } from "@/lib/stats/queries";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { TiltCard } from "@/components/dashboard/tilt-card";
 import { PipelineStatusChart } from "@/components/dashboard/pipeline-status-chart";
 import { GrowthComparison } from "@/components/dashboard/growth-comparison";
 import { TemplatePerformanceTable } from "@/components/dashboard/template-performance-table";
@@ -152,19 +153,21 @@ export default async function StatistiekenPage() {
         </div>
       </div>
 
-      <div data-faq-id="stats-revenue-tiles" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div data-faq-id="stats-revenue-tiles" className="grid grid-cols-1 gap-4 [perspective:800px] sm:grid-cols-3">
         {revenueTiles.map(({ label, icon: Icon, value, accent }) => (
-          <Card key={label}>
-            <CardContent className="flex items-center gap-4">
-              <div className={`flex size-11 shrink-0 items-center justify-center rounded-brand-sm ${accent}`}>
-                <Icon className="size-5" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-ink-400">{label}</p>
-                <p className="font-display text-xl font-semibold text-ink-500">{value}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <TiltCard key={label}>
+            <Card>
+              <CardContent className="flex items-center gap-4">
+                <div className={`flex size-11 shrink-0 items-center justify-center rounded-brand-sm ${accent}`}>
+                  <Icon className="size-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-ink-400">{label}</p>
+                  <p className="font-display text-xl font-semibold text-ink-500">{value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TiltCard>
         ))}
       </div>
 
@@ -215,19 +218,21 @@ export default async function StatistiekenPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 [perspective:800px] sm:grid-cols-3">
         {funStats.map(({ label, icon: Icon, value, accent }) => (
-          <Card key={label}>
-            <CardContent className="flex items-center gap-4">
-              <div className={`flex size-11 shrink-0 items-center justify-center rounded-brand-sm ${accent}`}>
-                <Icon className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-ink-400">{label}</p>
-                <p className="truncate font-display text-xl font-semibold text-ink-500">{value}</p>
-              </div>
-            </CardContent>
-          </Card>
+          <TiltCard key={label}>
+            <Card>
+              <CardContent className="flex items-center gap-4">
+                <div className={`flex size-11 shrink-0 items-center justify-center rounded-brand-sm ${accent}`}>
+                  <Icon className="size-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-ink-400">{label}</p>
+                  <p className="truncate font-display text-xl font-semibold text-ink-500">{value}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TiltCard>
         ))}
       </div>
 
