@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { LayoutTemplate, ChevronRight, Info, MessageCircleQuestion } from "lucide-react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { LayoutTemplate, ChevronRight, Info, MessageCircleQuestion, X, CircleCheck, HeartHandshake, ShieldCheck } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { WaveDivider } from "@/components/brand/wave-divider";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LanguageProvider } from "@/lib/i18n/language-context";
 import { BlockPreview, type QuoteMeta } from "@/components/preview/quote-preview";
+import { CountUpPrice } from "@/components/preview/count-up-price";
 import { defaultSelections } from "@/lib/blocks/pricing";
 import type { PackagesBlockContent } from "@/lib/blocks/types";
 import { PUBLIC_PRICE_DISCLAIMER, PRIVACYBELEID_URL } from "@/lib/legal";
@@ -22,13 +23,22 @@ import { LeadFormModal } from "./lead-form-modal";
 import { logTemplateOpened, logRequestFormOpened } from "./analytics";
 import { useIdlePulse } from "@/hooks/use-idle-pulse";
 
+/** Vertraging (ms) voor de gestaffelde intro van het n-de element. */
+function riseStyle(delayMs: number): CSSProperties {
+  return { "--kw-delay": `${delayMs}ms` } as CSSProperties;
+}
+
 /** Eén kaart in de "Onze offertes"/"Onze arrangementen"-rasters -- bewust
  * één gedeeld component zodat beide secties er exact hetzelfde uitzien
  * (gevraagd: "Maak deze gelijk aan elkaar"), compact en duidelijk
  * aanklikbaar zonder het beeld te overheersen. Klikken wisselt de
  * uitgeklapte inhoud eronder, hetzelfde patroon als de offertes al hadden.
  * Bewust geen icoon/thumbnail-strip bovenaan (op verzoek verwijderd, eerst
- * als mockup goedgekeurd) -- de kaart begint direct met de naam. */
+ * als mockup goedgekeurd) -- de kaart begint direct met de naam.
+ *
+ * De buitenste wrapper regelt alleen de gestaffelde intro (index bepaalt de
+ * vertraging); de knop zelf heeft hover-lift en een korte "pop" bij selecteren
+ * -- gescheiden elementen, omdat beide een transform-animatie gebruiken. */
 function ListingCard({
   title,
   description,
@@ -37,6 +47,7 @@ function ListingCard({
   ctaLabel,
   selected,
   onClick,
+  index,
 }: {
   title: string;
   description: string | null;
@@ -45,31 +56,108 @@ function ListingCard({
   ctaLabel: string;
   selected: boolean;
   onClick: () => void;
+  index: number;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex flex-col overflow-hidden rounded-brand-lg border bg-white text-left shadow-sm transition-colors duration-200 ease-brand",
-        selected ? "" : "border-ink-200/60 hover:border-ink-300",
-      )}
-      style={selected ? { borderColor: accentColor, borderWidth: 1.5 } : undefined}
-    >
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <p className="text-sm font-semibold text-ink-500">{title}</p>
-        {priceLabel && (
+    <div className="kw-rise flex" style={riseStyle(280 + index * 70)}>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "kw-lift flex flex-1 flex-col overflow-hidden rounded-brand-lg border bg-white text-left shadow-sm",
+          selected ? "kw-card-pop" : "border-ink-200/60",
+        )}
+        style={
+          {
+            "--kw-accent": accentColor,
+            ...(selected ? { borderColor: accentColor, borderWidth: 1.5 } : {}),
+          } as CSSProperties
+        }
+      >
+        <div className="flex flex-1 flex-col gap-1.5 p-4">
+          <p className="text-sm font-semibold text-ink-500">{title}</p>
+          {priceLabel && (
+            <span
+              className="w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              style={{ color: accentColor, backgroundColor: `color-mix(in srgb, ${accentColor} 12%, white)` }}
+            >
+              {priceLabel}
+            </span>
+          )}
+          {description && <p className="line-clamp-2 flex-1 text-xs text-ink-400">{description}</p>}
+          <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold" style={{ color: accentColor }}>
+            {ctaLabel}
+            <ChevronRight className="size-3.5" />
+          </span>
+        </div>
+      </button>
+    </div>
+  );
+}
+
+/** Sectiekop met een kort eyebrow-label + accentstreepje boven de titel. */
+function SectionHead({
+  eyebrow,
+  title,
+  accentColor,
+  delayMs,
+}: {
+  eyebrow: string;
+  title: string;
+  accentColor: string;
+  delayMs: number;
+}) {
+  return (
+    <div className="kw-rise flex flex-col gap-1" style={riseStyle(delayMs)}>
+      <span
+        className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em]"
+        style={{ color: accentColor }}
+      >
+        {eyebrow}
+        <span className="h-0.5 w-10 rounded-full opacity-50" style={{ backgroundColor: accentColor }} />
+      </span>
+      <h2 className="font-display text-xl font-semibold text-ink-500">{title}</h2>
+    </div>
+  );
+}
+
+/** Mini-balk bovenin een uitgeklapte offerte/arrangement: blijft bij het
+ * scrollen bovenin staan (sticky) zodat je altijd weet waar je naar kijkt,
+ * met de prijs (telt op bij het openen) en een sluitknop. */
+function PanelBar({
+  title,
+  amount,
+  pricePrefix,
+  priceSuffix,
+  accentColor,
+  onClose,
+}: {
+  title: string;
+  amount?: number | null;
+  pricePrefix?: string;
+  priceSuffix?: string;
+  accentColor: string;
+  onClose: () => void;
+}) {
+  return (
+    <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-ink-100 bg-white/90 px-5 py-3 backdrop-blur-sm">
+      <p className="min-w-0 truncate text-sm font-semibold text-ink-500">{title}</p>
+      <div className="flex shrink-0 items-center gap-2">
+        {amount != null && (
           <span className="text-sm font-semibold" style={{ color: accentColor }}>
-            {priceLabel}
+            <CountUpPrice amount={amount} prefix={pricePrefix} suffix={priceSuffix} />
           </span>
         )}
-        {description && <p className="line-clamp-2 flex-1 text-xs text-ink-400">{description}</p>}
-        <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold" style={{ color: accentColor }}>
-          {ctaLabel}
-          <ChevronRight className="size-3.5" />
-        </span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Sluiten"
+          className="flex size-7 items-center justify-center rounded-full text-ink-400 transition-colors duration-200 ease-brand hover:bg-sand-200 hover:text-ink-500"
+        >
+          <X className="size-4" />
+        </button>
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -193,18 +281,25 @@ export function PublicOrgPageView({
   );
 
   const expandedTemplateContent = selectedTemplate && (
-    <div className="overflow-hidden rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
+    <div className="overflow-clip rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
+      <PanelBar
+        title={selectedTemplate.name}
+        accentColor={data.primaryColor}
+        onClose={() => selectTemplate(selectedTemplate.id)}
+      />
       <div className="font-sans text-ink-500">
         {selectedTemplate.description && (
-          <p className="px-6 pt-6 text-sm text-ink-400">{selectedTemplate.description}</p>
+          <p className="kw-rise px-6 pt-6 text-sm text-ink-400" style={riseStyle(60)}>
+            {selectedTemplate.description}
+          </p>
         )}
         {[...selectedTemplate.blocks]
           .sort((a, b) => a.position - b.position)
           .map((block, i) => (
-            <div key={block.id}>
+            <div key={block.id} className="kw-rise" style={riseStyle(140 + i * 90)}>
               {i > 0 && (
                 <div className="px-6">
-                  <WaveDivider className="text-blue-200" />
+                  <WaveDivider className="text-blue-200" draw delayMs={260 + i * 90} />
                 </div>
               )}
               <BlockPreview
@@ -222,16 +317,26 @@ export function PublicOrgPageView({
   );
 
   const expandedArrangementContent = selectedArrangement && (
-    <div className="overflow-hidden rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
-      <BlockPreview
-        block={selectedArrangement.block}
-        meta={META}
-        selections={{ packageIdByBlock: {}, addonQuantities: {} }}
-        onSelectionsChange={() => {}}
-        readOnly
-        accentColor={data.primaryColor}
+    <div className="overflow-clip rounded-brand-lg border border-ink-200/60 bg-white shadow-sm">
+      <PanelBar
+        title={selectedArrangement.name}
+        amount={selectedArrangement.basePrice}
+        pricePrefix={selectedArrangement.isVariable ? "Vanaf " : ""}
+        priceSuffix={selectedArrangement.pricePerPerson ? " p.p." : ""}
+        accentColor={selectedArrangement.colorCode || data.primaryColor}
+        onClose={() => selectArrangement(selectedArrangement.id)}
       />
-      <div className="flex justify-center border-t border-ink-100 px-6 py-5">
+      <div className="kw-rise" style={riseStyle(80)}>
+        <BlockPreview
+          block={selectedArrangement.block}
+          meta={META}
+          selections={{ packageIdByBlock: {}, addonQuantities: {} }}
+          onSelectionsChange={() => {}}
+          readOnly
+          accentColor={data.primaryColor}
+        />
+      </div>
+      <div className="kw-rise flex justify-center border-t border-ink-100 px-6 py-5" style={riseStyle(200)}>
         <Button
           style={{ backgroundColor: data.primaryColor }}
           className="hover:opacity-90 active:opacity-90"
@@ -246,28 +351,69 @@ export function PublicOrgPageView({
     </div>
   );
 
+  const primary = data.primaryColor;
+  const requestButton = (
+    <Button
+      size="lg"
+      style={{ backgroundColor: primary }}
+      onClick={() => {
+        setFormOpen(true);
+        void logRequestFormOpened(orgSlug);
+      }}
+      className={cn("shadow-lg hover:opacity-90 active:opacity-90", ctaIdle && !formOpen && "kw-breathe")}
+    >
+      Vraag offerte aan
+    </Button>
+  );
+
   return (
     <LanguageProvider initialLang="nl">
-      <div className={cn(!embed && "relative isolate min-h-screen overflow-hidden bg-sand-100")}>
+      <div className={cn(!embed && "relative isolate min-h-screen overflow-clip bg-sand-100")}>
         {!embed && data.backgroundStyle === "coastline" && <CoastlineBackground />}
         {!embed && data.backgroundStyle === "icons" && <IconsBackground />}
         {!embed && (
-          <header className="border-b border-ink-200/40 bg-white/80 px-6 py-4 backdrop-blur-sm">
-            <div className="mx-auto flex max-w-3xl items-center gap-3">
-              {data.logoUrl ? <Logo logoUrl={data.logoUrl} height={32} /> : <KwotioMark size={32} />}
+          <header
+            className="kw-rise border-b border-ink-200/40 px-6 py-5"
+            style={{
+              backgroundImage: `linear-gradient(135deg, color-mix(in srgb, ${primary} 16%, transparent), transparent 65%)`,
+              backgroundColor: "rgb(255 255 255 / 0.85)",
+            }}
+          >
+            <div className="mx-auto flex max-w-3xl items-center gap-3.5">
+              <div className="flex shrink-0 items-center rounded-brand-sm bg-white px-3 py-2 shadow-[0_8px_20px_rgba(30,46,56,0.14)]">
+                {data.logoUrl ? <Logo logoUrl={data.logoUrl} height={32} /> : <KwotioMark size={32} />}
+              </div>
               <span className="font-display text-lg font-semibold text-ink-500">{data.organizationName}</span>
             </div>
           </header>
         )}
 
-        <div className={cn("mx-auto flex max-w-3xl flex-col gap-6", embed ? "px-1 py-4" : "px-4 py-8 sm:px-6")}>
+        <div
+          className={cn(
+            "mx-auto flex max-w-3xl flex-col gap-6",
+            embed ? "px-1 py-4" : "px-4 py-8 pb-28 sm:px-6 sm:pb-28",
+          )}
+        >
           {data.welcomeMessage && (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-500">{data.welcomeMessage}</p>
+            <p
+              className="kw-rise whitespace-pre-wrap text-sm leading-relaxed text-ink-500"
+              style={riseStyle(90)}
+            >
+              {data.welcomeMessage}
+            </p>
           )}
 
-          <div className="flex items-start gap-2.5 rounded-brand-sm border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-            <Info className="mt-0.5 size-4 shrink-0" />
-            <p>{PUBLIC_PRICE_DISCLAIMER}</p>
+          <div
+            className="kw-rise flex items-start gap-2.5 rounded-brand-sm border border-ink-200/60 bg-white px-4 py-3"
+            style={riseStyle(160)}
+          >
+            <span
+              className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full"
+              style={{ backgroundColor: `color-mix(in srgb, ${primary} 14%, white)`, color: primary }}
+            >
+              <Info className="size-3.5" />
+            </span>
+            <p className="text-xs leading-relaxed text-ink-400">{PUBLIC_PRICE_DISCLAIMER}</p>
           </div>
 
           {data.templates.length === 0 ? (
@@ -279,7 +425,7 @@ export function PublicOrgPageView({
             </Card>
           ) : (
             <div className="flex flex-col gap-3">
-              <h2 className="font-display text-lg font-semibold text-ink-500">Onze offertes</h2>
+              <SectionHead eyebrow="Kies je dag" title="Onze offertes" accentColor={primary} delayMs={220} />
 
               {/* Mobiel (< sm): elke offerte klapt direct onder zichzelf open
                   i.p.v. pas onderaan de hele lijst (live gemeld: op een
@@ -288,12 +434,13 @@ export function PublicOrgPageView({
                   zelfde patroon als offertes-table.tsx elders in de app,
                   voorkomt een hydration-mismatch. */}
               <div className="flex flex-col gap-3 sm:hidden">
-                {data.templates.map((t) => (
+                {data.templates.map((t, i) => (
                   <div key={t.id} className="flex flex-col">
                     <ListingCard
+                      index={i}
                       title={t.name}
                       description={t.description}
-                      accentColor={data.primaryColor}
+                      accentColor={primary}
                       ctaLabel="Bekijk offerte"
                       selected={t.id === selectedId}
                       onClick={() => selectTemplate(t.id)}
@@ -302,7 +449,7 @@ export function PublicOrgPageView({
                       className="grid transition-[grid-template-rows] duration-300 ease-brand"
                       style={{ gridTemplateRows: t.id === selectedId ? "1fr" : "0fr" }}
                     >
-                      <div className="overflow-hidden">
+                      <div className="min-h-0 overflow-clip">
                         <div className="pt-3">{t.id === selectedId && expandedTemplateContent}</div>
                       </div>
                     </div>
@@ -314,12 +461,13 @@ export function PublicOrgPageView({
                   onderaan, ongewijzigd -- een uitklap-per-kaart zou hier het
                   raster breken zodra een kaart niet in de laatste rij staat. */}
               <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
-                {data.templates.map((t) => (
+                {data.templates.map((t, i) => (
                   <ListingCard
                     key={t.id}
+                    index={i}
                     title={t.name}
                     description={t.description}
-                    accentColor={data.primaryColor}
+                    accentColor={primary}
                     ctaLabel="Bekijk offerte"
                     selected={t.id === selectedId}
                     onClick={() => selectTemplate(t.id)}
@@ -328,32 +476,24 @@ export function PublicOrgPageView({
               </div>
               {selectedTemplate && <div className="hidden sm:block">{expandedTemplateContent}</div>}
 
-              <div className="sticky bottom-4 flex justify-center">
-                <Button
-                  size="lg"
-                  style={{ backgroundColor: data.primaryColor }}
-                  onClick={() => {
-                    setFormOpen(true);
-                    void logRequestFormOpened(orgSlug);
-                  }}
-                  className={cn("shadow-lg hover:opacity-90 active:opacity-90", ctaIdle && !formOpen && "kw-breathe")}
-                >
-                  Vraag offerte aan
-                </Button>
-              </div>
+              {/* In de embed (iframe zonder eigen scroll) blijft de knop gewoon
+                  in de flow; op de eigen pagina staat hij als zwevende balk
+                  onderaan, zie verderop. */}
+              {embed && <div className="flex justify-center">{requestButton}</div>}
             </div>
           )}
 
           {data.arrangements.length > 0 && (
             <div className="flex flex-col gap-3">
-              <h2 className="font-display text-lg font-semibold text-ink-500">Onze arrangementen</h2>
+              <SectionHead eyebrow="Compleet pakket" title="Onze arrangementen" accentColor={primary} delayMs={220} />
 
               {/* Mobiel (< sm): zelfde per-kaart-uitklap-patroon als "Onze offertes"
                   hierboven. */}
               <div className="flex flex-col gap-3 sm:hidden">
-                {data.arrangements.map((a) => (
+                {data.arrangements.map((a, i) => (
                   <div key={a.id} className="flex flex-col">
                     <ListingCard
+                      index={i}
                       title={a.name}
                       description={a.description}
                       priceLabel={
@@ -361,7 +501,7 @@ export function PublicOrgPageView({
                           ? `${a.isVariable ? "Vanaf " : ""}${formatCurrency(a.basePrice, "EUR")}${a.pricePerPerson ? " p.p." : ""}`
                           : undefined
                       }
-                      accentColor={a.colorCode || data.primaryColor}
+                      accentColor={a.colorCode || primary}
                       ctaLabel="Bekijk arrangement"
                       selected={a.id === selectedArrangementId}
                       onClick={() => selectArrangement(a.id)}
@@ -370,7 +510,7 @@ export function PublicOrgPageView({
                       className="grid transition-[grid-template-rows] duration-300 ease-brand"
                       style={{ gridTemplateRows: a.id === selectedArrangementId ? "1fr" : "0fr" }}
                     >
-                      <div className="overflow-hidden">
+                      <div className="min-h-0 overflow-clip">
                         <div className="pt-3">{a.id === selectedArrangementId && expandedArrangementContent}</div>
                       </div>
                     </div>
@@ -381,9 +521,10 @@ export function PublicOrgPageView({
               {/* Tablet/desktop (>= sm): raster + gedeelde uitklap-sectie onderaan,
                   ongewijzigd. */}
               <div className="hidden gap-3 sm:grid sm:grid-cols-2 lg:grid-cols-3">
-                {data.arrangements.map((a) => (
+                {data.arrangements.map((a, i) => (
                   <ListingCard
                     key={a.id}
+                    index={i}
                     title={a.name}
                     description={a.description}
                     priceLabel={
@@ -391,7 +532,7 @@ export function PublicOrgPageView({
                         ? `${a.isVariable ? "Vanaf " : ""}${formatCurrency(a.basePrice, "EUR")}${a.pricePerPerson ? " p.p." : ""}`
                         : undefined
                     }
-                    accentColor={a.colorCode || data.primaryColor}
+                    accentColor={a.colorCode || primary}
                     ctaLabel="Bekijk arrangement"
                     selected={a.id === selectedArrangementId}
                     onClick={() => selectArrangement(a.id)}
@@ -402,10 +543,33 @@ export function PublicOrgPageView({
             </div>
           )}
 
-          <div className="flex items-center gap-4 rounded-brand-lg border border-ink-200/60 bg-white px-5 py-4">
+          <div className="kw-rise flex flex-wrap justify-center gap-2.5" style={riseStyle(120)}>
+            {[
+              { Icon: CircleCheck, label: "Vrijblijvend aanvragen" },
+              { Icon: HeartHandshake, label: "Persoonlijk contact" },
+              { Icon: ShieldCheck, label: "Veilig & vertrouwelijk" },
+            ].map(({ Icon, label }) => (
+              <span
+                key={label}
+                className="flex items-center gap-1.5 rounded-full border border-ink-200/60 bg-white px-3 py-1.5 text-xs font-semibold text-ink-400"
+              >
+                <Icon className="size-3.5" style={{ color: primary }} />
+                {label}
+              </span>
+            ))}
+          </div>
+
+          <div
+            className="kw-rise flex items-center gap-4 rounded-brand-lg border border-ink-200/60 bg-white px-5 py-4 shadow-sm"
+            style={riseStyle(180)}
+          >
             <div
-              className="flex size-11 shrink-0 items-center justify-center rounded-brand-sm"
-              style={{ backgroundColor: `${data.primaryColor}1a`, color: data.primaryColor }}
+              className="flex size-12 shrink-0 items-center justify-center rounded-2xl"
+              style={{
+                backgroundColor: `color-mix(in srgb, ${primary} 14%, white)`,
+                color: primary,
+                boxShadow: `0 0 0 4px color-mix(in srgb, ${primary} 7%, transparent)`,
+              }}
             >
               <MessageCircleQuestion className="size-5.5" />
             </div>
@@ -419,8 +583,8 @@ export function PublicOrgPageView({
                 setLeadFormArrangementName(null);
                 setLeadFormOpen(true);
               }}
-              style={{ borderColor: data.primaryColor, color: data.primaryColor }}
-              className="shrink-0 whitespace-nowrap rounded-brand-sm border px-4 py-2 text-sm font-semibold hover:opacity-80"
+              style={{ "--kw-accent": primary, borderColor: primary, color: primary } as CSSProperties}
+              className="shrink-0 whitespace-nowrap rounded-brand-sm border px-4 py-2 text-sm font-semibold transition-colors duration-200 ease-brand hover:bg-[var(--kw-accent)] hover:!text-white"
             >
               Neem contact op
             </button>
@@ -451,6 +615,26 @@ export function PublicOrgPageView({
           </a>
         </footer>
       </div>
+
+      {/* Zwevende afreken-balk onderaan: de vraag-offerte-knop blijft altijd
+          binnen bereik, met (zodra er een offerte open staat) de naam van de
+          gekozen offerte ernaast. fixed i.p.v. sticky: de pagina-wrapper
+          clipt zijn overflow en sticky zou daar niet betrouwbaar werken. */}
+      {!embed && data.templates.length > 0 && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
+          <div className="pointer-events-auto flex max-w-full items-center gap-4 rounded-full border border-ink-200/60 bg-white py-2 pr-2 shadow-xl" style={{ paddingLeft: selectedTemplate ? 20 : 8 }}>
+            {selectedTemplate && (
+              <div key={selectedTemplate.id} className="kw-rise min-w-0 leading-tight">
+                <p className="text-[11px] text-ink-400">Jouw keuze</p>
+                <p className="truncate text-sm font-semibold" style={{ color: primary }}>
+                  {selectedTemplate.name}
+                </p>
+              </div>
+            )}
+            {requestButton}
+          </div>
+        </div>
+      )}
 
       {formOpen && (
         <RequestFormModal

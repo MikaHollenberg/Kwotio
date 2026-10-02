@@ -20,14 +20,14 @@ export function CoastlineBackground() {
       preserveAspectRatio="none"
       className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-[110px] w-full sm:h-[150px]"
     >
-      <circle cx="1120" cy="46" r="20" fill="none" stroke="#C98A4E" strokeWidth="1.4" opacity="0.5" />
+      <circle cx="1120" cy="46" r="20" fill="none" stroke="#C98A4E" strokeWidth="1.4" opacity="0.5" className="kw-drift-b" />
       <line x1="0" y1="90" x2="1280" y2="90" stroke="#8FA6AC" strokeWidth="1.2" opacity="0.35" />
-      <g stroke="#5C7A82" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4">
+      <g stroke="#5C7A82" strokeWidth="1.4" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.4" className="kw-drift-a">
         <path d="M220 90V56" />
         <path d="M220 58c14 4 22 14 24 32-10 1-18-2-24-8" />
         <path d="M198 90h50l-6 12h-38l-6-12Z" />
       </g>
-      <g stroke="#5C7A82" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.3">
+      <g stroke="#5C7A82" strokeWidth="1.2" fill="none" strokeLinecap="round" strokeLinejoin="round" opacity="0.3" className="kw-drift-b">
         <path d="M760 90V66" />
         <path d="M760 68c10 3 16 10 17 23-7 1-13-1-17-6" />
         <path d="M744 90h34l-4 9h-26l-4-9Z" />

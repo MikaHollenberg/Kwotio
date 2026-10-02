@@ -239,6 +239,58 @@ h1, h2, h3, h4, .font-display {
 }
 .kw-breathe { animation: kw-breathe 2.2s ease-in-out infinite; }
 
+/* Publieke offertepagina: gestaffelde intro (A1/A2/A5), kaart-hover (A3),
+   selecteer-pop (A4), golflijn die zichzelf intekent (A7) en trage
+   achtergrond-drijfbeweging (A8). Vertraging per element via --kw-delay. */
+@keyframes kw-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.kw-rise {
+  animation: kw-rise 0.56s var(--ease-brand) backwards;
+  animation-delay: var(--kw-delay, 0ms);
+}
+
+@keyframes kw-card-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.kw-card-pop { animation: kw-card-pop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+.kw-lift {
+  transition: transform 0.2s var(--ease-brand), box-shadow 0.2s var(--ease-brand), border-color 0.2s var(--ease-brand);
+}
+@media (hover: hover) {
+  .kw-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 28px rgba(30, 46, 56, 0.14);
+    border-color: var(--kw-accent);
+  }
+}
+
+@keyframes kw-wave-draw {
+  from { stroke-dashoffset: 1; opacity: 0; }
+  12% { opacity: 1; }
+  to { stroke-dashoffset: 0; opacity: 1; }
+}
+.kw-wave-draw {
+  stroke-dasharray: 1;
+  animation: kw-wave-draw 0.9s var(--ease-brand) backwards;
+  animation-delay: var(--kw-delay, 0ms);
+}
+
+@keyframes kw-drift-a {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(12px, -8px); }
+}
+@keyframes kw-drift-b {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-14px, 10px); }
+}
+.kw-drift-a { animation: kw-drift-a 18s ease-in-out infinite; }
+.kw-drift-b { animation: kw-drift-b 22s ease-in-out infinite; }
+
 /* Magic hover: een zachte gloed i.p.v. een platte hover-kleur op offerte-/
    klantrijen -- bewust een vaste radiale gloed i.p.v. muisvolgend (deze rijen
    zijn <tr>'s in een Server Component, geen JS-mousemove-tracking nodig). */
@@ -387,8 +439,16 @@ h1, h2, h3, h4, .font-display {
   .kw-pop-in,
   .kw-skeleton,
   .kw-fire-pulse,
-  .kw-breathe {
+  .kw-breathe,
+  .kw-rise,
+  .kw-card-pop,
+  .kw-wave-draw,
+  .kw-drift-a,
+  .kw-drift-b {
     animation: none !important;
+  }
+  .kw-lift:hover {
+    transform: none !important;
   }
   .kw-bar-grow,
   .kw-bar-grow-x {

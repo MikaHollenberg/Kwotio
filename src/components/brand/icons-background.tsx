@@ -187,7 +187,7 @@ export function IconsBackground() {
         CYCLE_ICONS.map(({ Icon, top, className }, i) => (
           <Icon
             key={`${cycleIndex}-${i}`}
-            className={cn("absolute", className)}
+            className={cn("absolute", i % 2 === 0 ? "kw-drift-a" : "kw-drift-b", className)}
             style={{ top: cycleIndex * CYCLE_HEIGHT + top }}
           />
         )),
