@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { LayoutTemplate, ChevronRight, Info, MessageCircleQuestion, X, CircleCheck, HeartHandshake, Clock } from "lucide-react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { LayoutTemplate, ChevronRight, Info, MessageCircleQuestion, X, CircleCheck, HeartHandshake, Clock, ArrowRight } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { WaveDivider } from "@/components/brand/wave-divider";
@@ -21,7 +21,6 @@ import type { PublicOrgPageData } from "./data";
 import { RequestFormModal } from "./request-form-modal";
 import { LeadFormModal } from "./lead-form-modal";
 import { logTemplateOpened, logRequestFormOpened } from "./analytics";
-import { useIdlePulse } from "@/hooks/use-idle-pulse";
 
 /** Vertraging (ms) voor de gestaffelde intro van het n-de element. */
 function riseStyle(delayMs: number): CSSProperties {
@@ -91,6 +90,54 @@ function ListingCard({
           </span>
         </div>
       </button>
+    </div>
+  );
+}
+
+/** De hoofd-knop "Vraag offerte aan": springt op zodra hij in beeld komt, zweeft
+ * daarna rustig, krijgt af en toe een glans, schuift bij hover een pijltje uit
+ * en voelt ingedrukt bij een klik. Het zweven zit op de wrapper en de pop/
+ * press op de knop zelf, omdat beide een transform gebruiken. */
+function RequestButton({ accentColor, onClick }: { accentColor: string; onClick: () => void }) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !("IntersectionObserver" in window)) {
+      const frame = requestAnimationFrame(() => setInView(true));
+      return () => cancelAnimationFrame(frame);
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.4 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={wrapRef} className={cn(inView && "kw-cta-bob")}>
+      <Button
+        size="lg"
+        style={{ backgroundColor: accentColor }}
+        onClick={onClick}
+        className={cn(
+          "kw-cta-shine kw-cta-press group shadow-lg hover:opacity-90 active:opacity-90",
+          inView ? "kw-cta-pop" : "opacity-0",
+        )}
+      >
+        Vraag offerte aan
+        <span className="-ml-2 flex w-0 items-center overflow-hidden opacity-0 transition-all duration-300 ease-brand group-hover:ml-0 group-hover:w-5 group-hover:opacity-100">
+          <ArrowRight className="size-5 shrink-0" />
+        </span>
+      </Button>
     </div>
   );
 }
@@ -194,7 +241,6 @@ export function PublicOrgPageView({
   // knop bij een uitgeklapt arrangement geopend is -- de gewone "Neem
   // contact op"-knop onderaan laat dit op null staan.
   const [leadFormArrangementName, setLeadFormArrangementName] = useState<string | null>(null);
-  const ctaIdle = useIdlePulse(8000);
 
   useEffect(() => {
     if (embed) return;
@@ -353,17 +399,13 @@ export function PublicOrgPageView({
 
   const primary = data.primaryColor;
   const requestButton = (
-    <Button
-      size="lg"
-      style={{ backgroundColor: primary }}
+    <RequestButton
+      accentColor={primary}
       onClick={() => {
         setFormOpen(true);
         void logRequestFormOpened(orgSlug);
       }}
-      className={cn("shadow-lg hover:opacity-90 active:opacity-90", ctaIdle && !formOpen && "kw-breathe")}
-    >
-      Vraag offerte aan
-    </Button>
+    />
   );
 
   return (

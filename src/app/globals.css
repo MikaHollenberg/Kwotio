@@ -291,6 +291,50 @@ h1, h2, h3, h4, .font-display {
 .kw-drift-a { animation: kw-drift-a 18s ease-in-out infinite; }
 .kw-drift-b { animation: kw-drift-b 22s ease-in-out infinite; }
 
+/* "Vraag offerte aan"-knop op de publieke pagina: pop-in zodra hij in beeld
+   komt (backwards-fill, zodat hover/press-transforms erna werken), rustig
+   zweven, een glans die af en toe over de knop glijdt en een indrukbare
+   hover/active-staat. */
+@keyframes kw-cta-pop {
+  0% { transform: scale(0.4) translateY(24px); opacity: 0; }
+  60% { transform: scale(1.08); opacity: 1; }
+  80% { transform: scale(0.97) rotate(-1.5deg); }
+  100% { transform: scale(1); }
+}
+.kw-cta-pop { animation: kw-cta-pop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+
+@keyframes kw-cta-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+.kw-cta-bob { animation: kw-cta-bob 2.8s ease-in-out 1.2s infinite; }
+
+@keyframes kw-cta-shine {
+  0%, 55% { transform: translateX(-160%); }
+  100% { transform: translateX(380%); }
+}
+.kw-cta-shine { position: relative; overflow: hidden; }
+.kw-cta-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 40%;
+  background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-160%);
+  animation: kw-cta-shine 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.kw-cta-press {
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, opacity 0.2s ease;
+}
+@media (hover: hover) {
+  .kw-cta-press:hover { transform: translateY(-3px); box-shadow: 0 16px 28px -10px rgba(0, 0, 0, 0.35); }
+}
+.kw-cta-press:active { transform: translateY(2px) scale(0.96); box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.3); }
+
 /* Magic hover: een zachte gloed i.p.v. een platte hover-kleur op offerte-/
    klantrijen -- bewust een vaste radiale gloed i.p.v. muisvolgend (deze rijen
    zijn <tr>'s in een Server Component, geen JS-mousemove-tracking nodig). */
@@ -444,8 +488,15 @@ h1, h2, h3, h4, .font-display {
   .kw-card-pop,
   .kw-wave-draw,
   .kw-drift-a,
-  .kw-drift-b {
+  .kw-drift-b,
+  .kw-cta-pop,
+  .kw-cta-bob,
+  .kw-cta-shine::after {
     animation: none !important;
+  }
+  .kw-cta-press:hover,
+  .kw-cta-press:active {
+    transform: none !important;
   }
   .kw-lift:hover {
     transform: none !important;
