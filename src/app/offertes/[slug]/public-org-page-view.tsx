@@ -391,7 +391,7 @@ export function PublicOrgPageView({
         <div
           className={cn(
             "mx-auto flex max-w-3xl flex-col gap-6",
-            embed ? "px-1 py-4" : "px-4 py-8 pb-28 sm:px-6 sm:pb-28",
+            embed ? "px-1 py-4" : "px-4 py-8 sm:px-6",
           )}
         >
           {data.welcomeMessage && (
@@ -476,10 +476,7 @@ export function PublicOrgPageView({
               </div>
               {selectedTemplate && <div className="hidden sm:block">{expandedTemplateContent}</div>}
 
-              {/* In de embed (iframe zonder eigen scroll) blijft de knop gewoon
-                  in de flow; op de eigen pagina staat hij als zwevende balk
-                  onderaan, zie verderop. */}
-              {embed && <div className="flex justify-center">{requestButton}</div>}
+              <div className="flex justify-center">{requestButton}</div>
             </div>
           )}
 
@@ -615,26 +612,6 @@ export function PublicOrgPageView({
           </a>
         </footer>
       </div>
-
-      {/* Zwevende afreken-balk onderaan: de vraag-offerte-knop blijft altijd
-          binnen bereik, met (zodra er een offerte open staat) de naam van de
-          gekozen offerte ernaast. fixed i.p.v. sticky: de pagina-wrapper
-          clipt zijn overflow en sticky zou daar niet betrouwbaar werken. */}
-      {!embed && data.templates.length > 0 && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
-          <div className="pointer-events-auto flex max-w-full items-center gap-4 rounded-full border border-ink-200/60 bg-white py-2 pr-2 shadow-xl" style={{ paddingLeft: selectedTemplate ? 20 : 8 }}>
-            {selectedTemplate && (
-              <div key={selectedTemplate.id} className="kw-rise min-w-0 leading-tight">
-                <p className="text-[11px] text-ink-400">Jouw keuze</p>
-                <p className="truncate text-sm font-semibold" style={{ color: primary }}>
-                  {selectedTemplate.name}
-                </p>
-              </div>
-            )}
-            {requestButton}
-          </div>
-        </div>
-      )}
 
       {formOpen && (
         <RequestFormModal
