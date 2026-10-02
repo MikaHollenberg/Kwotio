@@ -95,7 +95,7 @@ function ListingCard({
 }
 
 /** De hoofd-knop "Vraag offerte aan": springt op zodra hij in beeld komt, zweeft
- * daarna rustig, krijgt af en toe een glans, schuift bij hover een pijltje uit
+ * daarna rustig, schuift bij hover een pijltje uit
  * en voelt ingedrukt bij een klik. Het zweven zit op de wrapper en de pop/
  * press op de knop zelf, omdat beide een transform gebruiken. */
 function RequestButton({ accentColor, onClick }: { accentColor: string; onClick: () => void }) {
@@ -129,7 +129,7 @@ function RequestButton({ accentColor, onClick }: { accentColor: string; onClick:
         style={{ backgroundColor: accentColor }}
         onClick={onClick}
         className={cn(
-          "kw-cta-shine kw-cta-press group shadow-lg hover:opacity-90 active:opacity-90",
+          "kw-cta-press group shadow-lg hover:opacity-90 active:opacity-90",
           inView ? "kw-cta-pop" : "opacity-0",
         )}
       >

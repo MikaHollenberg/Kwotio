@@ -293,8 +293,7 @@ h1, h2, h3, h4, .font-display {
 
 /* "Vraag offerte aan"-knop op de publieke pagina: pop-in zodra hij in beeld
    komt (backwards-fill, zodat hover/press-transforms erna werken), rustig
-   zweven, een glans die af en toe over de knop glijdt en een indrukbare
-   hover/active-staat. */
+   zweven en een indrukbare hover/active-staat. */
 @keyframes kw-cta-pop {
   0% { transform: scale(0.4) translateY(24px); opacity: 0; }
   60% { transform: scale(1.08); opacity: 1; }
@@ -308,24 +307,6 @@ h1, h2, h3, h4, .font-display {
   50% { transform: translateY(-5px); }
 }
 .kw-cta-bob { animation: kw-cta-bob 2.8s ease-in-out 1.2s infinite; }
-
-@keyframes kw-cta-shine {
-  0%, 68% { transform: translateX(-160%); }
-  100% { transform: translateX(380%); }
-}
-.kw-cta-shine { position: relative; overflow: hidden; }
-.kw-cta-shine::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 40%;
-  background: linear-gradient(115deg, transparent, rgba(255, 255, 255, 0.25), transparent);
-  transform: translateX(-160%);
-  animation: kw-cta-shine 8s ease-in-out infinite;
-  pointer-events: none;
-}
 
 .kw-cta-press {
   transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, opacity 0.2s ease;
@@ -490,8 +471,7 @@ h1, h2, h3, h4, .font-display {
   .kw-drift-a,
   .kw-drift-b,
   .kw-cta-pop,
-  .kw-cta-bob,
-  .kw-cta-shine::after {
+  .kw-cta-bob {
     animation: none !important;
   }
   .kw-cta-press:hover,
