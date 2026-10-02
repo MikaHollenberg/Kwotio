@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
-import { LayoutTemplate, ChevronRight, Info, MessageCircleQuestion, X, CircleCheck, HeartHandshake, ShieldCheck } from "lucide-react";
+import { LayoutTemplate, ChevronRight, Info, MessageCircleQuestion, X, CircleCheck, HeartHandshake, Clock } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { KwotioMark } from "@/components/brand/kwotio-mark";
 import { WaveDivider } from "@/components/brand/wave-divider";
@@ -547,7 +547,7 @@ export function PublicOrgPageView({
             {[
               { Icon: CircleCheck, label: "Vrijblijvend aanvragen" },
               { Icon: HeartHandshake, label: "Persoonlijk contact" },
-              { Icon: ShieldCheck, label: "Veilig & vertrouwelijk" },
+              { Icon: Clock, label: "Binnen 24 uur reactie" },
             ].map(({ Icon, label }) => (
               <span
                 key={label}
