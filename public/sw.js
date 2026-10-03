@@ -4,7 +4,7 @@
 // sowieso nooit — de same-origin-check hieronder sluit dat uit. Wordt alleen
 // geregistreerd binnen het ingelogde dashboard (zie install-app-banner.tsx),
 // dus dit draait nooit voor een klant op de publieke offertepagina.
-const CACHE_VERSION = 'kwotio-v2'
+const CACHE_VERSION = 'kwotio-v3'
 const CORE_ASSETS = ['/dashboard', '/manifest.json', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png']
 
 self.addEventListener('install', (event) => {
