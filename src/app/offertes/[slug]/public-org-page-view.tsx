@@ -142,29 +142,12 @@ function RequestButton({ accentColor, onClick }: { accentColor: string; onClick:
   );
 }
 
-/** Sectiekop met een kort eyebrow-label + accentstreepje boven de titel. */
-function SectionHead({
-  eyebrow,
-  title,
-  accentColor,
-  delayMs,
-}: {
-  eyebrow: string;
-  title: string;
-  accentColor: string;
-  delayMs: number;
-}) {
+/** Sectiekop met een zachte intro-animatie. */
+function SectionHead({ title, delayMs }: { title: string; delayMs: number }) {
   return (
-    <div className="kw-rise flex flex-col gap-1" style={riseStyle(delayMs)}>
-      <span
-        className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.08em]"
-        style={{ color: accentColor }}
-      >
-        {eyebrow}
-        <span className="h-0.5 w-10 rounded-full opacity-50" style={{ backgroundColor: accentColor }} />
-      </span>
-      <h2 className="font-display text-xl font-semibold text-ink-500">{title}</h2>
-    </div>
+    <h2 className="kw-rise font-display text-xl font-semibold text-ink-500" style={riseStyle(delayMs)}>
+      {title}
+    </h2>
   );
 }
 
@@ -467,7 +450,7 @@ export function PublicOrgPageView({
             </Card>
           ) : (
             <div className="flex flex-col gap-3">
-              <SectionHead eyebrow="Kies je dag" title="Onze offertes" accentColor={primary} delayMs={220} />
+              <SectionHead title="Onze offertes" delayMs={220} />
 
               {/* Mobiel (< sm): elke offerte klapt direct onder zichzelf open
                   i.p.v. pas onderaan de hele lijst (live gemeld: op een
@@ -524,7 +507,7 @@ export function PublicOrgPageView({
 
           {data.arrangements.length > 0 && (
             <div className="flex flex-col gap-3">
-              <SectionHead eyebrow="Compleet pakket" title="Onze arrangementen" accentColor={primary} delayMs={220} />
+              <SectionHead title="Onze arrangementen" delayMs={220} />
 
               {/* Mobiel (< sm): zelfde per-kaart-uitklap-patroon als "Onze offertes"
                   hierboven. */}
