@@ -1,11 +1,19 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import type { Metadata } from "next";
+import { Poppins, Lato } from "next/font/google";
 import { KWOTIO_FAVICON } from "@/lib/app-config";
 import { getPublicOrgPageData } from "../../offertes/[slug]/data";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { PublicOrgPageView } from "../../offertes/[slug]/public-org-page-view";
 import { logPageView } from "../../offertes/[slug]/analytics";
+
+// Optionele lettertype-set voor de embed (?fonts=poppins-lato), zodat de
+// ingesloten pagina visueel aansluit op de eigen website van een organisatie.
+// next/font host de bestanden zelf (CSP staat alleen font-src 'self' toe) en
+// preload staat uit: de bestanden worden alleen opgehaald als ze gebruikt worden.
+const poppins = Poppins({ weight: ["500", "600", "700"], subsets: ["latin"], variable: "--font-embed-poppins", preload: false });
+const lato = Lato({ weight: ["400", "700"], subsets: ["latin"], variable: "--font-embed-lato", preload: false });
 
 /**
  * Kale <iframe>-variant van de publieke offertepagina (/offertes/[slug]) --
@@ -31,10 +39,14 @@ export async function generateMetadata({
 
 export default async function EmbeddedOrganizationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ fonts?: string }>;
 }) {
   const { slug } = await params;
+  const { fonts } = await searchParams;
+  const useWebsiteFonts = fonts === "poppins-lato";
 
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "onbekend";
@@ -61,7 +73,22 @@ export default async function EmbeddedOrganizationPage({
           public/embed.js). Een geneste layout kan <body> niet overschrijven
           (één <html>/<body> voor de hele app), dus reset dit hier lokaal. */}
       <style>{`html, body { height: auto; min-height: 0; }`}</style>
-      <PublicOrgPageView orgSlug={slug} data={data} embed />
+      {useWebsiteFonts ? (
+        <div
+          className={`${poppins.variable} ${lato.variable} font-sans`}
+          style={
+            {
+              "--font-display": 'var(--font-embed-poppins), "Poppins", ui-sans-serif, system-ui, sans-serif',
+              "--font-sans": 'var(--font-embed-lato), "Lato", ui-sans-serif, system-ui, sans-serif',
+              fontFamily: 'var(--font-embed-lato), "Lato", ui-sans-serif, system-ui, sans-serif',
+            } as React.CSSProperties
+          }
+        >
+          <PublicOrgPageView orgSlug={slug} data={data} embed />
+        </div>
+      ) : (
+        <PublicOrgPageView orgSlug={slug} data={data} embed />
+      )}
     </>
   );
 }

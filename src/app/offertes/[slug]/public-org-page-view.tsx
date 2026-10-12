@@ -22,6 +22,15 @@ import { RequestFormModal } from "./request-form-modal";
 import { LeadFormModal } from "./lead-form-modal";
 import { logTemplateOpened, logRequestFormOpened } from "./analytics";
 
+function slugify(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 /** Vertraging (ms) voor de gestaffelde intro van het n-de element. */
 function riseStyle(delayMs: number): CSSProperties {
   return { "--kw-delay": `${delayMs}ms` } as CSSProperties;
@@ -261,11 +270,23 @@ export function PublicOrgPageView({
     // Eenmalige sync vanaf de URL bij het laden (deelbare ?template=-link) —
     // bewust in een effect i.p.v. een lazy useState-initializer, want de
     // server rendert zonder window en zou anders een hydration-mismatch geven.
-    const fromUrl = new URLSearchParams(window.location.search).get("template");
-    if (fromUrl && data.templates.some((t) => t.id === fromUrl)) {
+    // Accepteert zowel het id als een leesbare naam-slug ("sloepengame",
+    // "te-land-ter-zee"), zodat een link vanaf de eigen website er netjes
+    // uit kan zien (?template=sloepengame). Zelfde voor ?arrangement=.
+    const params = new URLSearchParams(window.location.search);
+    const templateParam = params.get("template");
+    const template = templateParam
+      ? data.templates.find((t) => t.id === templateParam || slugify(t.name) === slugify(templateParam))
+      : undefined;
+    if (template) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedId(fromUrl);
+      setSelectedId(template.id);
     }
+    const arrangementParam = params.get("arrangement");
+    const arrangement = arrangementParam
+      ? data.arrangements.find((a) => a.id === arrangementParam || slugify(a.name) === slugify(arrangementParam))
+      : undefined;
+    if (arrangement) setSelectedArrangementId(arrangement.id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
