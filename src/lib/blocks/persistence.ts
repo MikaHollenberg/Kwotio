@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/types/database";
+import { materializePriceUnits } from "@/lib/blocks/types";
 import type {
   BlockDraft,
   PackagesBlockContent,
@@ -30,7 +31,7 @@ export async function loadTemplateBlocks(supabase: Client, templateId: string): 
     id: row.id,
     type: row.type,
     position: row.position,
-    content: row.content,
+    content: materializePriceUnits(row.type, row.content as Record<string, unknown>, true),
   }));
 }
 
@@ -83,6 +84,9 @@ export async function loadQuoteBlocks(supabase: Client, quoteId: string): Promis
     .order("position", { ascending: true });
   if (blockError) throw blockError;
 
+  const { data: quoteRow } = await supabase.from("quotes").select("price_per_person").eq("id", quoteId).maybeSingle();
+  const legacyPricePerPerson = quoteRow?.price_per_person ?? true;
+
   const blocks: BlockDraft[] = [];
 
   for (const row of blockRows ?? []) {
@@ -100,12 +104,12 @@ export async function loadQuoteBlocks(supabase: Client, quoteId: string): Promis
     const [{ data: packageRows, error: pkgError }, { data: addonRows, error: addonError }] = await Promise.all([
       supabase
         .from("quote_packages")
-        .select("id, name, description, photo_url, price, is_default_selected, sort_order")
+        .select("id, name, description, photo_url, price, price_unit, is_default_selected, sort_order")
         .eq("quote_block_id", row.id)
         .order("sort_order", { ascending: true }),
       supabase
         .from("quote_addons")
-        .select("id, package_id, name, description, price, quantity_editable, default_quantity, sort_order")
+        .select("id, package_id, name, description, price, price_unit, quantity_editable, default_quantity, sort_order")
         .eq("quote_block_id", row.id)
         .order("sort_order", { ascending: true }),
     ]);
@@ -118,6 +122,7 @@ export async function loadQuoteBlocks(supabase: Client, quoteId: string): Promis
       description: p.description ?? "",
       photoUrl: p.photo_url ?? "",
       price: Number(p.price),
+      unit: p.price_unit ?? undefined,
       isDefaultSelected: p.is_default_selected,
     }));
     const addons: PackageAddon[] = (addonRows ?? []).map((a) => ({
@@ -126,6 +131,7 @@ export async function loadQuoteBlocks(supabase: Client, quoteId: string): Promis
       name: a.name,
       description: a.description ?? "",
       price: Number(a.price),
+      unit: a.price_unit ?? undefined,
       quantityEditable: a.quantity_editable,
       defaultQuantity: a.default_quantity,
     }));
@@ -142,8 +148,7 @@ export async function loadQuoteBlocks(supabase: Client, quoteId: string): Promis
     const resolvedContent = {
       heading: content.heading ?? "",
       intro: content.intro ?? "",
-      packages,
-      addons,
+      ...materializePriceUnits("packages", { packages, addons }, legacyPricePerPerson),
       pdfUrl: content.pdfUrl ?? "",
       pdfUrl2: content.pdfUrl2 ?? "",
       pdfLabel: content.pdfLabel ?? "",
@@ -220,6 +225,7 @@ export async function saveQuoteBlocks(supabase: Client, quoteId: string, blocks:
             description: pkg.description || null,
             photo_url: pkg.photoUrl || null,
             price: pkg.price,
+            price_unit: pkg.unit ?? null,
             is_default_selected: pkg.isDefaultSelected,
             sort_order: p,
           })),
@@ -239,6 +245,7 @@ export async function saveQuoteBlocks(supabase: Client, quoteId: string, blocks:
             name: addon.name,
             description: addon.description || null,
             price: addon.price,
+            price_unit: addon.unit ?? null,
             quantity_editable: addon.quantityEditable,
             default_quantity: addon.defaultQuantity,
             sort_order: a,

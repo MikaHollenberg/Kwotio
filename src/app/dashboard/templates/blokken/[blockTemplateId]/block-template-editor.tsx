@@ -107,7 +107,7 @@ export function BlockTemplateEditor({
                     eventDate: null,
                     currency: "EUR",
                     priceDisplay: "incl_btw",
-                    pricePerPerson: false,
+                    pricePerPerson: true,
                     discountAmount: 0,
                   }}
                   selections={selections}

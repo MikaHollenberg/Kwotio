@@ -1,4 +1,10 @@
-import type { PackageAddon, PackageDraft, PackagesBlockContent, ArrangementBlockContent } from "@/lib/blocks/types";
+import type {
+  PackageAddon,
+  PackageDraft,
+  PackagesBlockContent,
+  ArrangementBlockContent,
+  PriceUnit,
+} from "@/lib/blocks/types";
 import type { BlockType } from "@/lib/types/database";
 import { formatCurrency } from "@/lib/utils";
 
@@ -89,6 +95,21 @@ export function collectPricedBlocks(
   return result;
 }
 
+/** Per persoon of totaal voor een pakket: de eigen keuze van het bureau, en
+ * alleen voor oudere pakketten zonder keuze de offerte-brede instelling. */
+export function resolvePackageUnit(pkg: { unit?: PriceUnit }, quotePricePerPerson: boolean): PriceUnit {
+  return pkg.unit ?? (quotePricePerPerson ? "p.p." : "vast");
+}
+
+/** Idem voor een optie. Een oudere optie met "Aantal" aan was nooit per
+ * persoon (aantal x prijs), dus die blijft zonder eigen keuze "vast". */
+export function resolveAddonUnit(
+  addon: { unit?: PriceUnit; forcedUnit?: PriceUnit; quantityEditable: boolean },
+  quotePricePerPerson: boolean,
+): PriceUnit {
+  return addon.forcedUnit ?? addon.unit ?? (quotePricePerPerson && !addon.quantityEditable ? "p.p." : "vast");
+}
+
 export function defaultSelections(blocks: PackagesBlockInput[]): Selections {
   const packageIdByBlock: Record<string, string[]> = {};
   const addonQuantities: Record<string, number> = {};
@@ -158,10 +179,9 @@ export function calculateSubtotal(
  * bedrag echt aan iemand getoond wordt (bureau-preview, klantpagina,
  * onderteken-scherm, PDF, certificaat), zodat een vaste post (bv. een DJ
  * voor €600) nooit "p.p." krijgt opgeplakt puur omdat de offerte globaal op
- * per-persoon staat. Een gewoon pakket-addon volgt nog steeds de offerte-
- * brede instelling (`quotePricePerPerson`), inclusief de bestaande
- * uitzondering voor `quantityEditable`-addons; alleen een addon met een
- * eigen `forcedUnit` (arrangement-extra's) wijkt daarvan af.
+ * per-persoon staat. Elk pakket en elke optie heeft zijn eigen per-persoon/totaal-
+ * keuze (`unit`); alleen oudere items zonder keuze volgen nog de offerte-brede
+ * instelling (`quotePricePerPerson`). Arrangement-extra's gebruiken `forcedUnit`.
  */
 export function calculateSplitSubtotal(
   blocks: PackagesBlockInput[],
@@ -176,15 +196,14 @@ export function calculateSplitSubtotal(
     const selectedIds = selections.packageIdByBlock[blockId] ?? [];
     for (const pkg of packages) {
       if (!selectedIds.includes(pkg.id)) continue;
-      if (quotePricePerPerson) perPersonAmount += pkg.price;
+      if (resolvePackageUnit(pkg, quotePricePerPerson) === "p.p.") perPersonAmount += pkg.price;
       else fixedAmount += pkg.price;
     }
 
     for (const addon of addons) {
       const qty = selections.addonQuantities?.[addon.id] ?? 0;
       if (qty <= 0) continue;
-      const isPerPerson = addon.forcedUnit ? addon.forcedUnit === "p.p." : quotePricePerPerson && !addon.quantityEditable;
-      if (isPerPerson) perPersonAmount += addon.price * qty;
+      if (resolveAddonUnit(addon, quotePricePerPerson) === "p.p.") perPersonAmount += addon.price * qty;
       else fixedAmount += addon.price * qty;
     }
   }

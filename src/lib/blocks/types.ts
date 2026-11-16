@@ -19,12 +19,19 @@ export type GalleryBlockContent = {
   images: GalleryImage[];
 };
 
+/** Is een prijs een bedrag per persoon ("p.p.") of een totaalbedrag ("vast")? */
+export type PriceUnit = "vast" | "p.p.";
+
 export type PackageAddon = {
   id: string;
   packageId: string | null;
   name: string;
   description: string;
   price: number;
+  /** Per persoon of totaalbedrag. `undefined` = oudere optie die nog de
+   * offerte-brede "Totaal / Per persoon"-instelling volgt (zie
+   * resolveAddonUnit() in pricing.ts). Nieuwe opties zetten dit altijd. */
+  unit?: PriceUnit;
   quantityEditable: boolean;
   defaultQuantity: number;
   /** Overschrijft de offerte-brede "per persoon"-instelling voor dit ene
@@ -42,6 +49,9 @@ export type PackageDraft = {
   description: string;
   photoUrl: string;
   price: number;
+  /** Per persoon of totaalbedrag. `undefined` = ouder pakket dat nog de
+   * offerte-brede instelling volgt (zie resolvePackageUnit()). */
+  unit?: PriceUnit;
   isDefaultSelected: boolean;
 };
 
@@ -270,11 +280,12 @@ function regenerateContentIds(type: BlockType, content: Record<string, unknown>)
     c.packages = c.packages.map((pkg) => {
       const newId = uid();
       idMap.set(pkg.id, newId);
-      return { ...pkg, id: newId };
+      return { ...pkg, id: newId, unit: pkg.unit ?? "p.p." };
     });
     c.addons = c.addons.map((addon) => ({
       ...addon,
       id: uid(),
+      unit: addon.unit ?? (addon.quantityEditable ? "vast" : "p.p."),
       packageId: addon.packageId ? (idMap.get(addon.packageId) ?? null) : null,
     }));
     return cloned;
@@ -368,6 +379,29 @@ export function duplicateBlockDraft(block: BlockDraft): BlockDraft {
   };
 }
 
+/** Geef elk pakket en elke optie van een pakketten-blok een expliciete
+ * per-persoon/totaal-keuze. Oudere items (van vóór deze keuze bestond)
+ * kregen die door de offerte-brede instelling: `legacyPricePerPerson`
+ * zegt wat die was (voor templates en blok-templates: p.p., hetzelfde als
+ * de standaard van een nieuwe offerte). Een oudere optie met "Aantal" aan
+ * was nooit per persoon. */
+export function materializePriceUnits(
+  type: BlockType,
+  content: Record<string, unknown>,
+  legacyPricePerPerson: boolean,
+): Record<string, unknown> {
+  if (type !== "packages") return content;
+  const c = content as unknown as PackagesBlockContent;
+  return {
+    ...content,
+    packages: (c.packages ?? []).map((pkg) => ({ ...pkg, unit: pkg.unit ?? (legacyPricePerPerson ? "p.p." : "vast") })),
+    addons: (c.addons ?? []).map((addon) => ({
+      ...addon,
+      unit: addon.unit ?? (legacyPricePerPerson && !addon.quantityEditable ? "p.p." : "vast"),
+    })),
+  };
+}
+
 export function newPackage(): PackageDraft {
   return {
     id: uid(),
@@ -375,6 +409,7 @@ export function newPackage(): PackageDraft {
     description: "",
     photoUrl: "",
     price: 0,
+    unit: "p.p.",
     isDefaultSelected: false,
   };
 }
@@ -386,6 +421,7 @@ export function newAddon(packageId: string | null = null): PackageAddon {
     name: "Nieuwe optie",
     description: "",
     price: 0,
+    unit: "p.p.",
     quantityEditable: false,
     defaultQuantity: 1,
   };

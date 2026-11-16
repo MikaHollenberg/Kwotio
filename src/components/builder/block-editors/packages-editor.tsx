@@ -1,11 +1,34 @@
 import { Plus, Trash2, Star } from "lucide-react";
-import type { PackagesBlockContent } from "@/lib/blocks/types";
+import type { PackagesBlockContent, PriceUnit } from "@/lib/blocks/types";
 import { newPackage, newAddon } from "@/lib/blocks/types";
 import { Field, TextInput, TextArea } from "@/components/builder/field";
 import { ImageUploadField } from "@/components/builder/image-upload-field";
 import { PdfUploadField } from "@/components/builder/pdf-upload-field";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+/** Kleine keuze naast een prijsveld: is het bedrag per persoon of een
+ * totaalbedrag? De klant ziet dit op de offerte achter het bedrag staan. */
+function UnitToggle({ value, onChange }: { value: PriceUnit; onChange: (unit: PriceUnit) => void }) {
+  return (
+    <div className="flex shrink-0 gap-0.5 rounded-brand-sm bg-sand-200 p-0.5" role="group" aria-label="Prijs per persoon of totaal">
+      {(["p.p.", "vast"] as const).map((unit) => (
+        <button
+          key={unit}
+          type="button"
+          onClick={() => onChange(unit)}
+          aria-pressed={value === unit}
+          className={cn(
+            "rounded-[calc(var(--radius-brand-sm)_-_2px)] px-2 py-1.5 text-xs font-medium transition-colors duration-200 ease-brand",
+            value === unit ? "bg-teal-600 text-white" : "text-ink-400 hover:text-ink-500",
+          )}
+        >
+          {unit === "p.p." ? "p.p." : "Totaal"}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function PackagesBlockEditor({
   content,
@@ -134,6 +157,14 @@ export function PackagesBlockEditor({
                       className="w-20 text-sm text-ink-500 outline-none"
                     />
                   </div>
+                  <UnitToggle
+                    value={pkg.unit ?? "p.p."}
+                    onChange={(unit) => {
+                      const packages = [...content.packages];
+                      packages[i] = { ...pkg, unit };
+                      onChange({ ...content, packages });
+                    }}
+                  />
                   <button
                     type="button"
                     onClick={() =>
@@ -195,7 +226,7 @@ export function PackagesBlockEditor({
         </p>
         <div className="flex flex-col gap-2">
           {content.addons.map((addon, i) => (
-            <div key={addon.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 rounded-brand-sm border border-ink-100 bg-sand-50 p-3">
+            <div key={addon.id} className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-2 rounded-brand-sm border border-ink-100 bg-sand-50 p-3">
               <div className="flex flex-col gap-1">
                 <TextInput
                   value={addon.name}
@@ -246,6 +277,14 @@ export function PackagesBlockEditor({
                   className="w-16 text-sm text-ink-500 outline-none"
                 />
               </div>
+              <UnitToggle
+                value={addon.unit ?? (addon.quantityEditable ? "vast" : "p.p.")}
+                onChange={(unit) => {
+                  const addons = [...content.addons];
+                  addons[i] = { ...addon, unit };
+                  onChange({ ...content, addons });
+                }}
+              />
               <button
                 type="button"
                 onClick={() => onChange({ ...content, addons: content.addons.filter((a) => a.id !== addon.id) })}

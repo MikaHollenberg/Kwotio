@@ -35,6 +35,8 @@ const dict = {
   total_label: { nl: "Totaal", en: "Total" },
   extra_options: { nl: "Extra opties", en: "Extra options" },
   per_item: { nl: "/ stuk", en: "/ item" },
+  per_person_short: { nl: "p.p.", en: "p.p." },
+  total_short: { nl: "totaal", en: "total" },
   from_price_prefix: { nl: "vanaf ", en: "from " },
   included_label: { nl: "Inclusief", en: "Included" },
   most_chosen: { nl: "Meest gekozen", en: "Most popular" },

@@ -245,7 +245,7 @@ export function TemplateEditor({
                 eventDate: null,
                 currency: "EUR",
                 priceDisplay: "incl_btw",
-                pricePerPerson: false,
+                pricePerPerson: true,
                 discountAmount: 0,
               }}
             />

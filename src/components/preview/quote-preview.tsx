@@ -13,8 +13,15 @@ import type {
   TimelineBlockContent,
   SignatureBlockContent,
   ArrangementBlockContent,
+  PriceUnit,
 } from "@/lib/blocks/types";
-import { calculateTotal, formatSplitPrice, type Selections } from "@/lib/blocks/pricing";
+import {
+  calculateTotal,
+  formatSplitPrice,
+  resolveAddonUnit,
+  resolvePackageUnit,
+  type Selections,
+} from "@/lib/blocks/pricing";
 import { PRICE_DISPLAY_LABELS } from "@/lib/blocks/price-display";
 import { useQuoteSelections } from "@/hooks/use-quote-selections";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
@@ -51,11 +58,18 @@ export type QuoteMeta = {
   pricePerPerson: boolean;
 };
 
-/** "€ 45,00" of "€ 45,00 p.p." — puur een label-wissel, geen rekensom: het
+/** "€ 45,00 p.p." of "€ 45,00 totaal" — puur een label, geen rekensom: het
  * aantal personen is pas bekend zodra de klant tekent (feature 2), dus er
- * kan tijdens het bekijken/kiezen van de offerte niks gedeeld worden. */
-function priceLabel(amount: number, currency: string, pricePerPerson: boolean) {
-  return `${formatCurrency(amount, currency)}${pricePerPerson ? " p.p." : ""}`;
+ * kan tijdens het bekijken/kiezen van de offerte niks gedeeld worden. De
+ * klant ziet bij elk bedrag altijd expliciet of het per persoon of een
+ * totaalbedrag is. */
+function priceLabel(
+  amount: number,
+  currency: string,
+  unit: PriceUnit,
+  t: (key: "per_person_short" | "total_short") => string,
+) {
+  return `${formatCurrency(amount, currency)} ${t(unit === "p.p." ? "per_person_short" : "total_short")}`;
 }
 
 export function QuotePreview({
@@ -551,7 +565,7 @@ function PackagesBlockPreview({
                 )}
               </div>
               <span className="shrink-0 font-display text-sm font-semibold text-orange-600">
-                {priceLabel(pkg.price, meta.currency, meta.pricePerPerson)}
+                {priceLabel(pkg.price, meta.currency, resolvePackageUnit(pkg, meta.pricePerPerson), t)}
               </span>
               {!readOnly && (
                 <span
@@ -634,7 +648,7 @@ function PackagesBlockPreview({
                     </div>
                     {pkg.description && <p className="text-xs text-ink-400">{pkg.description}</p>}
                     <span className="mt-1 font-display text-sm font-semibold text-orange-600">
-                      {priceLabel(pkg.price, meta.currency, meta.pricePerPerson)}
+                      {priceLabel(pkg.price, meta.currency, resolvePackageUnit(pkg, meta.pricePerPerson), t)}
                     </span>
                   </div>
                 </>
@@ -735,7 +749,7 @@ function PackagesBlockPreview({
                         />
                       )}
                       <span className="text-sm font-medium text-ink-500 whitespace-nowrap">
-                        +{priceLabel(lineTotal, meta.currency, meta.pricePerPerson && !addon.quantityEditable)}
+                        +{priceLabel(lineTotal, meta.currency, resolveAddonUnit(addon, meta.pricePerPerson), t)}
                         {addon.quantityEditable && !checked ? ` ${t("per_item")}` : ""}
                       </span>
                     </div>
@@ -872,6 +886,7 @@ function ArrangementContentItemView({
   /** Dit specifieke onderdeel wordt op dit moment versleept of geresized. */
   isActive?: boolean;
 }) {
+  const { t } = useTranslation();
   const itemColor = item.color ?? arrangementColor;
   const Icon = item.icon ? ARRANGEMENT_ICON_MAP[item.icon] : undefined;
   const textStyle = contentTextStyle(item);
@@ -1052,7 +1067,7 @@ function ArrangementContentItemView({
                       </p>
                     </label>
                     <span className="shrink-0 text-sm font-medium text-ink-500 whitespace-nowrap">
-                      +{priceLabel(extra.price, meta.currency, extra.unit === "p.p.")}
+                      +{priceLabel(extra.price, meta.currency, extra.unit, t)}
                     </span>
                   </div>
                 );
@@ -1315,8 +1330,7 @@ function ArrangementBlockPreview({
             <li key={p.id} className="flex items-center justify-between gap-3">
               <span>{p.label}</span>
               <span className="font-medium">
-                {formatCurrency(p.amount, meta.currency)}
-                {p.unit === "p.p." ? " p.p." : ""}
+                {priceLabel(p.amount, meta.currency, p.unit, t)}
               </span>
             </li>
           ))}
@@ -1332,7 +1346,7 @@ function ArrangementBlockPreview({
                 {s.label && `${s.label}: `}
                 {s.minGuests}
                 {s.maxGuests != null ? `-${s.maxGuests}` : "+"} personen: +{formatCurrency(s.amount, meta.currency)}
-                {s.unit === "p.p." ? " p.p." : ""}
+                {s.unit === "p.p." ? ` ${t("per_person_short")}` : ` ${t("total_short")}`}
               </li>
             ))}
           </ul>

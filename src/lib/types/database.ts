@@ -341,6 +341,7 @@ export interface Database {
           description: string | null;
           photo_url: string | null;
           price: number;
+          price_unit: "vast" | "p.p." | null;
           is_default_selected: boolean;
           sort_order: number;
           created_at: string;
@@ -360,6 +361,7 @@ export interface Database {
           name: string;
           description: string | null;
           price: number;
+          price_unit: "vast" | "p.p." | null;
           quantity_editable: boolean;
           default_quantity: number;
           sort_order: number;

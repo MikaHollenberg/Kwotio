@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { materializePriceUnits } from "@/lib/blocks/types";
 import { BlockTemplateEditor } from "./block-template-editor";
 
 export default async function BlockTemplateEditorPage({
@@ -25,7 +26,10 @@ export default async function BlockTemplateEditorPage({
 
   return (
     <BlockTemplateEditor
-      blockTemplate={blockTemplate}
+      blockTemplate={{
+        ...blockTemplate,
+        content: materializePriceUnits(blockTemplate.type, blockTemplate.content as Record<string, unknown>, true),
+      }}
       organizationId={profile?.organization_id ?? blockTemplate.organization_id}
     />
   );

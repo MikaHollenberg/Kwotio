@@ -132,7 +132,10 @@ export function QuoteEditor({
   const [eventDate, setEventDate] = useState(quote.event_date ?? "");
   const [validUntil, setValidUntil] = useState(quote.valid_until ?? "");
   const [priceDisplay, setPriceDisplay] = useState<PriceDisplayMode>(quote.price_display);
-  const [pricePerPerson, setPricePerPerson] = useState(quote.price_per_person);
+  // Per persoon of totaal wordt sinds kort per pakket/optie/prijs gekozen
+  // (zie PackageDraft.unit); de offerte-brede waarde is alleen nog de
+  // terugval voor oudere items zonder eigen keuze.
+  const pricePerPerson = quote.price_per_person;
   const [discountAmount, setDiscountAmount] = useState(Number(quote.discount_amount));
   const [aantalPersonenActief, setAantalPersonenActief] = useState(quote.aantal_personen_actief);
   const [handledByProfileId, setHandledByProfileId] = useState(quote.handled_by_profile_id ?? "");
@@ -541,16 +544,6 @@ export function QuoteEditor({
             options={[
               { value: "incl_btw", label: "Incl. btw" },
               { value: "excl_btw", label: "Excl. btw" },
-            ]}
-          />
-        </FieldBox>
-        <FieldBox label="Weergave">
-          <SegmentedToggle
-            value={pricePerPerson ? "per_persoon" : "totaal"}
-            onChange={(v) => setPricePerPerson(v === "per_persoon")}
-            options={[
-              { value: "totaal", label: "Totaal" },
-              { value: "per_persoon", label: "Per persoon" },
             ]}
           />
         </FieldBox>

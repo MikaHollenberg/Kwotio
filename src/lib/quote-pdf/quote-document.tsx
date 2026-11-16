@@ -12,7 +12,7 @@ import type {
   SignatureBlockContent,
   ArrangementBlockContent,
 } from "@/lib/blocks/types";
-import { formatSplitPrice, type Selections } from "@/lib/blocks/pricing";
+import { formatSplitPrice, resolveAddonUnit, resolvePackageUnit, type Selections } from "@/lib/blocks/pricing";
 import { clusterIntoRows } from "@/lib/arrangements/layout";
 
 // Zelfde merkkleuren als het ondertekeningscertificaat
@@ -441,7 +441,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                           <Text style={styles.packageName}>{pkg.name}</Text>
                           <Text style={[styles.packagePrice, { color: data.accentColor }]}>
                             {formatCurrency(pkg.price, data.currency)}
-                            {data.pricePerPerson ? " p.p." : ""}
+                            {resolvePackageUnit(pkg, !!data.pricePerPerson) === "p.p." ? " p.p." : " totaal"}
                           </Text>
                         </View>
                         {pkg.description && <Text style={styles.packageDesc}>{pkg.description}</Text>}
@@ -463,7 +463,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                             </Text>
                             <Text style={styles.addonPrice}>
                               {formatCurrency(addon.price * qty, data.currency)}
-                              {data.pricePerPerson && !addon.quantityEditable ? " p.p." : ""}
+                              {resolveAddonUnit(addon, !!data.pricePerPerson) === "p.p." ? " p.p." : " totaal"}
                             </Text>
                           </View>
                         );
@@ -511,7 +511,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                         <Text style={styles.addonName}>{p.label}</Text>
                         <Text style={styles.addonPrice}>
                           {formatCurrency(p.amount, data.currency)}
-                          {p.unit === "p.p." ? " p.p." : ""}
+                          {p.unit === "p.p." ? " p.p." : " totaal"}
                         </Text>
                       </View>
                     ))}
@@ -528,7 +528,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                           {s.label ? `${s.label}: ` : ""}
                           {s.minGuests}
                           {s.maxGuests != null ? `-${s.maxGuests}` : "+"} personen: +{formatCurrency(s.amount, data.currency)}
-                          {s.unit === "p.p." ? " p.p." : ""}
+                          {s.unit === "p.p." ? " p.p." : " totaal"}
                         </Text>
                       ))}
                     </View>
@@ -611,7 +611,7 @@ function QuoteDocument({ data }: { data: QuotePdfData }) {
                                   <Text style={[styles.addonName, textStyle]}>{extra.name}</Text>
                                   <Text style={styles.addonPrice}>
                                     {formatCurrency(extra.price, data.currency)}
-                                    {extra.unit === "p.p." ? " p.p." : ""}
+                                    {extra.unit === "p.p." ? " p.p." : " totaal"}
                                   </Text>
                                 </View>
                               ))}
